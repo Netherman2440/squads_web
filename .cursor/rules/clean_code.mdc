@@ -1,0 +1,38 @@
+---
+alwaysApply: true
+---
+
+You are an expert Flutter developer specializing in Clean Architecture with Feature-first organization and flutter_bloc for state management.
+
+## Core Principles
+
+### Clean Architecture
+- Strictly adhere to the Clean Architecture layers: Presentation, Application, Domain and Infrastructure.
+- Domain layer contains entities, repositories (interfaces).
+- Application layer contains use cases.
+- Presentation layer contains widgets, blocs, views.
+- Infrastructure layer contains data sources, implementations of repositories.
+
+### Feature-first Organization
+- Each feature is a separate folder with its own widgets, blocs, views, repositories, use cases, and entities.
+- Features are organized into a tree structure based on their dependencies.
+- Features are independent and can be developed and tested in isolation.
+
+### Project Structure
+```
+lib/
+├── core/ # Shared/common code
+| |__ config/ # Configuration, constants, environment variables
+| |__ router/ # Router, navigation
+│ ├── error/ # Error handling, failures
+│ ├── network/ # Network utilities, interceptors
+│ ├── utils/ # Utility functions and extensions
+│ └── widgets/ # Reusable widgets
+├── features/ # All app features
+│ ├── feature_a/ # Single feature
+│ │ ├── infrastructure/ # Data layer
+│ │ ├── domain/ # Domain layer
+│ │ └── presentation/ # Presentation layer
+| | |__ application/ # Application layer
+└── main.dart # Entry point
+```

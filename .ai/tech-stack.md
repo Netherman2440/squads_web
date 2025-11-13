@@ -13,32 +13,33 @@ Notes (frontend):
   no legacy Flutter code is reused as a base.
 
 Backend:
-Python
-FastAPI + Pydantic
-Dataclasses bridging ORM to business logic
-Auth: JWT (python-jose), password hashing (passlib+bcrypt)
-Server: Uvicorn
-HTTP client: httpx (tests)
+Supabase (BaaS)
+- Supabase Auth (email/password, OAuth) for user authentication
+- Supabase REST (PostgREST) and RPC for data access
+- Row Level Security (RLS) policies for authorization
+- SQL functions and triggers for domain logic
+- Optional Supabase Edge Functions (Deno/TypeScript) for custom workflows
 
 Database:
-PostgreSQL (prod) + ORM: SQLAlchemy
-SQLite (tests)
+Supabase PostgreSQL (managed)
 
 Migrations:
-Alembic
+Supabase migrations (`supabase db` via Supabase CLI)
 
 Testing:
-pytest (backend)
+- Frontend: `flutter_test`
+- Backend: SQL-level tests and validation via Supabase migrations (TBD)
 
 Env/config:
-python-dotenv (backend), flutter_dotenv (frontend)
+Supabase project settings and environment variables, `flutter_dotenv` (frontend)
 
 Charts (frontend):
 fl_chart
 
 Local runtime:
-docker compose
+- Supabase Cloud for managed environment
+- Optional: Supabase CLI (Docker-based) for local Supabase instance
 
 CI/CD i Hosting:
 - GitHub Actions (planned)
-- DigitalOcean via Docker image (planned)
+- Hosting for Flutter Web build (e.g. static hosting or Supabase Storage + CDN, planned)

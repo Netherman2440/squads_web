@@ -1,10 +1,13 @@
 # REST API Plan
 
 > **Context**
-> This plan aligns the REST API with the database plan (PostgreSQL),
-> the PRD, and the current FastAPI + SQLAlchemy stack. It also
-> annotates where the **current API must change** to become compliant
-> with the DB model and PRD.
+> This plan aligns the REST/HTTP contract with the database plan
+> (PostgreSQL on Supabase) and the PRD. The concrete implementation
+> is intended to run on **Supabase**, using:
+> - auto-generated REST (PostgREST) for simple CRUD endpoints,
+> - RPC (SQL functions) or Edge Functions for more complex workflows
+>   (e.g. drafting, tournaments, scoring),
+> while keeping the resource model and payloads described below.
 > On the frontend side, this plan is a **contract for the new
 > greenfield Flutter UI** (Squads Web) built with Clean Architecture
 > and feature-first organization; the legacy Flutter UI is used only
@@ -39,8 +42,10 @@
 
 > **Conventions**
 >
-> * Base path: `/api/v1`
-> * Auth: HTTP Bearer JWT (access + refresh)
+> * Base path: conceptually `/api/v1` in this document; in Supabase
+>   this typically maps to `/rest/v1` (tables/views) and `/rest/v1/rpc`
+>   (RPC functions), or Edge Function URLs.
+> * Auth: Supabase JWT (access token) carried as HTTP Bearer token
 > * Pagination: `page` (default 1), `page_size` (default 20, max 100). Responses include `{ "items": [...], "page": 1, "page_size": 20, "total": 123 }`.
 > * Sorting: `sort` (comma separated, use `-` for desc, e.g. `sort=-played_at,name`).
 > * Filtering: resource-specific via query parameters.
@@ -548,11 +553,13 @@ API version and git commit. `200 { "version":"v1.0.0","commit":"..." }`.
 
 ## 3. Authentication and Authorization
 
-* **Mechanism**: JWT (HS256/RS256) with **access** and **refresh** tokens.
+* **Mechanism**: Supabase JWT (HS256) access tokens (optionally
+  complemented by refresh tokens handled by Supabase Auth).
 * **Scopes / Claims**:
 
   * `sub` (user_id), `is_guest` (bool), `exp`, optional `scopes` (e.g., `squads:read`, `squads:write`, `matches:approve`).
-* **RBAC Rules** (enforced in API; no RLS in MVP for now):
+* **RBAC Rules** (primarily enforced via Supabase RLS policies;
+  some additional checks may live in RPC/Edge Functions):
 
   * Guest: read-only on public squads; cannot POST/PUT/PATCH/DELETE.
   * Member: read private squad they belong to.

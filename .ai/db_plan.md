@@ -33,6 +33,7 @@
 ### 1.1. `users`
 
 Identyfikacja użytkowników; autoryzacja obsługiwana przez Supabase Auth. Poniższa tabela przechowuje dodatkowe dane/profil w aplikacji oraz powiązanie z kontem z autentykacji. **[Zmiana vs. aktualny plan]**
+Ta tabela jest tworzona przez Supabase Auth i nie jest tworzona przez nas.
 
 | Kolumna         | Typ         | Ograniczenia                                                     |
 | --------------- | ----------- | ---------------------------------------------------------------- |

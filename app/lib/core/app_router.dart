@@ -1,14 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:app/features/auth/presentation/pages/auth_page.dart';
+import 'package:app/features/auth/presentation/pages/register_page.dart';
+
 enum AppRoute {
+  auth,
+  authRegister,
   home,
   settings,
 }
 
 final appRouter = GoRouter(
-  initialLocation: '/home',
+  initialLocation: '/auth',
   routes: [
+    GoRoute(
+      path: '/auth',
+      name: AppRoute.auth.name,
+      pageBuilder: (context, state) => const NoTransitionPage(
+        child: AuthPage(),
+      ),
+    ),
+    GoRoute(
+      path: '/auth/register',
+      name: AppRoute.authRegister.name,
+      pageBuilder: (context, state) => const NoTransitionPage(
+        child: RegisterPage(),
+      ),
+    ),
     ShellRoute(
       builder: (context, state, child) => RootShell(
         child: child,

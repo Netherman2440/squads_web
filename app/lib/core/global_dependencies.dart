@@ -1,7 +1,5 @@
 
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:riverpod/riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-final supabase = Provider<SupabaseClient>((ref) {
-  return Supabase.instance.client;
-});
+final supabaseProvider = Provider<SupabaseClient>((ref) => Supabase.instance.client);

@@ -109,7 +109,7 @@ For full details, see [.ai/tech-stack.md](.ai/tech-stack.md).
 - Install dependencies: `flutter pub get`
 - Run dev server (web): `flutter run -d chrome`
 - Build for web: `flutter build web`
-- Generate code (e.g., Riverpod/Freezed): `flutter pub run build_runner build --delete-conflicting-outputs`
+- Generate code (e.g., Riverpod/JSON): `flutter pub run build_runner build --delete-conflicting-outputs`
 - Test: `flutter test`
 - Lint: `flutter analyze`
 

@@ -51,22 +51,29 @@ class SquadsNotifier extends Notifier<SquadsState> {
 
     state = state.copyWith(isLoading: true, error: null);
 
-    final result = await ref.read(createSquadUseCaseProvider).execute(
-          name: name,
-          visibility: visibility,
-          ownerId: authEntity.userId,
-          sportType: SportType.football,
-        );
+    try {
+      final result = await ref.read(createSquadUseCaseProvider).execute(
+            name: name,
+            visibility: visibility,
+            ownerId: authEntity.userId,
+            sportType: SportType.football,
+          );
 
-    if (!result.success) {
+      if (!result.success) {
+        state = state.copyWith(
+          isLoading: false,
+          error: result.error,
+        );
+        return;
+      }
+
+      await loadSquads();
+    } catch (_) {
       state = state.copyWith(
         isLoading: false,
-        error: result.error,
+        error: 'Failed to create squad',
       );
-      return;
     }
-
-    await loadSquads();
   }
 
   Future<void> applyToSquad(String squadId) async {
@@ -80,12 +87,19 @@ class SquadsNotifier extends Notifier<SquadsState> {
 
     state = state.copyWith(isLoading: true, error: null);
 
-    await ref.read(applyToSquadUseCaseProvider).execute(
-          squadId,
-          authEntity.userId,
-        );
+    try {
+      await ref.read(applyToSquadUseCaseProvider).execute(
+            squadId,
+            authEntity.userId,
+          );
 
-    await loadSquads();
+      await loadSquads();
+    } catch (_) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Failed to apply to squad',
+      );
+    }
   }
 
   Future<void> acceptInvite(String squadId) async {
@@ -99,12 +113,19 @@ class SquadsNotifier extends Notifier<SquadsState> {
 
     state = state.copyWith(isLoading: true, error: null);
 
-    await ref.read(squadRepositoryProvider).addUserToSquad(
-          squadId,
-          authEntity.userId,
-        );
+    try {
+      await ref.read(squadRepositoryProvider).addUserToSquad(
+            squadId,
+            authEntity.userId,
+          );
 
-    await loadSquads();
+      await loadSquads();
+    } catch (_) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Failed to accept squad invite',
+      );
+    }
   }
 
   void clearError() {

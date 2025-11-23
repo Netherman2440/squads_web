@@ -5,6 +5,8 @@ class SquadsState {
   final List<Squad> squads;
   final String? error;
 
+  static const Object _undefined = Object();
+
   const SquadsState({
     this.isLoading = false,
     this.squads = const [],
@@ -14,11 +16,11 @@ class SquadsState {
   SquadsState copyWith({
     bool? isLoading,
     List<Squad>? squads,
-    String? error,
+    Object? error = _undefined,
   }) =>
       SquadsState(
         isLoading: isLoading ?? this.isLoading,
         squads: squads ?? this.squads,
-        error: error,
+        error: identical(error, _undefined) ? this.error : error as String?,
       );
 }

@@ -5,14 +5,15 @@ import '../../application/apply_to_squad_use_case.dart';
 import '../../application/create_squad_use_case.dart';
 import '../../application/get_squads_use_case.dart';
 import '../../domain/entities/squad.dart';
-import '../../domain/entities/user_squad_role.dart';
+
 import '../../infrastructure/repositories/supabase_squad_repository.dart';
 import 'squads_state.dart';
 
-class SquadsNotifier extends StateNotifier<SquadsState> {
-  SquadsNotifier(this.ref) : super(const SquadsState());
-
-  final Ref ref;
+class SquadsNotifier extends Notifier<SquadsState> {
+  @override
+  SquadsState build() {
+    return const SquadsState();
+  }
 
   Future<void> loadSquads({String? searchQuery}) async {
     state = state.copyWith(isLoading: true, error: null);
@@ -109,7 +110,9 @@ class SquadsNotifier extends StateNotifier<SquadsState> {
   void clearError() {
     state = state.copyWith(error: null);
   }
+  
 }
 
-final squadsNotifierProvider =
-    StateNotifierProvider<SquadsNotifier, SquadsState>(SquadsNotifier.new);
+final squadsNotifierProvider = NotifierProvider<SquadsNotifier, SquadsState>(
+  SquadsNotifier.new,
+);

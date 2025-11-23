@@ -22,25 +22,25 @@ class SupabaseSquadRepository implements SquadRepository {
     String? sportType,
   }) async {
     try {
-      var query = _supabase.from('squads').select(
+      final query = _supabase.from('squads').select(
             'id, owner_id, name, visibility, sport_type, created_at, user_squads(count)',
           );
 
       if (visibility != null) {
-        query = query.eq('visibility', visibility.name);
+        query.eq('visibility', visibility.name);
       }
 
       if (searchQuery != null && searchQuery.isNotEmpty) {
-        query = query.ilike('name', '%$searchQuery%');
+        query.ilike('name', '%$searchQuery%');
       }
 
       if (sportType != null && sportType.isNotEmpty) {
-        query = query.eq('sport_type', sportType);
+        query.eq('sport_type', sportType);
       }
 
-      query = query.order('created_at', ascending: false);
+      final orderedQuery = query.order('created_at', ascending: false);
 
-      final response = await query;
+      final response = await orderedQuery;
       final List<dynamic> data = response as List<dynamic>;
 
       return data

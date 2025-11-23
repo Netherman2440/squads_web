@@ -72,7 +72,7 @@ class SquadListItem extends StatelessWidget {
                 ? 'Guest'
                 : squad.role.label,
           ),
-          backgroundColor: _roleColor(context).withOpacity(0.15),
+          backgroundColor: _roleColor(context).withValues(alpha: 0.15),
           labelStyle: Theme.of(context)
               .textTheme
               .bodySmall

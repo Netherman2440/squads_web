@@ -1,5 +1,4 @@
 import '../entities/squad.dart';
-import '../entities/user_squad_role.dart';
 
 abstract class SquadRepository {
   Future<List<Squad>> getSquads({

@@ -158,7 +158,7 @@ class _SquadsPageState extends ConsumerState<SquadsPage> {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<SquadVisibility>(
-              value: visibility,
+              initialValue: visibility,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
                 labelText: 'Visibility',

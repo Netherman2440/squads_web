@@ -90,7 +90,17 @@ Opis: Jako Owner chcę utworzyć skład z nazwą, widocznością i limitem gracz
 Kryteria akceptacji:
 - Utworzenie składu z polami: nazwa, visibility (public/private).
 - Weryfikacja limitu: 1 skład na Ownera; do 100 graczy w składzie.
-- RBAC: tylko zalogowany Owner może tworzyć skład.
+- RBAC: tylko zalogowany użytkownik może tworzyć skład.
+
+US-003
+Tytuł: Wyświetlanie listy składów
+Opis: Jako użytkownik aplikacji chcę móc przeglądać listę składów, aby wybrać skład do dołączenia/ przeglądania.
+Kryteria akceptacji:
+- Widok listy składów z nazwami, widocznością, liczbą graczy i właścicielem.
+- Możliwość filtrowania po widoczności i wyszukiwania po nazwie.
+- RBAC: visibility określa dostęp do składu. public - read dla wszystkich, private - read dla członków składu.
+- Możliwość dołączenia do składu poprzez zaproszenie. (dodanie statusu pending do tabeli users_squads)
+- Możliwość przeglądania składu poprzez kliknięcie na skład. (jeżeli użytkownik ma dostęp do składu)
 
 US-004
 Tytuł: Zarządzanie członkami i zaproszeniami
@@ -204,6 +214,32 @@ Tytuł: Eksport prostych metryk operacyjnych
 Opis: Jako Owner chcę móc uzyskać podstawowe metryki (np. liczba meczów/tydzień).
 Kryteria akceptacji:
 - Możliwy prosty eksport/raport przez zapytania bez dedykowanej analityki.
+
+US-020
+Tytuł: Widok home page po zalogowaniu
+Opis: Jako użytkownik, gdy zaloguję sie do aplikację chcę zobaczyć listę swoich składów aby móc szybko przeglądać je i zarządzać nimi.
+Kryteria akceptacji:
+- zalogowany użytkownik widzi listę swoich składów wraz z nazwą, widocznościąi liczbą przypisanych graczy.
+- użytkownik widzi róznice pomiędzy składami do których dopiero aplikował, w których jest adminem/ownerem i w których jest członkiem.
+- użytkownik może szybko przejść do szczegółów składu poprzez kliknięcie na skład.
+
+US-021
+Tytuł: Dodanie składu dla użytkownika 
+Opis: Jako zalogowany użytkownik chce móc dodać skład do swojego konta.
+Kryteria akceptacji:
+- użytkownik będąc w widoku home page może szybko przejść do listy składów   poprzez kliknięcie na przycisk "Dodaj skład".
+
+US-022
+Tytuł: Powiadomienia o zaproszeniach do składów
+Opis: Jako użytkownik chce móc otrzymać powiadomienie o zaproszeniu do składu.
+Kryteria akceptacji:
+- w ekranie home page użytkownik ma widoczną ikonę dzwoneczka z liczbą powiadomień.
+- użytkownik może szybko przejść do listy powiadomień poprzez kliknięcie na ikonę dzwoneczka.
+- w liście powiadomień użytkownik widzi nazwę składu, nazwę właściciela, datę zaproszenia i status zaproszenia.
+- użytkownik może zaakceptować lub odrzucić zaproszenie do składu poprzez kliknięcie na powiadomienie.
+- zaakceptowanie zaproszenia do składu dodaje użytkownika do składu i zmienia jego status na członek.
+- taki skład pojawia się w liście składów użytkownika wraz z nazwą, widocznością i liczbą graczy.
+
 
 ## 6. Metryki sukcesu
 - KPI 1: Co najmniej 50% graczy to zalogowani użytkownicy (w MVP liczony jako stosunek liczby rekordów users do players; znane ograniczenie bez mapowania user↔player).

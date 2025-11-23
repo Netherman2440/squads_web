@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:app/features/auth/presentation/pages/auth_page.dart';
 import 'package:app/features/auth/presentation/pages/register_page.dart';
+import 'package:app/features/squads/presentation/pages/squads_page.dart';
 
 enum AppRoute {
   auth,
@@ -37,7 +38,7 @@ final appRouter = GoRouter(
           path: '/home',
           name: AppRoute.home.name,
           pageBuilder: (context, state) => const NoTransitionPage(
-            child: HomePage(),
+            child: SquadsPage(),
           ),
         ),
         GoRoute(
@@ -62,9 +63,9 @@ class RootShell extends StatelessWidget {
 
   static const _tabs = [
     _ShellTab(
-      label: 'Home',
-      icon: Icons.home_outlined,
-      activeIcon: Icons.home,
+      label: 'Squads',
+      icon: Icons.groups_outlined,
+      activeIcon: Icons.groups,
       location: '/home',
     ),
     _ShellTab(
@@ -127,17 +128,6 @@ class _ShellTab {
   final IconData icon;
   final IconData activeIcon;
   final String location;
-}
-
-class HomePage extends StatelessWidget {
-  const HomePage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Text('Home screen'),
-    );
-  }
 }
 
 class SettingsPage extends StatelessWidget {

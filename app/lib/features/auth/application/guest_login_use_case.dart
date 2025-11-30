@@ -19,9 +19,10 @@ class GuestLoginResult {
 
 class GuestLoginUseCase {
   final LoginRepository _loginRepository;
-  final TokenRepository _tokenRepository;
+  //final TokenRepository _tokenRepository;
 
-  GuestLoginUseCase(this._loginRepository, this._tokenRepository);
+  GuestLoginUseCase(this._loginRepository);
+  //GuestLoginUseCase(this._loginRepository, this._tokenRepository);
 
   Future<GuestLoginResult> execute() async {
     try {
@@ -31,7 +32,7 @@ class GuestLoginUseCase {
       }
 
       // Store tokens securely
-      await _tokenRepository.setTokensFromEntity(entity);
+      /*await _tokenRepository.setTokensFromEntity(entity);
 
       // Auto-refresh if refresh token exists (usually not for guest)
       if (entity.refreshToken.isNotEmpty) {
@@ -39,7 +40,7 @@ class GuestLoginUseCase {
         if (refreshed != null) {
           await _tokenRepository.setTokensFromEntity(refreshed);
         }
-      }
+      }*/
 
       return GuestLoginResult.success(entity);
     } catch (e) {
@@ -48,9 +49,8 @@ class GuestLoginUseCase {
   }
 }
 
-//TODO add provider
 final guestLoginUseCaseProvider = Provider<GuestLoginUseCase>((ref) {
   final loginRepository = ref.read(supabaseLoginClientProvider);
-  final tokenRepository = ref.read(tokenSecureStorageProvider);
-  return GuestLoginUseCase(loginRepository, tokenRepository);
+  //final tokenRepository = ref.read(tokenSecureStorageProvider);
+  return GuestLoginUseCase(loginRepository);
 });

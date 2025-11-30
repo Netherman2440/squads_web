@@ -73,10 +73,10 @@ class SupabaseLoginClient implements LoginRepository {
       } else {
         _logger.severe('Registration failed: $e');
       }
-      throw e; // Re-throw to let use case handle it
+      rethrow; // Re-throw to let use case handle it
     } catch (e) {
       _logger.severe('Registration failed: $e');
-      throw e; // Re-throw to let use case handle it
+      rethrow; // Re-throw to let use case handle it
     }
   }
 

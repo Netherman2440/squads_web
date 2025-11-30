@@ -29,13 +29,13 @@ class GetSquadsUseCase {
 
     final userSquads = await _repository.getUserSquads(userId);
     final roleMap = {
-      for (final squad in userSquads) squad.id: squad.role,
+      for (final squad in userSquads) squad.squadId: squad.role,
     };
 
     return squads
         .map(
           (squad) => squad.copyWith(
-            role: roleMap[squad.id] ?? squad.role,
+            role: roleMap[squad.squadId] ?? squad.role,
           ),
         )
         .toList();

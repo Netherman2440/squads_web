@@ -10,7 +10,7 @@ import 'core/app_theme.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await dotenv.load(fileName: '.env');
+  await dotenv.load(fileName: Environment.current.fileName);
 
   await Supabase.initialize(
     url: AppConfig.supabaseUrl,

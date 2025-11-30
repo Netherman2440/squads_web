@@ -1,3 +1,4 @@
+import 'package:app/features/squads/domain/entities/squad_member.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -23,7 +24,7 @@ class SupabaseSquadRepository implements SquadRepository {
   }) async {
     try {
       final query = _supabase.from('squads').select(
-            'id, owner_id, name, visibility, sport_type, created_at, user_squads(count)',
+            'squad_id, owner_id, name, visibility, sport_type, created_at, user_squads(count)',
           );
 
       if (visibility != null) {
@@ -58,7 +59,7 @@ class SupabaseSquadRepository implements SquadRepository {
   Future<List<Squad>> getUserSquads(String userId) async {
     try {
       final response = await _supabase.from('user_squads').select(
-            'squad_id, role, squads: squads (id, owner_id, name, visibility, sport_type, created_at, user_squads(count))',
+            'squad_id, role, squads: squads (squad_id, owner_id, name, visibility, sport_type, created_at, user_squads(count))',
           ).eq(
             'user_id',
             userId,
@@ -93,7 +94,7 @@ class SupabaseSquadRepository implements SquadRepository {
 
     try {
       await _supabase.from('squads').insert({
-            'id': newSquadId,
+            'squad_id': newSquadId,
             'name': name,
             'visibility': visibility.name,
             'owner_id': ownerId,
@@ -144,6 +145,25 @@ class SupabaseSquadRepository implements SquadRepository {
           );
     } catch (e, stack) {
       _logger.severe('Failed to add user $userId to squad $squadId', e, stack);
+      rethrow;
+    }
+  }
+
+  @override
+  Future<List<SquadMember>> getSquadMembers(String squadId) async {
+    try {
+      final response = await _supabase
+          .from('user_squads')
+          .select('user_id, role, users(email)')
+          .eq('squad_id', squadId);
+      final List<dynamic> data = response as List<dynamic>;
+      return data.map((row) {
+        final map = Map<String, dynamic>.from(row as Map);
+        map['squad_id'] = squadId;
+        return SquadMember.fromMap(map);
+      }).toList();
+    } catch (e, stack) {
+      _logger.severe('Failed to fetch squad members', e, stack);
       rethrow;
     }
   }

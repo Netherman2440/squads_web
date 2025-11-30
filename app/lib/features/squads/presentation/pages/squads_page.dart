@@ -71,7 +71,7 @@ class _SquadsPageState extends ConsumerState<SquadsPage> {
         if (squad.visibility == SquadVisibility.private) {
           final confirmed = await _confirmJoinRequest();
           if (confirmed ?? false) {
-            await notifier.applyToSquad(squad.id);
+            await notifier.applyToSquad(squad.squadId);
           }
         } else {
           messenger.showSnackBar(
@@ -128,7 +128,7 @@ class _SquadsPageState extends ConsumerState<SquadsPage> {
           FilledButton(
             onPressed: () async {
               Navigator.of(context).pop();
-              await notifier.acceptInvite(squad.id);
+              await notifier.acceptInvite(squad.squadId);
             },
             child: const Text('Accept'),
           ),
@@ -242,17 +242,6 @@ class _SquadsPageState extends ConsumerState<SquadsPage> {
     });
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Squads'),
-        actions: [
-          IconButton(
-            onPressed: () => ref
-                .read(squadsNotifierProvider.notifier)
-                .loadSquads(searchQuery: _searchController.text),
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
-      ),
       body: Column(
         children: [
           Padding(

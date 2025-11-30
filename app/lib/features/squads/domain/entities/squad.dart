@@ -36,7 +36,7 @@ extension SportTypeParser on SportType {
 }
 
 class Squad {
-  final String id;
+  final String squadId;
   final String ownerId;
   final String name;
   final SquadVisibility visibility;
@@ -46,7 +46,7 @@ class Squad {
   final SquadRole role;
 
   const Squad({
-    required this.id,
+    required this.squadId,
     required this.ownerId,
     required this.name,
     required this.visibility,
@@ -57,7 +57,7 @@ class Squad {
   });
 
   Squad copyWith({
-    String? id,
+    String? squadId,
     String? ownerId,
     String? name,
     SquadVisibility? visibility,
@@ -67,7 +67,7 @@ class Squad {
     SquadRole? role,
   }) {
     return Squad(
-      id: id ?? this.id,
+      squadId: squadId ?? this.squadId,
       ownerId: ownerId ?? this.ownerId,
       name: name ?? this.name,
       visibility: visibility ?? this.visibility,
@@ -83,7 +83,7 @@ class Squad {
         map['member_count'] ?? map['user_squads']?.first?['count'];
 
     return Squad(
-      id: map['id'] as String,
+      squadId: map['squad_id'] as String,
       ownerId: map['owner_id'] as String,
       name: map['name'] as String,
       visibility:
@@ -98,7 +98,7 @@ class Squad {
   }
 
   Map<String, dynamic> toMap() => {
-        'id': id,
+        'squad_id': squadId,
         'owner_id': ownerId,
         'name': name,
         'visibility': visibility.name,

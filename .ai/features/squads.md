@@ -46,6 +46,12 @@ This feature handles the management of squads , including listing, creating, and
     - `memberCount`: int (computed/joined)
     - `role`: `SquadRole` (Current user's role in this squad, default: `none`)
 
+- `SquadMember`:
+    - `squadId`: String (UUID)
+    - `role`: `SquadRole`
+    - `userId`: String (UUID)
+    - `email`: String
+
 **Repositories (Interface):**
 - `SquadRepository`:
     - `Future<List<Squad>> getSquads({SquadVisibility? visibility, String? searchQuery, String? sportType})`
@@ -53,6 +59,7 @@ This feature handles the management of squads , including listing, creating, and
     - `Future<void> createSquad(String name, SquadVisibility visibility, String ownerId, String sportType)`
     - `Future<void> applyToSquad(String squadId, String userId)`
     - `Future<void> addUserToSquad(String squadId, String userId)`
+    - `Future<List<SquadMember>> getSquadMembers(String squadId)`
 
 ### 2. Infrastructure Layer
 **SupabaseSquadRepository:**
@@ -65,9 +72,10 @@ This feature handles the management of squads , including listing, creating, and
 - **Get User Squads**:
     - Query `user_squads` joined with `squads` for a specific `userId`.
     - Returns list of `Squad` objects where the user has a role (owner, member, etc.).
-- **Get Squad Roles**:
-    - Query `user_squads` for the given `userId`.
-    - Returns a Map of `squadId` -> `SquadRole`.
+- **Get Squad Members**:
+    - Query `user_squads` for the given `squadId`.
+    - Join with `users` table to get email.
+    - Returns list of `SquadMember` objects.
 - **Create Squad**: Insert into `squads`. 
     - *Limit Check*: Check if user already owns a squad before insertion.
 - **Apply to Squad**: 

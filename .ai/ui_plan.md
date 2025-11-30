@@ -64,9 +64,14 @@ Zakres UI obejmuje: autoryzację (login/guest, rejestracja), listy i detale skł
 6) Nazwa widoku: SquadShell (kontener)
 - Ścieżka widoku: /squads/:squadId
 - Główny cel: Wspólny układ i nawigacja kontekstowa dla sekcji składu.
-- Kluczowe informacje do wyświetlenia: Nagłówek składu (nazwa, visibility), zakładki/side‑nav: Players, Matches, Members & Settings, Tournaments.
+- Kluczowe informacje do wyświetlenia: Nagłówek składu (nazwa, visibility), zakładki/side‑nav: Players, Matches, Members & Settings, Tournaments, ikona settings.
 - Kluczowe komponenty widoku: SquadHeader, TabNav/SideNav, ContextActions.
 - UX, dostępność i względy bezpieczeństwa: RBAC guard (owner/admin/member/guest), spójne breadcrumb i back; unified „No access” dla 403/404.
+6.1) Nazwa widoku: SquadHomePage
+- Ścieżka widoku: /squads/:squadId/home
+- Główny cel: Strona główna składu.
+- Kluczowe informacje do wyświetlenia: duże panele navi Players, Matches,  Tournaments, Stats.
+
 
 7) Nazwa widoku: PlayersPage
 - Ścieżka widoku: /squads/:squadId/players

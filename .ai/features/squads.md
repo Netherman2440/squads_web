@@ -152,3 +152,21 @@ This feature handles the management of squads , including listing, creating, and
 - `flutter_riverpod`
 - `supabase_flutter`
 - `go_router`
+
+### Design updates (membership-based user_squads)
+
+- The many-to-many relation between users and squads is modeled explicitly as a domain
+  entity `Membership` in `features/squads/domain/entities/membership.dart`, mirroring
+  the `public.user_squads` table (`userId`, `squadId`, `role`, `createdAt`).
+- `SquadRepository` no longer exposes `getUserSquads`; instead it has
+  `getSquadsByIds(List<String> squadIds)` for batch loading squads by ID, and all
+  membership-specific queries go through `MembershipRepository`.
+- `MembershipRepository` (with `SupabaseMembershipRepository`) provides
+  `getMembershipsForUser(userId)` and `getMembershipsForSquad(squadId)` and is the
+  single source of truth for user–squad roles.
+- `GetSquadsUseCase` now depends on both `SquadRepository` and `MembershipRepository`:
+  it fetches all squads, then for logged-in users fetches memberships and overlays
+  the current user's `SquadRole` onto each `Squad.role` as a projection field.
+- `CreateSquadUseCase` enforces the "1 squad per owner" rule via `MembershipRepository`
+  (checking for any `Membership` with `role == owner` for the given user) before
+  delegating to `SquadRepository.createSquad`.

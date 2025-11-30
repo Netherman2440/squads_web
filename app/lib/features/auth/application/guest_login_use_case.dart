@@ -1,10 +1,7 @@
 import 'package:app/features/auth/infrastructure/repositories/supabase_login_client.dart';
-import 'package:app/features/auth/infrastructure/repositories/token_secure_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import '../domain/entities/auth_entity.dart';
 import '../domain/repositories/login_repository.dart';
-import '../domain/repositories/token_repository.dart';
 
 class GuestLoginResult {
   final AuthEntity? entity;

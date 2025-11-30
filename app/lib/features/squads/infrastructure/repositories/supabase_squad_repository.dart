@@ -56,29 +56,29 @@ class SupabaseSquadRepository implements SquadRepository {
   }
 
   @override
-  Future<List<Squad>> getUserSquads(String userId) async {
+  Future<List<Squad>> getSquadsByIds(List<String> squadIds) async {
+    if (squadIds.isEmpty) {
+      return const [];
+    }
+
     try {
-      final response = await _supabase.from('user_squads').select(
-            'squad_id, role, squads: squads (squad_id, owner_id, name, visibility, sport_type, created_at, user_squads(count))',
-          ).eq(
-            'user_id',
-            userId,
+      final query = _supabase.from('squads').select(
+            'squad_id, owner_id, name, visibility, sport_type, created_at, user_squads(count)',
           );
 
+      // Supabase Dart client uses `inFilter` instead of `in_`.
+      query.inFilter('squad_id', squadIds);
+
+      final response = await query;
       final List<dynamic> data = response as List<dynamic>;
 
-      return data.map((row) {
-        final squadDataRaw = row['squads'];
-        if (squadDataRaw == null) {
-          return null;
-        }
-
-        final squadData = Map<String, dynamic>.from(squadDataRaw as Map);
-        squadData['role'] = row['role'];
-        return Squad.fromMap(squadData);
-      }).whereType<Squad>().toList();
+      return data
+          .map(
+            (row) => Squad.fromMap(Map<String, dynamic>.from(row as Map)),
+          )
+          .toList();
     } catch (e, stack) {
-      _logger.severe('Failed to fetch user squads', e, stack);
+      _logger.severe('Failed to fetch squads by ids', e, stack);
       rethrow;
     }
   }

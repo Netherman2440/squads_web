@@ -9,7 +9,7 @@ abstract class SquadRepository {
     String? sportType,
   });
 
-  Future<List<Squad>> getUserSquads(String userId);
+  Future<List<Squad>> getSquadsByIds(List<String> squadIds);
 
   Future<void> createSquad(
     String name,

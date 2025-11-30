@@ -6,12 +6,14 @@ import 'package:app/features/auth/presentation/pages/auth_page.dart';
 import 'package:app/features/auth/presentation/pages/register_page.dart';
 import 'package:app/features/auth/presentation/providers/auth_notifier.dart';
 import 'package:app/features/squads/presentation/pages/squads_page.dart';
+import 'package:app/features/users/presentation/pages/user_page.dart';
 
 enum AppRoute {
   auth,
   authRegister,
   home,
   settings,
+  profile,
 }
 
 final appRouter = GoRouter(
@@ -50,6 +52,13 @@ final appRouter = GoRouter(
             child: SettingsPage(),
           ),
         ),
+        GoRoute(
+          path: '/me',
+          name: AppRoute.profile.name,
+          pageBuilder: (context, state) => const NoTransitionPage(
+            child: UserPage(),
+          ),
+        ),
       ],
     ),
   ],
@@ -71,10 +80,10 @@ class RootShell extends StatelessWidget {
       location: '/home',
     ),
     _ShellTab(
-      label: 'Settings',
-      icon: Icons.settings_outlined,
-      activeIcon: Icons.settings,
-      location: '/settings',
+      label: 'Profile',
+      icon: Icons.person_outline,
+      activeIcon: Icons.person,
+      location: '/me',
     ),
   ];
 
@@ -142,7 +151,7 @@ class RootShell extends StatelessWidget {
                     onSelected: (action) async {
                       switch (action) {
                         case _ProfileMenuAction.profile:
-                          // Mock for now – profile screen will be implemented later.
+                          context.go('/me');
                           break;
                         case _ProfileMenuAction.logout:
                           await ref.read(authStateProvider.notifier).logout();

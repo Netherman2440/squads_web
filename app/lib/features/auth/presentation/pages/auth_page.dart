@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:app/core/app_theme.dart';
+
 import '../providers/auth_notifier.dart';
 
 class AuthPage extends ConsumerStatefulWidget {
@@ -61,7 +63,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
           );
 
       if (success && context.mounted) {
-        context.go('/home');
+        context.go('/me');
       }
     }
 
@@ -205,32 +207,44 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                 ),
                 const SizedBox(height: 16),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    TextButton(
-                      onPressed: isLoading
-                          ? null
-                          : () {
-                              if (!context.mounted) {
-                                return;
-                              }
-                              context.go('/auth/register');
-                            },
-                      child: Text(
-                        'Create account',
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: Colors.grey[600],
-                            ),
+                    SizedBox(
+                      width: 150,
+                      height: 40,
+                      child: TextButton(
+                        style: TextButton.styleFrom(
+                          backgroundColor: Theme.of(context).brightness ==
+                                  Brightness.dark
+                              ? AppColors.bgLight
+                              : AppColors.lightSurface,
+                          foregroundColor: AppColors.primary,
+                        ),
+                        onPressed: isLoading
+                            ? null
+                            : () {
+                                if (!context.mounted) {
+                                  return;
+                                }
+                                context.go('/auth/register');
+                              },
+                        child: const Text('Create account'),
                       ),
                     ),
-                    TextButton(
-                      onPressed: isLoading ? null : handleGuest,
-                      child: Text(
-                        'Continue as guest',
-                        style:
-                            Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                  color: Colors.grey[600],
-                                ),
+                    const SizedBox(width: 12),
+                    SizedBox(
+                      width: 170,
+                      height: 40,
+                      child: TextButton(
+                        style: TextButton.styleFrom(
+                          backgroundColor: Theme.of(context).brightness ==
+                                  Brightness.dark
+                              ? AppColors.bgLight
+                              : AppColors.lightSurface,
+                          foregroundColor: AppColors.primary,
+                        ),
+                        onPressed: isLoading ? null : handleGuest,
+                        child: const Text('Continue as guest'),
                       ),
                     ),
                   ],

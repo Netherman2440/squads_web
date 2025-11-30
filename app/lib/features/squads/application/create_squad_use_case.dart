@@ -1,9 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:app/features/squads/infrastructure/repositories/supabase_membership_repository.dart';
 import 'package:app/features/squads/infrastructure/repositories/supabase_squad_repository.dart';
 
 import '../domain/entities/squad.dart';
 import '../domain/entities/user_squad_role.dart';
+import '../domain/repositories/membership_repository.dart';
 import '../domain/repositories/squad_repository.dart';
 
 class CreateSquadResult {
@@ -18,9 +20,13 @@ class CreateSquadResult {
 }
 
 class CreateSquadUseCase {
-  final SquadRepository _repository;
+  final SquadRepository _squadRepository;
+  final MembershipRepository _membershipRepository;
 
-  CreateSquadUseCase(this._repository);
+  CreateSquadUseCase(
+    this._squadRepository,
+    this._membershipRepository,
+  );
 
   Future<CreateSquadResult> execute({
     required String name,
@@ -32,9 +38,11 @@ class CreateSquadUseCase {
       return const CreateSquadResult.failure('Squad name cannot be empty');
     }
 
-    final existing = await _repository.getUserSquads(ownerId);
-    final ownsSquad = existing.any(
-      (squad) => squad.role == SquadRole.owner && squad.ownerId == ownerId,
+    final memberships =
+        await _membershipRepository.getMembershipsForUser(ownerId);
+
+    final ownsSquad = memberships.any(
+      (membership) => membership.role == SquadRole.owner,
     );
 
     if (ownsSquad) {
@@ -43,7 +51,7 @@ class CreateSquadUseCase {
       );
     }
 
-    await _repository.createSquad(
+    await _squadRepository.createSquad(
       name.trim(),
       visibility,
       ownerId,
@@ -55,6 +63,7 @@ class CreateSquadUseCase {
 }
 
 final createSquadUseCaseProvider = Provider<CreateSquadUseCase>((ref) {
-  final repository = ref.read(squadRepositoryProvider);
-  return CreateSquadUseCase(repository);
+  final squadRepository = ref.read(squadRepositoryProvider);
+  final membershipRepository = ref.read(membershipRepositoryProvider);
+  return CreateSquadUseCase(squadRepository, membershipRepository);
 });

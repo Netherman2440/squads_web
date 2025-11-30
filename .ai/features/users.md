@@ -32,13 +32,13 @@ This feature handles the current user's profile management. It is designed to be
 - `User`:
     - `id`: String (UUID)
     - `email`: String
-    - `role`: SquadRole ???
+    - `role`: SquadRole
 
 **Repositories (Interface):**
 - `UserRepository`:
     - `Future<User?> getCurrentUser()`
     - `Future<void> updateUser(User user)` (Mock for MVP, as email/password changes are handled by Auth feature usually, or not in MVP scope)
-    - `Future<User> getUserSquads(String squa)`
+    - `Future<User> getUserSquads(String squadId)`
 
 ### 2. Infrastructure Layer
 **SupabaseUserRepository:**

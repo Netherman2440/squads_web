@@ -11,6 +11,8 @@ abstract class SquadRepository {
 
   Future<List<Squad>> getSquadsByIds(List<String> squadIds);
 
+  Future<Squad?> getSquad(String squadId);
+
   Future<void> createSquad(
     String name,
     SquadVisibility visibility,

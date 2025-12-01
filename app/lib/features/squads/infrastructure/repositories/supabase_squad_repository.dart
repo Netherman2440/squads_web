@@ -23,25 +23,24 @@ class SupabaseSquadRepository implements SquadRepository {
     String? sportType,
   }) async {
     try {
-      final query = _supabase.from('squads').select(
+      var query = _supabase.from('squads').select(
             'squad_id, owner_id, name, visibility, sport_type, created_at, user_squads(count)',
           );
 
       if (visibility != null) {
-        query.eq('visibility', visibility.name);
+        query = query.eq('visibility', visibility.name);
       }
 
       if (searchQuery != null && searchQuery.isNotEmpty) {
-        query.ilike('name', '%$searchQuery%');
+        query = query.ilike('name', '%$searchQuery%');
       }
 
       if (sportType != null && sportType.isNotEmpty) {
-        query.eq('sport_type', sportType);
+        query = query.eq('sport_type', sportType);
       }
 
-      final orderedQuery = query.order('created_at', ascending: false);
-
-      final response = await orderedQuery;
+      final response =
+          await query.order('created_at', ascending: false);
       final List<dynamic> data = response as List<dynamic>;
 
       return data
@@ -79,6 +78,26 @@ class SupabaseSquadRepository implements SquadRepository {
           .toList();
     } catch (e, stack) {
       _logger.severe('Failed to fetch squads by ids', e, stack);
+      rethrow;
+    }
+  }
+
+  @override
+  Future<Squad?> getSquad(String squadId) async {
+    try {
+      final query = _supabase.from('squads').select(
+            'squad_id, owner_id, name, visibility, sport_type, created_at, user_squads(count)',
+          );
+
+      final response = await query.eq('squad_id', squadId).maybeSingle();
+
+      if (response == null) {
+        return null;
+      }
+
+      return Squad.fromMap(Map<String, dynamic>.from(response as Map));
+    } catch (e, stack) {
+      _logger.severe('Failed to fetch squad $squadId', e, stack);
       rethrow;
     }
   }

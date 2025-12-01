@@ -72,7 +72,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
           await ref.read(authStateProvider.notifier).guestLogin();
 
       if (success && context.mounted) {
-        context.go('/home');
+        context.go('/squads');
       }
     }
 

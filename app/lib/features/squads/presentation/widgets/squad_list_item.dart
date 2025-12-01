@@ -66,18 +66,26 @@ class SquadListItem extends StatelessWidget {
             Text('${squad.memberCount}'),
           ],
         ),
-        trailing: Chip(
-          label: Text(
-            isGuest && squad.role == SquadRole.none
-                ? 'Guest'
-                : squad.role.label,
-          ),
-          backgroundColor: _roleColor(context).withValues(alpha: 0.15),
-          labelStyle: Theme.of(context)
-              .textTheme
-              .bodySmall
-              ?.copyWith(color: _roleColor(context)),
-        ),
+        trailing: squad.role == SquadRole.none
+            ? (squad.visibility == SquadVisibility.private
+                ? Icon(
+                    Icons.lock,
+                    color: Theme.of(context).colorScheme.outline,
+                    size: 20,
+                  )
+                : null)
+            : Chip(
+                label: Text(
+                  isGuest && squad.role == SquadRole.none
+                      ? 'Guest'
+                      : squad.role.label,
+                ),
+                backgroundColor: _roleColor(context).withValues(alpha: 0.15),
+                labelStyle: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: _roleColor(context)),
+              ),
         onTap: onTap,
       ),
     );

@@ -12,6 +12,14 @@ class Membership {
     required this.role,
     required this.createdAt,
   });
+
+  Membership.empty()
+      : userId = '',
+        squadId = '',
+        role = SquadRole.none,
+        createdAt = DateTime.fromMillisecondsSinceEpoch(0);
+
+  bool get isEmpty => userId.isEmpty || squadId.isEmpty;
 }
 
 

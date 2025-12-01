@@ -42,6 +42,8 @@ class _UserPageState extends ConsumerState<UserPage> {
       (membership) => membership.role == SquadRole.owner,
     );
 
+    final text = hasOwnedSquad ? 'Add more' : 'Add your first squad';
+
     return Scaffold(
       body: RefreshIndicator(
         onRefresh: _onRefresh,
@@ -62,12 +64,11 @@ class _UserPageState extends ConsumerState<UserPage> {
                     'My squads',
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
-                  if (!hasOwnedSquad)
-                    FilledButton.icon(
-                      onPressed: () => context.go('/home'),
-                      icon: const Icon(Icons.add),
-                      label: const Text('Create Squad'),
-                    ),
+                  FilledButton.icon(
+                    onPressed: () => context.go('/squads'),
+                    icon: const Icon(Icons.add),
+                    label: Text(text),
+                  ),
                 ],
               ),
             ),
@@ -111,7 +112,7 @@ class _UserPageState extends ConsumerState<UserPage> {
                     squad: squad,
                     isGuest: false,
                     onTap: () {
-                      // Placeholder for future detailed squad navigation.
+                      context.go('/squads/${squad.squadId}');
                     },
                   );
                 },

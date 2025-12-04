@@ -1,5 +1,3 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
-
 class AuthEntity {
   final String accessToken;
   final String refreshToken;
@@ -47,67 +45,3 @@ class AuthEntity {
 
 }
 
-class AuthFailure {
-  final String message;
-  final String code;
-
-  const AuthFailure({
-    required this.message,
-    required this.code,
-  });
-
-  static const AuthFailure invalidCredentials = AuthFailure(
-    message: 'Invalid email or password',
-    code: 'invalid_credentials',
-  );
-
-  static const AuthFailure emailNotConfirmed = AuthFailure(
-    message: 'Please check your email and click the confirmation link',
-    code: 'email_not_confirmed',
-  );
-
-  static const AuthFailure userAlreadyExists = AuthFailure(
-    message: 'An account with this email already exists',
-    code: 'user_already_registered',
-  );
-
-  static const AuthFailure networkError = AuthFailure(
-    message: 'Network connection error. Please try again',
-    code: 'network_error',
-  );
-
-  static const AuthFailure registrationFailed = AuthFailure(
-    message: 'Registration failed. Please try again',
-    code: 'registration_failed',
-  );
-
-  static const AuthFailure guestLoginFailed = AuthFailure(
-    message: 'Guest login failed. Please try again',
-    code: 'guest_login_failed',
-  );
-
-  static AuthFailure fromSupabaseError(dynamic error) {
-    if (error is AuthException) {
-      switch (error.statusCode) {
-        case '400':
-          if (error.message.contains('Invalid login credentials')) {
-            return invalidCredentials;
-          } else if (error.message.contains('Email not confirmed')) {
-            return emailNotConfirmed;
-          }
-          break;
-        case '409':
-          return userAlreadyExists;
-        case '422':
-          if (error.message.contains('User already registered')) {
-            return userAlreadyExists;
-          }
-          break;
-      }
-    }
-    return AuthFailure(
-      message: 'An unexpected error occurred',
-      code: 'unknown_error',
-    );
-  }
-}

@@ -5,45 +5,31 @@ import '../domain/entities/auth_entity.dart';
 import '../domain/repositories/login_repository.dart';
 import '../domain/repositories/token_repository.dart';
 
-class LoginResult {
-  final AuthEntity? entity;
-  final AuthFailure? failure;
-
-  const LoginResult.success(AuthEntity this.entity) : failure = null;
-  const LoginResult.failure(AuthFailure this.failure) : entity = null;
-
-  bool get isSuccess => entity != null;
-  bool get isFailure => failure != null;
-}
-
 class LoginUseCase {
   final LoginRepository _loginRepository;
   final TokenRepository _tokenRepository;
 
   LoginUseCase(this._loginRepository, this._tokenRepository);
 
-  Future<LoginResult> execute(String email, String password) async {
-    try {
-      final entity = await _loginRepository.login(email, password);
-      if (entity == null) {
-        return const LoginResult.failure(AuthFailure.invalidCredentials);
-      }
+  Future<AuthEntity> execute(String email, String password) async {
+    final entity = await _loginRepository.login(email, password);
+    
+    // Store tokens securely
+    await _tokenRepository.setTokensFromEntity(entity);
 
-      // Store tokens securely
-      await _tokenRepository.setTokensFromEntity(entity);
-
-      // Auto-refresh if refresh token exists
-      if (entity.refreshToken.isNotEmpty) {
+    // Auto-refresh logic kept from original implementation
+    // We wrap it to ensure login doesn't fail if immediate refresh fails
+    if (entity.refreshToken.isNotEmpty) {
+      try {
         final refreshed = await _loginRepository.refreshSession(entity.refreshToken);
-        if (refreshed != null) {
-          await _tokenRepository.setTokensFromEntity(refreshed);
-        }
+        await _tokenRepository.setTokensFromEntity(refreshed);
+        return refreshed;
+      } catch (_) {
+        // If refresh fails, just return the original entity
       }
-
-      return LoginResult.success(entity);
-    } catch (e) {
-      return LoginResult.failure(AuthFailure.fromSupabaseError(e));
     }
+
+    return entity;
   }
 }
 

@@ -3,51 +3,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/entities/auth_entity.dart';
 import '../domain/repositories/login_repository.dart';
 
-class GuestLoginResult {
-  final AuthEntity? entity;
-  final AuthFailure? failure;
-
-  const GuestLoginResult.success(AuthEntity this.entity) : failure = null;
-  const GuestLoginResult.failure(AuthFailure this.failure) : entity = null;
-
-  bool get isSuccess => entity != null;
-  bool get isFailure => failure != null;
-}
-
 class GuestLoginUseCase {
   final LoginRepository _loginRepository;
-  //final TokenRepository _tokenRepository;
 
   GuestLoginUseCase(this._loginRepository);
-  //GuestLoginUseCase(this._loginRepository, this._tokenRepository);
 
-  Future<GuestLoginResult> execute() async {
-    try {
-      final entity = await _loginRepository.guestLogin();
-      if (entity == null) {
-        return const GuestLoginResult.failure(AuthFailure.guestLoginFailed);
-      }
-
-      // Store tokens securely
-      /*await _tokenRepository.setTokensFromEntity(entity);
-
-      // Auto-refresh if refresh token exists (usually not for guest)
-      if (entity.refreshToken.isNotEmpty) {
-        final refreshed = await _loginRepository.refreshSession(entity.refreshToken);
-        if (refreshed != null) {
-          await _tokenRepository.setTokensFromEntity(refreshed);
-        }
-      }*/
-
-      return GuestLoginResult.success(entity);
-    } catch (e) {
-      return GuestLoginResult.failure(AuthFailure.fromSupabaseError(e));
-    }
+  Future<AuthEntity> execute() async {
+    final entity = await _loginRepository.guestLogin();
+    // Note: Guest login usually doesn't persist tokens in the same way or might be session-only.
+    // If persistence is needed, add TokenRepository here.
+    return entity;
   }
 }
 
 final guestLoginUseCaseProvider = Provider<GuestLoginUseCase>((ref) {
   final loginRepository = ref.read(supabaseLoginClientProvider);
-  //final tokenRepository = ref.read(tokenSecureStorageProvider);
   return GuestLoginUseCase(loginRepository);
 });

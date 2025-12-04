@@ -24,7 +24,7 @@ class _RootShellState extends ConsumerState<RootShell> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
-    final authEntity = authState.authEntity;
+    final authEntity = authState.value;
     final isGuest = authEntity == null || authEntity.isAnonymous;
     final email = authEntity?.email ?? '';
 

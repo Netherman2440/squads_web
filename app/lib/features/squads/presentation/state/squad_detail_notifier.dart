@@ -7,7 +7,7 @@ import 'package:app/features/squads/domain/entities/squad.dart';
 final squadDetailProvider = FutureProvider.family<Squad, String>(
   (ref, squadId) async {
     final authState = ref.read(authStateProvider);
-    final authEntity = authState.authEntity;
+    final authEntity = authState.value;
 
     final result = await ref.read(getSquadUseCaseProvider).execute(
           squadId: squadId,

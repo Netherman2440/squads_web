@@ -7,19 +7,7 @@ import '../../application/guest_login_use_case.dart';
 import '../../application/logout_use_case.dart';
 import '../../application/refresh_session_use_case.dart';
 
-class AuthState {
-  final AuthEntity? authEntity;
-  final bool isLoading;
-  final String? error;
-
-  const AuthState({
-    this.authEntity,
-    this.isLoading = false,
-    this.error,
-  });
-}
-
-class AuthNotifier extends Notifier<AuthState> {
+class AuthNotifier extends Notifier<AsyncValue<AuthEntity?>> {
   late final RefreshSessionUseCase _refreshSessionUseCase =
       ref.read(refreshSessionUseCaseProvider);
   late final LoginUseCase _loginUseCase = ref.read(loginUseCaseProvider);
@@ -29,123 +17,55 @@ class AuthNotifier extends Notifier<AuthState> {
       ref.read(guestLoginUseCaseProvider);
   late final LogoutUseCase _logoutUseCase = ref.read(logoutUseCaseProvider);
 
-  Future<void> init() async {
-    state = const AuthState(
-      authEntity: null,
-      isLoading: true,
-      error: null,
-    );
-    final result = await _refreshSessionUseCase.execute();
-    if (result != null) {
-      state = AuthState(authEntity: result, isLoading: false, error: null);
-    } else {
-      state = const AuthState(
-        authEntity: null,
-        isLoading: false,
-        error: null,
-      );
-    }
-  }
-
   @override
-  AuthState build() {
-    init();
-    return const AuthState(authEntity: null, isLoading: false, error: null);
+  AsyncValue<AuthEntity?> build() {
+    // Start with loading, then check session
+    _init();
+    return const AsyncValue.loading();
   }
 
-  Future<bool> login({
+  Future<void> _init() async {
+    // Use guard to handle errors automatically
+    state = await AsyncValue.guard(() => _refreshSessionUseCase.execute());
+  }
+
+  Future<void> login({
     required String email,
     required String password,
   }) async {
-    state = AuthState(
-      authEntity: state.authEntity,
-      isLoading: true,
-      error: null,
-    );
-    final result = await _loginUseCase.execute(email, password);
-    if (result.isFailure) {
-      state = AuthState(
-        authEntity: null,
-        isLoading: false,
-        error: result.failure!.message,
-      );
-      return false;
-    }
-    state = AuthState(authEntity: result.entity, isLoading: false, error: null);
-    return true;
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() => _loginUseCase.execute(email, password));
   }
 
-  Future<bool> register({
+  Future<void> register({
     required String email,
     required String password,
   }) async {
-    state = AuthState(
-      authEntity: state.authEntity,
-      isLoading: true,
-      error: null,
-    );
-    final result = await _registerUseCase.execute(email, password);
-    if (result.isFailure) {
-      state = AuthState(
-        authEntity: null,
-        isLoading: false,
-        error: result.failure!.message,
-      );
-      return false;
-    }
-
-    // If user needs email confirmation, don't set auth entity yet
-    if (result.needsEmailConfirmation) {
-      state = const AuthState(
-        authEntity: null,
-        isLoading: false,
-        error: 'Please check your email and click the confirmation link',
-      );
-      return false;
-    }
-
-    state = AuthState(authEntity: result.entity, isLoading: false, error: null);
-    return true;
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      final entity = await _registerUseCase.execute(email, password);
+      
+      // If email confirmation is required (no access token), 
+      // we might want to throw a specific message or handle it.
+      // For now, returning the entity (even if partial) is fine.
+      // The UI can check entity.accessToken.isEmpty if needed.
+      return entity;
+    });
   }
 
-  Future<bool> guestLogin() async {
-    state = AuthState(
-      authEntity: state.authEntity,
-      isLoading: true,
-      error: null,
-    );
-    final result = await _guestLoginUseCase.execute();
-    if (result.isFailure) {
-      state = AuthState(
-        authEntity: null,
-        isLoading: false,
-        error: result.failure!.message,
-      );
-      return false;
-    }
-    state = AuthState(authEntity: result.entity, isLoading: false, error: null);
-    return true;
+  Future<void> guestLogin() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() => _guestLoginUseCase.execute());
   }
 
   Future<void> logout() async {
-    await _logoutUseCase.execute();
-    state = const AuthState(
-      authEntity: null,
-      isLoading: false,
-      error: null,
-    );
-  }
-
-  void clearError() {
-    if (state.error != null) {
-      state = AuthState(
-        authEntity: state.authEntity,
-        isLoading: state.isLoading,
-        error: null,
-      );
-    }
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      await _logoutUseCase.execute();
+      return null;
+    });
   }
 }
 
 final authStateProvider =
-    NotifierProvider<AuthNotifier, AuthState>(AuthNotifier.new);
+    NotifierProvider<AuthNotifier, AsyncValue<AuthEntity?>>(AuthNotifier.new);

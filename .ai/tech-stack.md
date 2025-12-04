@@ -2,6 +2,7 @@ Frontend:
 Flutter (Dart)
 State:
 Riverpod (flutter_riverpod)
+- AsyncValue & AsyncNotifier for state management
 Routing:
 MaterialApp (GoRouter – planned)
 
@@ -11,6 +12,17 @@ Notes (frontend):
 - The new Squads Web frontend is being built **from scratch** in
   Flutter with Clean Architecture (DDD) and feature-first structure;
   no legacy Flutter code is reused as a base.
+
+Architecture & Patterns:
+- **Clean Architecture**: Feature-first folders (domain, infrastructure, application, presentation).
+- **Error Handling**: 
+  - Domain `Failure` hierarchy (AuthFailure, NetworkFailure, etc.).
+  - `AsyncValue.guard` in Notifiers for automatic error catching.
+  - `ref.listen` in UI for side-effects (SnackBars).
+  - Explicit repository try-catch blocks mapping external exceptions to Domain Failures via extensions.
+- **Async State**: 
+  - `AsyncValue` for all data-fetching states (loading/data/error).
+  - Global Loading indicators for blocking operations.
 
 Backend:
 Supabase (BaaS)

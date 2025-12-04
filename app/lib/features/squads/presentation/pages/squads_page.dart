@@ -33,7 +33,7 @@ class _SquadsPageState extends ConsumerState<SquadsPage> {
   }
 
   bool get _isGuest {
-    final authEntity = ref.read(authStateProvider).authEntity;
+    final authEntity = ref.read(authStateProvider).value;
     return authEntity == null || authEntity.isAnonymous;
   }
 

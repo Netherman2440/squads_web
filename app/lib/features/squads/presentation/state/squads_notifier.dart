@@ -19,7 +19,7 @@ class SquadsNotifier extends Notifier<SquadsState> {
     state = state.copyWith(isLoading: true, error: null);
     try {
       final authState = ref.read(authStateProvider);
-      final authEntity = authState.authEntity;
+      final authEntity = authState.value;
 
       final squads = await ref.read(getSquadsUseCaseProvider).execute(
             searchQuery: searchQuery,
@@ -41,7 +41,7 @@ class SquadsNotifier extends Notifier<SquadsState> {
   }
 
   Future<void> createSquad(String name, SquadVisibility visibility) async {
-    final authEntity = ref.read(authStateProvider).authEntity;
+    final authEntity = ref.read(authStateProvider).value;
     if (authEntity == null || authEntity.isAnonymous) {
       state = state.copyWith(
         error: 'Login required to create squads',
@@ -70,7 +70,7 @@ class SquadsNotifier extends Notifier<SquadsState> {
   }
 
   Future<void> applyToSquad(String squadId) async {
-    final authEntity = ref.read(authStateProvider).authEntity;
+    final authEntity = ref.read(authStateProvider).value;
     if (authEntity == null || authEntity.isAnonymous) {
       state = state.copyWith(
         error: 'Login required to apply to a squad',
@@ -89,7 +89,7 @@ class SquadsNotifier extends Notifier<SquadsState> {
   }
 
   Future<void> acceptInvite(String squadId) async {
-    final authEntity = ref.read(authStateProvider).authEntity;
+    final authEntity = ref.read(authStateProvider).value;
     if (authEntity == null || authEntity.isAnonymous) {
       state = state.copyWith(
         error: 'Login required to join squads',

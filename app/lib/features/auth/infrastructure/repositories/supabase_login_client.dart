@@ -1,4 +1,6 @@
 import 'package:app/core/global_dependencies.dart';
+import 'package:app/core/error/failure.dart';
+import 'package:app/core/error/supabase_error_extension.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:logging/logging.dart';
@@ -13,7 +15,7 @@ class SupabaseLoginClient implements LoginRepository {
   SupabaseLoginClient(this._supabase);
 
   @override
-  Future<AuthEntity?> login(String email, String password) async {
+  Future<AuthEntity> login(String email, String password) async {
     try {
       final response = await _supabase.auth.signInWithPassword(
         email: email,
@@ -21,28 +23,26 @@ class SupabaseLoginClient implements LoginRepository {
       );
 
       if (response.user == null || response.session == null) {
-        _logger.warning('Login failed: No user or session returned');
-        return null;
+        throw const ServerFailure('Login failed: No user or session returned');
       }
 
-      final entity = AuthEntity(
+      _logger.info('Login successful for user: ${response.user!.id}');
+      
+      return AuthEntity(
         accessToken: response.session!.accessToken,
         refreshToken: response.session!.refreshToken!,
         userId: response.user!.id,
         isAnonymous: false,
         email: response.user!.email!,
       );
-
-      _logger.info('Login successful for user: ${response.user!.id}');
-      return entity;
-    } catch (e) {
-      _logger.severe('Login failed: $e');
-      return null;
+    } catch (e, stackTrace) {
+      _logger.severe('Login failed', e, stackTrace);
+      throw e.toFailure();
     }
   }
 
   @override
-  Future<AuthEntity?> register(String email, String password) async {
+  Future<AuthEntity> register(String email, String password) async {
     try {
       final response = await _supabase.auth.signUp(
         email: email,
@@ -52,73 +52,60 @@ class SupabaseLoginClient implements LoginRepository {
       final user = response.user;
 
       if (user == null) {
-        _logger.warning('Registration failed: No user returned');
-        return null;
+        throw const ServerFailure('Registration failed: No user returned');
       }
-
-      // When email confirmation is enabled, session is null but user exists
-      final entity = AuthEntity(
+      
+      _logger.info('Registration successful for user: ${response.user!.id}');
+      
+      return AuthEntity(
         accessToken: session?.accessToken ?? '',
         refreshToken: session?.refreshToken ?? '',
         userId: user.id,
         isAnonymous: false,
         email: user.email ?? email,
       );
-
-      _logger.info('Registration successful for user: ${response.user!.id}');
-      return entity;
-    } on AuthException catch (e) {
-      if (e.statusCode == '409') {
-        _logger.warning('Registration failed: User already exists');
-      } else {
-        _logger.severe('Registration failed: $e');
-      }
-      rethrow; // Re-throw to let use case handle it
-    } catch (e) {
-      _logger.severe('Registration failed: $e');
-      rethrow; // Re-throw to let use case handle it
+    } catch (e, stackTrace) {
+      _logger.severe('Registration failed', e, stackTrace);
+      throw e.toFailure();
     }
   }
 
   @override
-  Future<AuthEntity?> guestLogin() async {
+  Future<AuthEntity> guestLogin() async {
     try {
       final response = await _supabase.auth.signInAnonymously();
 
       if (response.user == null || response.session == null) {
-        _logger.warning('Guest login failed: No user or session returned');
-        return null;
+        throw const GuestLoginFailure();
       }
 
-      final entity = AuthEntity(
+      _logger.info('Guest login successful for user: ${response.user!.id}');
+      
+      return AuthEntity(
         accessToken: response.session!.accessToken,
         refreshToken: response.session!.refreshToken!,
         userId: response.user!.id,
         isAnonymous: true,
         email: '',
       );
-
-      _logger.info('Guest login successful for user: ${response.user!.id}');
-      return entity;
-    } catch (e) {
-      _logger.severe('Guest login failed: $e');
-      return null;
+    } catch (e, stackTrace) {
+      _logger.severe('Guest login failed', e, stackTrace);
+      throw e.toFailure();
     }
   }
 
   @override
-  Future<AuthEntity?> refreshSession(String? refreshToken) async {
-    if (refreshToken == null) {
-      _logger.warning('Cannot refresh session: No refresh token provided');
-      return null;
-    }
-
+  Future<AuthEntity> refreshSession(String? refreshToken) async {
     try {
+      if (refreshToken == null) {
+        throw const ServerFailure('No refresh token provided');
+      }
+
       final response = await _supabase.auth.refreshSession(refreshToken);
       if (response.session == null) {
-        _logger.warning('Session refresh failed: No session returned');
-        return null;
+        throw const ServerFailure('Session refresh failed: No session returned');
       }
+      
       return AuthEntity(
         accessToken: response.session!.accessToken,
         refreshToken: response.session!.refreshToken!,
@@ -126,9 +113,9 @@ class SupabaseLoginClient implements LoginRepository {
         isAnonymous: false,
         email: response.user!.email!,
       );
-    } catch (e) {
-      _logger.severe('Session refresh failed: $e');
-      return null;
+    } catch (e, stackTrace) {
+      _logger.warning('Session refresh failed', e, stackTrace);
+      throw e.toFailure();
     }
   }
 }

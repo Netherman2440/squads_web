@@ -1,3 +1,4 @@
+import 'package:app/core/error/supabase_error_extension.dart';
 import 'package:app/features/squads/domain/entities/squad_member.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
@@ -50,7 +51,7 @@ class SupabaseSquadRepository implements SquadRepository {
           .toList();
     } catch (e, stack) {
       _logger.severe('Failed to fetch squads', e, stack);
-      rethrow;
+      throw e.toFailure();
     }
   }
 
@@ -78,7 +79,7 @@ class SupabaseSquadRepository implements SquadRepository {
           .toList();
     } catch (e, stack) {
       _logger.severe('Failed to fetch squads by ids', e, stack);
-      rethrow;
+      throw e.toFailure();
     }
   }
 
@@ -98,7 +99,7 @@ class SupabaseSquadRepository implements SquadRepository {
       return Squad.fromMap(Map<String, dynamic>.from(response as Map));
     } catch (e, stack) {
       _logger.severe('Failed to fetch squad $squadId', e, stack);
-      rethrow;
+      throw e.toFailure();
     }
   }
 
@@ -130,7 +131,7 @@ class SupabaseSquadRepository implements SquadRepository {
           );
     } catch (e, stack) {
       _logger.severe('Failed to create squad', e, stack);
-      rethrow;
+      throw e.toFailure();
     }
   }
 
@@ -147,7 +148,7 @@ class SupabaseSquadRepository implements SquadRepository {
           );
     } catch (e, stack) {
       _logger.severe('Failed to apply to squad $squadId', e, stack);
-      rethrow;
+      throw e.toFailure();
     }
   }
 
@@ -164,7 +165,7 @@ class SupabaseSquadRepository implements SquadRepository {
           );
     } catch (e, stack) {
       _logger.severe('Failed to add user $userId to squad $squadId', e, stack);
-      rethrow;
+      throw e.toFailure();
     }
   }
 
@@ -183,7 +184,7 @@ class SupabaseSquadRepository implements SquadRepository {
       }).toList();
     } catch (e, stack) {
       _logger.severe('Failed to fetch squad members', e, stack);
-      rethrow;
+      throw e.toFailure();
     }
   }
 }

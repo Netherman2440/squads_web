@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:app/core/error/failure.dart';
 import 'package:app/features/squads/domain/entities/membership.dart';
 import 'package:app/features/squads/domain/entities/squad.dart';
 import 'package:app/features/squads/domain/entities/user_squad_role.dart';
@@ -7,48 +8,6 @@ import 'package:app/features/squads/domain/repositories/membership_repository.da
 import 'package:app/features/squads/domain/repositories/squad_repository.dart';
 import 'package:app/features/squads/infrastructure/repositories/supabase_membership_repository.dart';
 import 'package:app/features/squads/infrastructure/repositories/supabase_squad_repository.dart';
-
-enum SquadFailureType {
-  notFound,
-  forbidden,
-  unexpected,
-}
-
-class SquadFailure {
-  final SquadFailureType type;
-  final Object? cause;
-
-  const SquadFailure._(this.type, [this.cause]);
-
-  const SquadFailure.notFound() : this._(SquadFailureType.notFound);
-
-  const SquadFailure.forbidden() : this._(SquadFailureType.forbidden);
-
-  const SquadFailure.unexpected([Object? cause])
-      : this._(SquadFailureType.unexpected, cause);
-}
-
-class GetSquadResult {
-  final Squad? squad;
-  final SquadFailure? failure;
-
-  const GetSquadResult._({
-    this.squad,
-    this.failure,
-  });
-
-  const GetSquadResult.success(Squad squad)
-      : this._(
-          squad: squad,
-          failure: null,
-        );
-
-  const GetSquadResult.error(SquadFailure failure)
-      : this._(
-          squad: null,
-          failure: failure,
-        );
-}
 
 class GetSquadUseCase {
   final SquadRepository _squadRepository;
@@ -59,26 +18,23 @@ class GetSquadUseCase {
     this._membershipRepository,
   );
 
-  Future<GetSquadResult> execute({
+  Future<Squad> execute({
     required String squadId,
     String? userId,
     bool isGuest = false,
   }) async {
-    try {
       final squad = await _squadRepository.getSquad(squadId);
 
       if (squad == null) {
-        return const GetSquadResult.error(SquadFailure.notFound());
+        throw const NotFoundFailure('Squad not found.');
       }
 
       if (isGuest || userId == null) {
         if (squad.visibility == SquadVisibility.private) {
-          return const GetSquadResult.error(SquadFailure.forbidden());
+          throw const UnauthorizedFailure('You do not have access to this squad.');
         }
 
-        return GetSquadResult.success(
-          squad.copyWith(role: SquadRole.none),
-        );
+        return squad.copyWith(role: SquadRole.none);
       }
 
       final memberships =
@@ -93,20 +49,13 @@ class GetSquadUseCase {
 
       if (membership.isEmpty) {
         if (squad.visibility == SquadVisibility.private) {
-          return const GetSquadResult.error(SquadFailure.forbidden());
+          throw const UnauthorizedFailure('You do not have access to this squad.');
         }
 
-        return GetSquadResult.success(
-          squad.copyWith(role: SquadRole.none),
-        );
+        return squad.copyWith(role: SquadRole.none);
       }
 
-      return GetSquadResult.success(
-        squad.copyWith(role: membership.role),
-      );
-    } catch (error) {
-      return GetSquadResult.error(SquadFailure.unexpected(error));
-    }
+      return squad.copyWith(role: membership.role);
   }
 }
 
@@ -119,5 +68,3 @@ final getSquadUseCaseProvider = Provider<GetSquadUseCase>((ref) {
     membershipRepository,
   );
 });
-
-

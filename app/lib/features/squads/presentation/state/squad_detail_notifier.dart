@@ -9,17 +9,10 @@ final squadDetailProvider = FutureProvider.family<Squad, String>(
     final authState = ref.read(authStateProvider);
     final authEntity = authState.value;
 
-    final result = await ref.read(getSquadUseCaseProvider).execute(
+    return ref.read(getSquadUseCaseProvider).execute(
           squadId: squadId,
           userId: authEntity?.userId,
           isGuest: authEntity == null || authEntity.isAnonymous,
         );
-
-    if (result.failure != null) {
-      throw result.failure!;
-    }
-
-    return result.squad!;
   },
 );
-

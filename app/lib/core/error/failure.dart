@@ -23,6 +23,14 @@ class UnknownFailure extends Failure {
   const UnknownFailure([super.message = 'An unexpected error occurred.']);
 }
 
+class ValidationFailure extends Failure {
+  const ValidationFailure(super.message);
+}
+
+class NotFoundFailure extends Failure {
+  const NotFoundFailure([super.message = 'Resource not found.']);
+}
+
 // --- Auth Specific Failures ---
 
 abstract class AuthFailure extends Failure {
@@ -46,5 +54,5 @@ class GuestLoginFailure extends AuthFailure {
 }
 
 class UnauthorizedFailure extends AuthFailure {
-  const UnauthorizedFailure() : super('You do not have permission to access this resource.');
+  const UnauthorizedFailure([super.message = 'You do not have permission to access this resource.']);
 }

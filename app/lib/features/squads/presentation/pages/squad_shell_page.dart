@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:app/features/squads/application/get_squad_use_case.dart';
+import 'package:app/core/error/failure.dart';
 import 'package:app/features/squads/domain/entities/squad.dart';
 import 'package:app/features/squads/domain/entities/user_squad_role.dart';
 import 'package:app/features/squads/presentation/pages/squad_home_page.dart';
@@ -50,23 +50,20 @@ class _SquadShellErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final error = this.error;
     String title = 'Something went wrong';
     String message = 'An unexpected error occurred while loading the squad.';
+    IconData icon = Icons.error_outline;
 
-    if (error is SquadFailure) {
-      final typedError = error as SquadFailure;
-      switch (typedError.type) {
-        case SquadFailureType.notFound:
-          title = 'Squad not found';
-          message = 'The squad you are looking for does not exist.';
-          break;
-        case SquadFailureType.forbidden:
-          title = 'No access';
-          message = 'You do not have access to this squad.';
-          break;
-        case SquadFailureType.unexpected:
-          break;
-      }
+    if (error is NotFoundFailure) {
+      title = 'Squad not found';
+      message = 'The squad you are looking for does not exist.';
+    } else if (error is UnauthorizedFailure) {
+      title = 'No access';
+      message = 'You do not have access to this squad.';
+      icon = Icons.lock_outline;
+    } else if (error is Failure) {
+      message = error.message;
     }
 
     final textTheme = Theme.of(context).textTheme;
@@ -79,11 +76,7 @@ class _SquadShellErrorView extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Icon(
-              error is SquadFailure &&
-                      (error as SquadFailure).type ==
-                          SquadFailureType.forbidden
-                  ? Icons.lock_outline
-                  : Icons.error_outline,
+              icon,
               size: 48,
               color: Theme.of(context).colorScheme.error,
             ),
@@ -242,5 +235,3 @@ class _QuickActionsSheet extends StatelessWidget {
     );
   }
 }
-
-

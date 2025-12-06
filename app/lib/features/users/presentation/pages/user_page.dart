@@ -95,7 +95,7 @@ class _UserPageState extends ConsumerState<UserPage> {
                 itemCount: mySquads.length,
                 itemBuilder: (context, index) {
                   final item = mySquads[index];
-                  final squad = squadsState.squads.firstWhere(
+                  final squad = squadsState.value?.firstWhere(
                     (s) => s.squadId == item.squadId,
                     orElse: () => Squad(
                       squadId: item.squadId,
@@ -109,7 +109,7 @@ class _UserPageState extends ConsumerState<UserPage> {
                   );
 
                   return SquadListItem(
-                    squad: squad,
+                    squad: squad!,
                     isGuest: false,
                     onTap: () {
                       context.go('/squads/${squad.squadId}');

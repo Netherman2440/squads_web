@@ -162,36 +162,59 @@ class _SquadsPageState extends ConsumerState<SquadsPage> {
     );
   }
 
-  Widget _buildBody() {
-    final squadsState = ref.watch(squadsNotifierProvider);
-
-    if (squadsState.isLoading && squadsState.squads.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (squadsState.squads.isEmpty) {
-      return const Center(
-        child: Text('No squads found. Create one to get started!'),
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: () =>
-          ref.read(squadsNotifierProvider.notifier).loadSquads(
-                searchQuery: _searchController.text,
-              ),
-      child: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        itemCount: squadsState.squads.length,
-        itemBuilder: (context, index) {
-          final squad = squadsState.squads[index];
-          return SquadListItem(
-            squad: squad,
-            isGuest: _isGuest,
-            onTap: () => _handleSquadTap(squad),
+  Widget _buildBody(AsyncValue<List<Squad>> squadsState) {
+    return squadsState.when(
+      skipLoadingOnReload: true,
+      data: (squads) {
+        if (squads.isEmpty) {
+          return const Center(
+            child: Text('No squads found. Create one to get started!'),
           );
-        },
+        }
+
+        return RefreshIndicator(
+          onRefresh: () =>
+              ref.read(squadsNotifierProvider.notifier).loadSquads(
+                    searchQuery: _searchController.text,
+                  ),
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            itemCount: squads.length,
+            itemBuilder: (context, index) {
+              final squad = squads[index];
+              return SquadListItem(
+                squad: squad,
+                isGuest: _isGuest,
+                onTap: () => _handleSquadTap(squad),
+              );
+            },
+          ),
+        );
+      },
+      error: (error, stackTrace) => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 48, color: Colors.red),
+            const SizedBox(height: 16),
+             SelectableText.rich(
+              TextSpan(
+                text: 'Error: $error',
+                style: const TextStyle(color: Colors.red),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: () => ref
+                  .read(squadsNotifierProvider.notifier)
+                  .loadSquads(searchQuery: _searchController.text),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
       ),
+      loading: () => const Center(child: CircularProgressIndicator()),
     );
   }
 
@@ -199,13 +222,14 @@ class _SquadsPageState extends ConsumerState<SquadsPage> {
   Widget build(BuildContext context) {
     final squadsState = ref.watch(squadsNotifierProvider);
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final error = squadsState.error;
-      if (error != null && error.isNotEmpty) {
+    ref.listen(squadsNotifierProvider, (previous, next) {
+      if (next.hasError && !next.isLoading) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error)),
+          SnackBar(
+            content: Text(next.error.toString()),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
         );
-        ref.read(squadsNotifierProvider.notifier).clearError();
       }
     });
 
@@ -240,7 +264,7 @@ class _SquadsPageState extends ConsumerState<SquadsPage> {
               ],
             ),
           ),
-          Expanded(child: _buildBody()),
+          Expanded(child: _buildBody(squadsState)),
         ],
       ),
       floatingActionButton: _isGuest

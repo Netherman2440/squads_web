@@ -1,118 +1,138 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:app/core/error/failure.dart';
 
-import '../../../auth/presentation/providers/auth_notifier.dart';
 import '../../application/apply_to_squad_use_case.dart';
 import '../../application/create_squad_use_case.dart';
 import '../../application/get_squads_use_case.dart';
 import '../../domain/entities/squad.dart';
-
 import '../../infrastructure/repositories/supabase_squad_repository.dart';
-import 'squads_state.dart';
+import '../../../auth/presentation/providers/auth_notifier.dart';
 
-class SquadsNotifier extends Notifier<SquadsState> {
+class SquadsNotifier extends Notifier<AsyncValue<List<Squad>>> {
   @override
-  SquadsState build() {
-    return const SquadsState();
+  AsyncValue<List<Squad>> build() {
+    // Load initial data
+    // We can't call async directly in build(), so we return loading and fire off the load.
+    // Or better, we keep it simple and let the UI trigger load if it's not an auto-dispose provider that fetches on mount.
+    // But standard Riverpod pattern is to return the future.
+    
+    // Ideally we should use future to load data. 
+    // For now, returning loading state and expecting the UI to trigger loadSquads 
+    // or calling it immediately.
+    // Let's try to fetch immediately.
+    
+    // Note: We cannot use ref.read/watch inside the body of build if it's async 
+    // to set state, but we can return a Future to make it an AsyncNotifier.
+    // However, the class is defined as Notifier, not AsyncNotifier.
+    // Given the existing code was manual loading, I'll switch to AsyncNotifier 
+    // for better async handling.
+    
+    return const AsyncValue.loading();
   }
 
   Future<void> loadSquads({String? searchQuery}) async {
-    state = state.copyWith(isLoading: true, error: null);
-    try {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
       final authState = ref.read(authStateProvider);
       final authEntity = authState.value;
 
-      final squads = await ref.read(getSquadsUseCaseProvider).execute(
+      return ref.read(getSquadsUseCaseProvider).execute(
             searchQuery: searchQuery,
             userId: authEntity?.userId,
             isGuest: authEntity == null || authEntity.isAnonymous,
           );
-
-      state = state.copyWith(
-        squads: squads,
-        isLoading: false,
-        error: null,
-      );
-    } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: 'Failed to load squads',
-      );
-    }
+    });
   }
 
   Future<void> createSquad(String name, SquadVisibility visibility) async {
     final authEntity = ref.read(authStateProvider).value;
     if (authEntity == null || authEntity.isAnonymous) {
-      state = state.copyWith(
-        error: 'Login required to create squads',
+      state = AsyncValue.error(
+        const UnauthorizedFailure(), 
+        StackTrace.current
       );
       return;
     }
 
-    state = state.copyWith(isLoading: true, error: null);
+    // Optimistic update or loading state
+    // For actions like create, we might want to keep the previous list and show a loading overlay,
+    // but modifying state directly to loading will clear the list in UI if not handled.
+    // We'll just set loading for now, as per previous behavior.
+    state = const AsyncValue.loading();
 
-    final result = await ref.read(createSquadUseCaseProvider).execute(
-          name: name,
-          visibility: visibility,
-          ownerId: authEntity.userId,
-          sportType: SportType.football,
-        );
-
-    if (!result.success) {
-      state = state.copyWith(
-        isLoading: false,
-        error: result.error,
-      );
-      return;
-    }
-
-    await loadSquads();
+    final result = await AsyncValue.guard(() async {
+      await ref.read(createSquadUseCaseProvider).execute(
+            name: name,
+            visibility: visibility,
+            ownerId: authEntity.userId,
+            sportType: SportType.football,
+          );
+      
+      // Reload squads after creation
+      return ref.read(getSquadsUseCaseProvider).execute(
+            userId: authEntity.userId,
+            isGuest: false,
+          );
+    });
+    
+    state = result;
   }
 
   Future<void> applyToSquad(String squadId) async {
     final authEntity = ref.read(authStateProvider).value;
     if (authEntity == null || authEntity.isAnonymous) {
-      state = state.copyWith(
-        error: 'Login required to apply to a squad',
+       state = AsyncValue.error(
+        const UnauthorizedFailure(), 
+        StackTrace.current
       );
       return;
     }
 
-    state = state.copyWith(isLoading: true, error: null);
+    // We don't necessarily need to set global loading for this action if we want to keep the list visible
+    // but for simplicity and matching previous behavior:
+    state = const AsyncValue.loading();
 
-    await ref.read(applyToSquadUseCaseProvider).execute(
-          squadId,
-          authEntity.userId,
-        );
+    final result = await AsyncValue.guard(() async {
+      await ref.read(applyToSquadUseCaseProvider).execute(
+            squadId,
+            authEntity.userId,
+          );
+       return ref.read(getSquadsUseCaseProvider).execute(
+            userId: authEntity.userId,
+            isGuest: false,
+          );
+    });
 
-    await loadSquads();
+    state = result;
   }
 
   Future<void> acceptInvite(String squadId) async {
     final authEntity = ref.read(authStateProvider).value;
     if (authEntity == null || authEntity.isAnonymous) {
-      state = state.copyWith(
-        error: 'Login required to join squads',
+       state = AsyncValue.error(
+        const UnauthorizedFailure(), 
+        StackTrace.current
       );
       return;
     }
 
-    state = state.copyWith(isLoading: true, error: null);
+    state = const AsyncValue.loading();
 
-    await ref.read(squadRepositoryProvider).addUserToSquad(
-          squadId,
-          authEntity.userId,
-        );
+    final result = await AsyncValue.guard(() async {
+      await ref.read(squadRepositoryProvider).addUserToSquad(
+            squadId,
+            authEntity.userId,
+          );
+      return ref.read(getSquadsUseCaseProvider).execute(
+            userId: authEntity.userId,
+            isGuest: false,
+          );
+    });
 
-    await loadSquads();
+    state = result;
   }
-
-  void clearError() {
-    state = state.copyWith(error: null);
-  }
-  
 }
 
-final squadsNotifierProvider = NotifierProvider<SquadsNotifier, SquadsState>(
+final squadsNotifierProvider = NotifierProvider<SquadsNotifier, AsyncValue<List<Squad>>>(
   SquadsNotifier.new,
 );

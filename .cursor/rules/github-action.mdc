@@ -1,0 +1,30 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+
+## Github Action Rules
+
+- Check if `pubspec.yaml` exists in project root and summarize key scripts
+- Check if `.env.example` exists in project root to identify key `env:` variables
+- Always use `env:` variables and secrets attached to jobs instead of global workflows
+- Extract common steps into composite actions in separate files
+
+2) (Ask if needed) Use <tool>"Run Terminal"</tool> to check package info on pub.dev and verify it's not deprecated:
+
+```bash
+dart pub info {package_name}
+```
+
+3) (Ask if needed) Use <tool>"Run Terminal"</tool> to fetch package README and check for deprecation notices:
+
+```bash
+curl -s https://pub.dev/packages/{package_name} | grep -i "discontinued\|deprecated\|archived" || echo "Package appears active"
+```
+
+4) (Ask if needed) In case of package issues, check the pubspec.yaml directly from the source repository:
+
+```bash
+curl -s https://raw.githubusercontent.com/{owner}/{repo}/refs/heads/{main/master}/pubspec.yaml
+```

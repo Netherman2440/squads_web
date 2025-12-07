@@ -1,0 +1,16 @@
+name: Main
+run-name: ${{github.actor}} is building the project.
+on: [push]
+jobs:
+    Analyze:
+        runs-on: ubuntu-latest
+        steps:
+            - run: flutter analyze
+    Test:
+        runs-on: ubuntu-latest
+        steps:
+            - run: flutter test
+    Web-Build:
+        runs-on: ubuntu-latest
+        steps:
+            - run: flutter build web

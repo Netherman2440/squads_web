@@ -42,8 +42,11 @@ class Squad {
   final SquadVisibility visibility;
   final SportType sportType;
   final DateTime createdAt;
-  final int memberCount;
   final SquadRole role;
+  /// True when squad has at least one member with `pending` role.
+  ///
+  /// This is derived from memberships, not stored on `squads` table.
+  final bool hasPendingMembers;
 
   const Squad({
     required this.squadId,
@@ -52,8 +55,8 @@ class Squad {
     required this.visibility,
     required this.sportType,
     required this.createdAt,
-    required this.memberCount,
     this.role = SquadRole.none,
+    this.hasPendingMembers = false,
   });
 
   Squad copyWith({
@@ -63,8 +66,8 @@ class Squad {
     SquadVisibility? visibility,
     SportType? sportType,
     DateTime? createdAt,
-    int? memberCount,
     SquadRole? role,
+    bool? hasPendingMembers,
   }) {
     return Squad(
       squadId: squadId ?? this.squadId,
@@ -73,15 +76,12 @@ class Squad {
       visibility: visibility ?? this.visibility,
       sportType: sportType ?? this.sportType,
       createdAt: createdAt ?? this.createdAt,
-      memberCount: memberCount ?? this.memberCount,
       role: role ?? this.role,
+      hasPendingMembers: hasPendingMembers ?? this.hasPendingMembers,
     );
   }
 
   factory Squad.fromMap(Map<String, dynamic> map) {
-    final dynamic memberCountValue =
-        map['member_count'] ?? map['user_squads']?.first?['count'];
-
     return Squad(
       squadId: map['squad_id'] as String,
       ownerId: map['owner_id'] as String,
@@ -90,10 +90,8 @@ class Squad {
           SquadVisibilityParser.fromString(map['visibility'] as String?),
       sportType: SportTypeParser.fromString(map['sport_type'] as String?),
       createdAt: DateTime.parse(map['created_at'] as String),
-      memberCount: memberCountValue is int
-          ? memberCountValue
-          : int.tryParse(memberCountValue?.toString() ?? '') ?? 0,
       role: SquadRoleParser.fromString(map['role'] as String?),
+      hasPendingMembers: false,
     );
   }
 
@@ -104,7 +102,7 @@ class Squad {
         'visibility': visibility.name,
         'sport_type': sportType.name,
         'created_at': createdAt.toIso8601String(),
-        'member_count': memberCount,
         'role': role.name,
+        'has_pending_members': hasPendingMembers,
       };
 }

@@ -241,6 +241,49 @@ Kryteria akceptacji:
 - taki skład pojawia się w liście składów użytkownika wraz z nazwą, widocznością i liczbą graczy.
 
 
+
+US-023
+Tytuł: Widok detali składu
+Opis: Jako użytkownik chcę po kliknięciu w skład do którego mam dostęp chce zoabzcyć stronę z detalami składu.
+Kryteria akceptacji:
+- mogę otworzyć sklad którego jestem : role admin/owner/member.
+- widok składu zawiera nazwę składu, widoczność, liczbę graczy, oraz nawigację do listy graczy, listy meczów, listy turniejów oraz statystyk.
+
+US-024
+Tytuł: Nawigacja w składzie
+Opis: Jako użytkownik, będąc w squad  chcę mieć łatwą nawigację do listy graczy, listy meczów, listy turniejów oraz statystyk.
+Kryteria akceptacji:
+- użytkownik ma widoczne duże panele odnoszące siędo subpage.
+- na apkach mobilnych jest dodatkowo nawigacja dolna do nawigacji pomiędzy subpage (Home,Players, Matches)
+w przeglądarce jest rozwijany sidebar do nawigacji pomiędzy subpage (Home,Players, Matches, Tournaments, Settings)
+
+US-025
+Tytuł: Menu szybkich akcji
+Jako owner/admin chcę mieć możliwość szybkiego dodania gracza, meczu lub turnieju.
+Kryteria akceptacji:
+- mając odpowiednią role widzę plusa floating button, po najechaniu na niego pokazuje mi się dodatkowe opcje dodania gracza, meczu lub turnieju.
+
+US-026
+Tytuł: Ustawienia składu
+Opis: Jako owner chcę mieć możliwość edycji ustawień składu.
+Kryteria akceptacji:
+- na root shellu widze ikonkę koła zębatego w przyszłości prowadzącej do ustawień składu.
+
+US-027
+Tytuł: Lista powiadomień o zaproszeniach do składu
+Opis: Jako owner w squad details page chce wyświetlić ikonę powiadomień o ilości oczekujących zaproszeń do składu.
+Kryteria akceptacji:
+- na ikonce zębatki wyświetlamy liczbę oczekujacych akceptacji zaproszeń do składu.
+- po kliknięciu na ikonę przechodzimy do /settings(todo)
+
+US-028
+Tytuł: Ustawienia składu
+Opis: Jako owner chcę mieć możliwość edycji ustawień składu.
+Kryteria akceptacji:
+- po kliknięciu ikony zębatki w squad details page przechodzimy do /squads/:squadId/settings
+- widok zawiera wszystkie elementy dokładnie opisane w dokumentacji UI
+
+
 ## 6. Metryki sukcesu
 - KPI 1: Co najmniej 50% graczy to zalogowani użytkownicy (w MVP liczony jako stosunek liczby rekordów users do players; znane ograniczenie bez mapowania user↔player).
 - KPI 2: Co piąty użytkownik tworzy skład (users vs squads).

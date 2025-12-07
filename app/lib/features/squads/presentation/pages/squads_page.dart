@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../auth/presentation/providers/auth_notifier.dart';
 import '../../domain/entities/squad.dart';
@@ -32,7 +33,7 @@ class _SquadsPageState extends ConsumerState<SquadsPage> {
   }
 
   bool get _isGuest {
-    final authEntity = ref.read(authStateProvider).authEntity;
+    final authEntity = ref.read(authStateProvider).value;
     return authEntity == null || authEntity.isAnonymous;
   }
 
@@ -40,46 +41,29 @@ class _SquadsPageState extends ConsumerState<SquadsPage> {
     final notifier = ref.read(squadsNotifierProvider.notifier);
     final messenger = ScaffoldMessenger.of(context);
 
-    if (_isGuest) {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Login required to interact with squads'),
-        ),
-      );
-      return;
-    }
-
     switch (squad.role) {
       case SquadRole.owner:
       case SquadRole.admin:
       case SquadRole.member:
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text('Entering ${squad.name}...'),
-          ),
-        );
+        if (!mounted) {
+          return;
+        }
+        context.go('/squads/${squad.squadId}');
         return;
       case SquadRole.pending:
         messenger.showSnackBar(
           const SnackBar(content: Text('Request already sent')),
         );
         return;
-      case SquadRole.invited:
-        await _showInvitationDialog(squad, notifier);
-        return;
       case SquadRole.none:
         if (squad.visibility == SquadVisibility.private) {
-          final confirmed = await _confirmJoinRequest();
-          if (confirmed ?? false) {
-            await notifier.applyToSquad(squad.squadId);
-          }
-        } else {
-          messenger.showSnackBar(
-            SnackBar(
-              content: Text('Opening public squad ${squad.name}'),
-            ),
-          );
+          await _showApplyDialog(squad, notifier);
+          return;
         }
+        if (!mounted) {
+          return;
+        }
+        context.go('/squads/${squad.squadId}');
         return;
       case SquadRole.declined:
       case SquadRole.removed:
@@ -88,49 +72,33 @@ class _SquadsPageState extends ConsumerState<SquadsPage> {
             content: Text('You cannot access this squad'),
           ),
         );
+        return;
+      default:
+      throw Exception('Invalid squad role: ${squad.role}');
     }
   }
 
-  Future<bool?> _confirmJoinRequest() {
-    return showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Apply to join'),
-        content: const Text('Send a request to join this private squad?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Send'),
-          ),
-        ],
-      ),
-    );
-  }
 
-  Future<void> _showInvitationDialog(
+  Future<void> _showApplyDialog(
     Squad squad,
     SquadsNotifier notifier,
   ) async {
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Squad invitation'),
-        content: Text('You have been invited to ${squad.name}'),
+        title: const Text('Apply to Squad'),
+        content: Text('Apply to join ${squad.name}'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Decline'),
+            child: const Text('Cancel'),
           ),
           FilledButton(
             onPressed: () async {
               Navigator.of(context).pop();
-              await notifier.acceptInvite(squad.squadId);
+              await notifier.applyToSquad(squad.squadId);
             },
-            child: const Text('Accept'),
+            child: const Text('Apply'),
           ),
         ],
       ),
@@ -194,36 +162,59 @@ class _SquadsPageState extends ConsumerState<SquadsPage> {
     );
   }
 
-  Widget _buildBody() {
-    final squadsState = ref.watch(squadsNotifierProvider);
-
-    if (squadsState.isLoading && squadsState.squads.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (squadsState.squads.isEmpty) {
-      return const Center(
-        child: Text('No squads found. Create one to get started!'),
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: () =>
-          ref.read(squadsNotifierProvider.notifier).loadSquads(
-                searchQuery: _searchController.text,
-              ),
-      child: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        itemCount: squadsState.squads.length,
-        itemBuilder: (context, index) {
-          final squad = squadsState.squads[index];
-          return SquadListItem(
-            squad: squad,
-            isGuest: _isGuest,
-            onTap: () => _handleSquadTap(squad),
+  Widget _buildBody(AsyncValue<List<Squad>> squadsState) {
+    return squadsState.when(
+      skipLoadingOnReload: true,
+      data: (squads) {
+        if (squads.isEmpty) {
+          return const Center(
+            child: Text('No squads found. Create one to get started!'),
           );
-        },
+        }
+
+        return RefreshIndicator(
+          onRefresh: () =>
+              ref.read(squadsNotifierProvider.notifier).loadSquads(
+                    searchQuery: _searchController.text,
+                  ),
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            itemCount: squads.length,
+            itemBuilder: (context, index) {
+              final squad = squads[index];
+              return SquadListItem(
+                squad: squad,
+                isGuest: _isGuest,
+                onTap: () => _handleSquadTap(squad),
+              );
+            },
+          ),
+        );
+      },
+      error: (error, stackTrace) => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 48, color: Colors.red),
+            const SizedBox(height: 16),
+             SelectableText.rich(
+              TextSpan(
+                text: 'Error: $error',
+                style: const TextStyle(color: Colors.red),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: () => ref
+                  .read(squadsNotifierProvider.notifier)
+                  .loadSquads(searchQuery: _searchController.text),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
       ),
+      loading: () => const Center(child: CircularProgressIndicator()),
     );
   }
 
@@ -231,13 +222,14 @@ class _SquadsPageState extends ConsumerState<SquadsPage> {
   Widget build(BuildContext context) {
     final squadsState = ref.watch(squadsNotifierProvider);
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final error = squadsState.error;
-      if (error != null && error.isNotEmpty) {
+    ref.listen(squadsNotifierProvider, (previous, next) {
+      if (next.hasError && !next.isLoading) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error)),
+          SnackBar(
+            content: Text(next.error.toString()),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
         );
-        ref.read(squadsNotifierProvider.notifier).clearError();
       }
     });
 
@@ -272,7 +264,7 @@ class _SquadsPageState extends ConsumerState<SquadsPage> {
               ],
             ),
           ),
-          Expanded(child: _buildBody()),
+          Expanded(child: _buildBody(squadsState)),
         ],
       ),
       floatingActionButton: _isGuest

@@ -50,6 +50,14 @@ create type public.score_pair as (
 -- 3. Tables (all in public)
 -- ---------------------------------------------------------------------------
 
+-- 3.0 users (public copy of auth.users with minimal fields)
+create table public.users (
+  user_id uuid primary key,
+  email text not null,
+  created_at timestamptz not null
+    default now()
+);
+
 -- 3.1 squads
 create table public.squads (
   squad_id uuid primary key

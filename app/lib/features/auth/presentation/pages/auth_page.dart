@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:app/core/app_theme.dart';
+import 'package:app/core/error/failure.dart';
+
 import '../providers/auth_notifier.dart';
 
 class AuthPage extends ConsumerStatefulWidget {
@@ -23,16 +26,6 @@ class _AuthPageState extends ConsumerState<AuthPage> {
     emailController = TextEditingController();
     passwordController = TextEditingController();
     formKey = GlobalKey<FormState>();
-
-    // Clear error when user starts typing
-    emailController.addListener(_clearError);
-    passwordController.addListener(_clearError);
-  }
-
-  void _clearError() {
-    if (ref.read(authStateProvider).error != null) {
-      ref.read(authStateProvider.notifier).clearError();
-    }
   }
 
   @override
@@ -44,34 +37,58 @@ class _AuthPageState extends ConsumerState<AuthPage> {
 
   @override
   Widget build(BuildContext context) {
-
     final authState = ref.watch(authStateProvider);
 
+    // Handle side effects (Navigation, Errors)
+    ref.listen<AsyncValue>(authStateProvider, (previous, next) {
+      next.whenOrNull(
+        data: (data) {
+          if (data != null && mounted) {
+             if (data.isAnonymous) {
+               context.go('/squads');
+             } else {
+               context.go('/me');
+             }
+          }
+        },
+        error: (error, stackTrace) {
+          String message = 'Login failed. Please try again.';
+          
+          if (error is InvalidCredentialsFailure) {
+            message = 'Invalid email or password.';
+          } else if (error is UserNotConfirmedFailure) {
+            message = 'Email not confirmed. Please check your inbox.';
+          } else if (error is NetworkFailure) {
+            message = 'No internet connection.';
+          } else if (error is Failure) {
+            message = error.message;
+          }
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(message),
+              backgroundColor: Colors.red,
+            ),
+          );
+        },
+      );
+    });
+
     final isLoading = authState.isLoading;
-    final error = authState.error;
 
     Future<void> handleLogin() async {
       if (!(formKey.currentState?.validate() ?? false)) {
         return;
       }
-
-      final success = await ref.read(authStateProvider.notifier).login(
+      // Trigger login. State listener will handle success/error.
+      await ref.read(authStateProvider.notifier).login(
             email: emailController.text.trim(),
             password: passwordController.text,
           );
-
-      if (success && context.mounted) {
-        context.go('/home');
-      }
     }
 
     Future<void> handleGuest() async {
-      final success =
-          await ref.read(authStateProvider.notifier).guestLogin();
-
-      if (success && context.mounted) {
-        context.go('/home');
-      }
+      await ref.read(authStateProvider.notifier).guestLogin();
     }
 
     return Scaffold(
@@ -148,43 +165,10 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                     if (text.isEmpty) {
                       return 'Please enter password';
                     }
-                   /* if (text.length < 8) {
-                      return 'Password must be at least 8 characters';
-                    }*/
                     return null;
                   },
                   onFieldSubmitted: (_) => handleLogin(),
                 ),
-                if (error != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: SelectableText.rich(
-                        TextSpan(
-                          text: 'Authentication error: ',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
-                              ?.copyWith(
-                                color: Colors.red,
-                                fontWeight: FontWeight.bold,
-                              ),
-                          children: [
-                            TextSpan(
-                              text: error.toString(),
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.copyWith(
-                                    color: Colors.red,
-                                  ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
                 const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
@@ -205,32 +189,44 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                 ),
                 const SizedBox(height: 16),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    TextButton(
-                      onPressed: isLoading
-                          ? null
-                          : () {
-                              if (!context.mounted) {
-                                return;
-                              }
-                              context.go('/auth/register');
-                            },
-                      child: Text(
-                        'Create account',
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: Colors.grey[600],
-                            ),
+                    SizedBox(
+                      width: 150,
+                      height: 40,
+                      child: TextButton(
+                        style: TextButton.styleFrom(
+                          backgroundColor: Theme.of(context).brightness ==
+                                  Brightness.dark
+                              ? AppColors.bgLight
+                              : AppColors.lightSurface,
+                          foregroundColor: AppColors.primary,
+                        ),
+                        onPressed: isLoading
+                            ? null
+                            : () {
+                                if (!context.mounted) {
+                                  return;
+                                }
+                                context.go('/auth/register');
+                              },
+                        child: const Text('Create account'),
                       ),
                     ),
-                    TextButton(
-                      onPressed: isLoading ? null : handleGuest,
-                      child: Text(
-                        'Continue as guest',
-                        style:
-                            Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                  color: Colors.grey[600],
-                                ),
+                    const SizedBox(width: 12),
+                    SizedBox(
+                      width: 170,
+                      height: 40,
+                      child: TextButton(
+                        style: TextButton.styleFrom(
+                          backgroundColor: Theme.of(context).brightness ==
+                                  Brightness.dark
+                              ? AppColors.bgLight
+                              : AppColors.lightSurface,
+                          foregroundColor: AppColors.primary,
+                        ),
+                        onPressed: isLoading ? null : handleGuest,
+                        child: const Text('Continue as guest'),
                       ),
                     ),
                   ],
@@ -243,5 +239,3 @@ class _AuthPageState extends ConsumerState<AuthPage> {
     );
   }
 }
-
-

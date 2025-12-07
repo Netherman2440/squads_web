@@ -1,38 +1,98 @@
+import 'package:app/core/error/failure.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/auth_notifier.dart';
 
-class RegisterPage extends ConsumerWidget {
+class RegisterPage extends ConsumerStatefulWidget {
   const RegisterPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final emailController = TextEditingController();
-    final passwordController = TextEditingController();
-    final confirmController = TextEditingController();
-    final formKey = GlobalKey<FormState>();
+  ConsumerState<RegisterPage> createState() => _RegisterPageState();
+}
 
+class _RegisterPageState extends ConsumerState<RegisterPage> {
+  late final TextEditingController emailController;
+  late final TextEditingController passwordController;
+  late final TextEditingController confirmController;
+  late final GlobalKey<FormState> formKey;
+
+  @override
+  void initState() {
+    super.initState();
+    emailController = TextEditingController();
+    passwordController = TextEditingController();
+    confirmController = TextEditingController();
+    formKey = GlobalKey<FormState>();
+  }
+
+  @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    confirmController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
     final isLoading = authState.isLoading;
-    final error = authState.error;
+
+    // Listen for authentication state changes
+    ref.listen(authStateProvider, (previous, next) {
+      next.whenOrNull(
+        data: (data) {
+          if (data != null) {
+            // Registration success, redirect to home/squads
+            // Or maybe show a dialog "Please confirm email" if access token is empty
+            if (data.accessToken.isEmpty) {
+               ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Account created! Please check your email to confirm.'),
+                  backgroundColor: Colors.green,
+                  duration: Duration(seconds: 5),
+                ),
+              );
+              context.go('/auth'); // Back to login
+            } else {
+              context.go('/squads');
+            }
+          }
+        },
+        error: (error, stack) {
+           String message = 'Registration failed. Please try again.';
+           if (error is UserAlreadyExistsFailure) {
+             message = 'An account with this email already exists.';
+           } else if (error is NetworkFailure) {
+             message = 'No internet connection.';
+           } else if (error is Failure) {
+             message = error.message;
+           }
+           
+           ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(message),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      );
+    });
 
     Future<void> handleRegister() async {
       if (!(formKey.currentState?.validate() ?? false)) {
         return;
       }
 
-      final success = await ref
+      await ref
           .read(authStateProvider.notifier)
           .register(
             email: emailController.text.trim(),
             password: passwordController.text,
           );
-
-      if (success && context.mounted) {
-        context.go('/home');
-      }
+      // Navigation is handled by listener
     }
 
     return Scaffold(
@@ -55,34 +115,7 @@ class RegisterPage extends ConsumerWidget {
                       ),
                 ),
                 const SizedBox(height: 24),
-                if (error != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: SelectableText.rich(
-                      TextSpan(
-                        text: 'Registration error:\n',
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodyMedium
-                            ?.copyWith(
-                              color: Colors.red,
-                              fontWeight: FontWeight.bold,
-                            ),
-                        children: [
-                          TextSpan(
-                            text: error.toString(),
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(
-                                  color: Colors.red,
-                                ),
-                          ),
-                        ],
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
+                // Removed inline error widget
                 TextFormField(
                   controller: emailController,
                   decoration: const InputDecoration(
@@ -166,9 +199,11 @@ class RegisterPage extends ConsumerWidget {
                 ),
                 const SizedBox(height: 16),
                 TextButton(
-                  onPressed: isLoading || !context.mounted
+                  onPressed: isLoading 
                       ? null
-                      : () => context.go('/auth'),
+                      : () {
+                         if (context.mounted) context.go('/auth');
+                      },
                   child: const Text('Back to login'),
                 ),
               ],
@@ -179,5 +214,3 @@ class RegisterPage extends ConsumerWidget {
     );
   }
 }
-
-

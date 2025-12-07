@@ -1,60 +1,57 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:app/features/squads/infrastructure/repositories/supabase_membership_repository.dart';
 import 'package:app/features/squads/infrastructure/repositories/supabase_squad_repository.dart';
+import 'package:app/core/error/failure.dart';
 
 import '../domain/entities/squad.dart';
 import '../domain/entities/user_squad_role.dart';
+import '../domain/repositories/membership_repository.dart';
 import '../domain/repositories/squad_repository.dart';
 
-class CreateSquadResult {
-  final bool success;
-  final String? error;
-
-  const CreateSquadResult.success()
-      : success = true,
-        error = null;
-
-  const CreateSquadResult.failure(this.error) : success = false;
-}
-
 class CreateSquadUseCase {
-  final SquadRepository _repository;
+  final SquadRepository _squadRepository;
+  final MembershipRepository _membershipRepository;
 
-  CreateSquadUseCase(this._repository);
+  CreateSquadUseCase(
+    this._squadRepository,
+    this._membershipRepository,
+  );
 
-  Future<CreateSquadResult> execute({
+  Future<void> execute({
     required String name,
     required SquadVisibility visibility,
     required String ownerId,
     required SportType sportType,
   }) async {
     if (name.trim().isEmpty) {
-      return const CreateSquadResult.failure('Squad name cannot be empty');
+      throw const ValidationFailure('Squad name cannot be empty');
     }
 
-    final existing = await _repository.getUserSquads(ownerId);
-    final ownsSquad = existing.any(
-      (squad) => squad.role == SquadRole.owner && squad.ownerId == ownerId,
+    final memberships =
+        await _membershipRepository.getMembershipsForUser(ownerId);
+
+    final ownsSquad = memberships.any(
+      (membership) => membership.role == SquadRole.owner,
     );
 
     if (ownsSquad) {
-      return const CreateSquadResult.failure(
+      throw const ValidationFailure(
         'You can own only one squad. Please manage your existing squad.',
       );
     }
 
-    await _repository.createSquad(
+    await _squadRepository.createSquad(
       name.trim(),
       visibility,
       ownerId,
       sportType.name,
     );
-
-    return const CreateSquadResult.success();
   }
 }
 
 final createSquadUseCaseProvider = Provider<CreateSquadUseCase>((ref) {
-  final repository = ref.read(squadRepositoryProvider);
-  return CreateSquadUseCase(repository);
+  final squadRepository = ref.read(squadRepositoryProvider);
+  final membershipRepository = ref.read(membershipRepositoryProvider);
+  return CreateSquadUseCase(squadRepository, membershipRepository);
 });

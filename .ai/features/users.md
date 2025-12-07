@@ -32,13 +32,14 @@ This feature handles the current user's profile management. It is designed to be
 - `User`:
     - `id`: String (UUID)
     - `email`: String
-    - `role`: SquadRole ???
+    - Note: `User` is intentionally **not** coupled to squads or roles; the
+      user–squad relation is modeled in the `squads` feature as the
+      `Membership` entity.
 
 **Repositories (Interface):**
 - `UserRepository`:
     - `Future<User?> getCurrentUser()`
     - `Future<void> updateUser(User user)` (Mock for MVP, as email/password changes are handled by Auth feature usually, or not in MVP scope)
-    - `Future<User> getUserSquads(String squa)`
 
 ### 2. Infrastructure Layer
 **SupabaseUserRepository:**
@@ -84,4 +85,24 @@ This feature handles the current user's profile management. It is designed to be
 - `supabase_flutter`
 - `flutter_riverpod`
 - `features/squads` (Presentation layer dependency only, for displaying squad lists)
+
+### Design updates (user profile + memberships)
+
+- The `User` entity in `features/users/domain/entities/user.dart` now contains only
+  identity data (`id`, `email`). It does **not** store squad roles or memberships;
+  the many-to-many relation lives in the squads feature as the `Membership` entity.
+- `UserRepository` exposes only user-centric operations:
+  `getCurrentUser()` and `updateUser(User user)` (still a mock for MVP).
+- `GetCurrentUserUseCase` has been extended to compose data from three repositories:
+  `UserRepository`, `MembershipRepository` and `SquadRepository`. It returns a
+  `UserProfileSummary` that contains the current `User` plus a list of
+  `UserMembershipItem` objects (each with `squadId`, `squadName`, `memberCount`
+  and the user's `SquadRole` in that squad).
+- `UserState` in presentation now holds `UserProfileSummary?` instead of just `User?`,
+  and `UserNotifier.loadUser()` writes the full summary into the state.
+- `UserPage` (`/me`) renders:
+  - `UserProfileCard` based on `UserProfileSummary.user`,
+  - a "My Squads" section based on `UserMembershipItem` list,
+  - a "Create Squad" CTA only when the user does **not** already own a squad
+    (no membership with `role == owner`), mirroring the domain owner-limit rule.
 

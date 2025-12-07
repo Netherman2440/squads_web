@@ -4,13 +4,11 @@ import 'package:app/features/users/domain/entities/user.dart';
 class UserMembershipItem {
   final String squadId;
   final String squadName;
-  final int memberCount;
   final SquadRole role;
 
   const UserMembershipItem({
     required this.squadId,
     required this.squadName,
-    required this.memberCount,
     required this.role,
   });
 }

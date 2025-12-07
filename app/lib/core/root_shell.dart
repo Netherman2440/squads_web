@@ -42,7 +42,7 @@ class _RootShellState extends ConsumerState<RootShell> {
               squadName = squad.name;
             },
             loading: () {},
-            error: (_, __) {},
+            error: (_, _) {},
           );
         }
 

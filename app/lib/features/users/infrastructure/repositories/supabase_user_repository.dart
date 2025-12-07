@@ -34,12 +34,59 @@ class SupabaseUserRepository implements UserRepository {
 
   @override
   Future<void> updateUser(domain.User user) async {
-    _logger.info(
-      'updateUser is a no-op for now. '
-      'Received user id=${user.id}, email=${user.email}',
-    );
+    await upsertUser(user);
   }
 
+  @override
+  Future<List<domain.User>> getUsers(List<String> userIds) async {
+    if (userIds.isEmpty) {
+      return const [];
+    }
+
+    try {
+      final response = await _supabase
+          .from('users')
+          .select('user_id, email')
+          .inFilter('user_id', userIds);
+
+      final List<dynamic> data = response as List<dynamic>;
+
+      return data.map((row) {
+        final map = Map<String, dynamic>.from(row as Map);
+        return domain.User(
+          id: map['user_id'] as String,
+          email: (map['email'] as String?) ?? '',
+        );
+      }).toList();
+    } catch (e, stack) {
+      _logger.severe(
+        'Failed to fetch users by ids $userIds',
+        e,
+        stack,
+      );
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> upsertUser(domain.User user) async {
+    try {
+      await _supabase.from('users').upsert(
+        {
+          'user_id': user.id,
+          'email': user.email,
+        },
+        onConflict: 'user_id',
+      );
+    } catch (e, stack) {
+      _logger.severe(
+        'Failed to upsert public.users for id=${user.id}',
+        e,
+        stack,
+      );
+      rethrow;
+    }
+  }
 }
 
 final userRepositoryProvider = Provider<UserRepository>((ref) {

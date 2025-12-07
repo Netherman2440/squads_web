@@ -1,3 +1,4 @@
+import 'package:app/core/error/supabase_error_extension.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -35,7 +36,7 @@ class SupabaseMembershipRepository implements MembershipRepository {
       }).toList();
     } catch (e, stack) {
       _logger.severe('Failed to fetch memberships for user $userId', e, stack);
-      rethrow;
+      throw e.toFailure();
     }
   }
 
@@ -60,7 +61,41 @@ class SupabaseMembershipRepository implements MembershipRepository {
       }).toList();
     } catch (e, stack) {
       _logger.severe('Failed to fetch memberships for squad $squadId', e, stack);
-      rethrow;
+      throw e.toFailure();
+    }
+  }
+
+  @override
+  Future<void> updateMemberRole(
+    String squadId,
+    String userId,
+    SquadRole newRole,
+  ) async {
+    try {
+      await _supabase
+          .from('user_squads')
+          .update({'role': newRole.name})
+          .eq('squad_id', squadId)
+          .eq('user_id', userId);
+    } catch (e, stack) {
+      _logger.severe(
+          'Failed to update role for user $userId in squad $squadId', e, stack);
+      throw e.toFailure();
+    }
+  }
+
+  @override
+  Future<void> removeMember(String squadId, String userId) async {
+    try {
+      await _supabase
+          .from('user_squads')
+          .delete()
+          .eq('squad_id', squadId)
+          .eq('user_id', userId);
+    } catch (e, stack) {
+      _logger.severe(
+          'Failed to remove user $userId from squad $squadId', e, stack);
+      throw e.toFailure();
     }
   }
 }
@@ -69,5 +104,3 @@ final membershipRepositoryProvider = Provider<MembershipRepository>((ref) {
   final supabase = ref.read(supabaseProvider);
   return SupabaseMembershipRepository(supabase);
 });
-
-

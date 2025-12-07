@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:app/core/root_shell.dart';
 import 'package:app/features/auth/presentation/pages/auth_page.dart';
 import 'package:app/features/auth/presentation/pages/register_page.dart';
+import 'package:app/features/squads/presentation/pages/squad_settings_page.dart';
 import 'package:app/features/squads/presentation/pages/squads_page.dart';
 import 'package:app/features/users/presentation/pages/user_page.dart';
 import 'package:app/features/squads/presentation/pages/squad_shell_page.dart';
@@ -47,7 +47,7 @@ final appRouter = GoRouter(
             child: SquadsPage(),
           ),
         ),
-        GoRoute(  
+        GoRoute(
           path: '/squads/:squadId',
           name: AppRoute.squadDetails.name,
           pageBuilder: (context, state) {
@@ -68,11 +68,14 @@ final appRouter = GoRouter(
           },
         ),
         GoRoute(
-          path: '/settings',
+          path: '/squads/:squadId/settings',
           name: AppRoute.settings.name,
-          pageBuilder: (context, state) => const NoTransitionPage(
-            child: SettingsPage(),
-          ),
+          pageBuilder: (context, state) {
+            final squadId = state.pathParameters['squadId'] ?? '';
+            return NoTransitionPage(
+              child: SquadSettingsPage(squadId: squadId),
+            );
+          },
         ),
         GoRoute(
           path: '/me',
@@ -85,14 +88,3 @@ final appRouter = GoRouter(
     ),
   ],
 );
-
-class SettingsPage extends StatelessWidget {
-  const SettingsPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Text('Settings screen'),
-    );
-  }
-}

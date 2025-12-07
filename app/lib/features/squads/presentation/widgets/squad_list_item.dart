@@ -56,14 +56,6 @@ class SquadListItem extends StatelessWidget {
             ),
             const SizedBox(width: 4),
             Text(squad.sportType.label),
-            const SizedBox(width: 12),
-            Icon(
-              Icons.people_alt_outlined,
-              size: 16,
-              color: Theme.of(context).colorScheme.secondary,
-            ),
-            const SizedBox(width: 4),
-            Text('${squad.memberCount}'),
           ],
         ),
         trailing: squad.role == SquadRole.none

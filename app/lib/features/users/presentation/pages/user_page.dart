@@ -95,21 +95,22 @@ class _UserPageState extends ConsumerState<UserPage> {
                 itemCount: mySquads.length,
                 itemBuilder: (context, index) {
                   final item = mySquads[index];
-                  final squad = squadsState.value?.firstWhere(
-                    (s) => s.squadId == item.squadId,
-                    orElse: () => Squad(
-                      squadId: item.squadId,
-                      ownerId: '',
-                      name: item.squadName,
-                      visibility: SquadVisibility.public,
-                      sportType: SportType.football,
-                      createdAt: DateTime.now(),
-                      memberCount: item.memberCount,
-                    ),
+                  final fallback = Squad(
+                    squadId: item.squadId,
+                    ownerId: '',
+                    name: item.squadName,
+                    visibility: SquadVisibility.public,
+                    sportType: SportType.football,
+                    createdAt: DateTime.now(),
                   );
+                  final squad = squadsState.value?.firstWhere(
+                        (s) => s.squadId == item.squadId,
+                        orElse: () => fallback,
+                      ) ??
+                      fallback;
 
                   return SquadListItem(
-                    squad: squad!,
+                    squad: squad,
                     isGuest: false,
                     onTap: () {
                       context.go('/squads/${squad.squadId}');

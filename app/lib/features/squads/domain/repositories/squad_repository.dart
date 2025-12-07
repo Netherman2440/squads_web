@@ -20,6 +20,12 @@ abstract class SquadRepository {
     String sportType,
   );
 
+  Future<void> updateSquad(
+    String squadId, {
+    String? name,
+    SquadVisibility? visibility,
+  });
+
   Future<void> applyToSquad(String squadId, String userId);
 
   Future<void> addUserToSquad(String squadId, String userId);

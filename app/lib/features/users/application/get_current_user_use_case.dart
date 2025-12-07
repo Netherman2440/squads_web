@@ -48,7 +48,6 @@ class GetCurrentUserUseCase {
           return UserMembershipItem(
             squadId: squad.squadId,
             squadName: squad.name,
-            memberCount: squad.memberCount,
             role: membership.role,
           );
         })

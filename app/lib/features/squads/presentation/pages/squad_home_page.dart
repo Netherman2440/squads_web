@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:app/features/squads/domain/entities/squad.dart';
 import 'package:app/features/squads/domain/entities/user_squad_role.dart';
@@ -36,6 +37,7 @@ class _SquadHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isPrivate = squad.visibility == SquadVisibility.private;
+    final hasPending = squad.hasPendingMembers;
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -87,46 +89,36 @@ class _SquadHeader extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    Text(
-                      '${squad.memberCount} members',
-                      style: theme.textTheme.bodySmall,
-                    ),
                   ],
                 ),
               ],
             ),
           ),
-          if (squad.role == SquadRole.owner ||
-              squad.role == SquadRole.admin ||
-              squad.role == SquadRole.member)
+          if (squad.role == SquadRole.owner)
             IconButton(
               onPressed: () {
-                // TODO: navigate to squad settings in future iteration
+                context.go('/squads/${squad.squadId}/settings');
               },
-              icon: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  const Icon(Icons.settings),
-                  Positioned(
-                    right: -2,
-                    top: -2,
-                    child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.error,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Text(
-                        '0',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: theme.colorScheme.onError,
-                          fontSize: 9,
+              icon: hasPending
+                  ? Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        const Icon(Icons.settings),
+                        const Positioned(
+                          right: -2,
+                          top: -6,
+                          child: Text(
+                            '!',
+                            style: TextStyle(
+                              color: Colors.orange,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                      ],
+                    )
+                  : const Icon(Icons.settings),
             ),
         ],
       ),

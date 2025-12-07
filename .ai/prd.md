@@ -276,6 +276,13 @@ Kryteria akceptacji:
 - na ikonce zębatki wyświetlamy liczbę oczekujacych akceptacji zaproszeń do składu.
 - po kliknięciu na ikonę przechodzimy do /settings(todo)
 
+US-028
+Tytuł: Ustawienia składu
+Opis: Jako owner chcę mieć możliwość edycji ustawień składu.
+Kryteria akceptacji:
+- po kliknięciu ikony zębatki w squad details page przechodzimy do /squads/:squadId/settings
+- widok zawiera wszystkie elementy dokładnie opisane w dokumentacji UI
+
 
 ## 6. Metryki sukcesu
 - KPI 1: Co najmniej 50% graczy to zalogowani użytkownicy (w MVP liczony jako stosunek liczby rekordów users do players; znane ograniczenie bez mapowania user↔player).

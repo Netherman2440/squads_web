@@ -119,8 +119,8 @@ Zakres UI obejmuje: autoryzację (login/guest, rejestracja), listy i detale skł
 - Ścieżka widoku: /squads/:squadId/settings
 - Główny cel: Zarządzanie członkami, rolami i widocznością składu.
 - Kluczowe informacje do wyświetlenia: Lista członków z rolami, zaproszenia/stan, formularz zmiany visibility/sport_type.
-- Kluczowe komponenty widoku: MembersList, InviteUserDialog, RoleChanger, PrivacyToggle, DangerZone (delete squad).
-- UX, dostępność i względy bezpieczeństwa: RBAC (owner/admin zarządzają rolami), akcje potwierdzane (modale), czytelne statusy „invited/pending/member”.
+- Kluczowe komponenty widoku: MembersList, InvitationGenerator,  DangerZone (delete squad, change visibility, change sport_type).
+- UX, dostępność i względy bezpieczeństwa: RBAC (ownerzarządzają rolami), akcje potwierdzane (modale), czytelne statusy „invited/pending/member”.
 
 14) Nazwa widoku: TournamentsListPage (MVP: placeholder)
 - Ścieżka widoku: /squads/:squadId/tournaments

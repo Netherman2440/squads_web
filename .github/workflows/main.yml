@@ -2,21 +2,29 @@ name: Main
 run-name: ${{ github.actor }} is building the project.
 
 on:
-  push:
-    branches:
-      - main
-      - develop
   pull_request:
 
 jobs:
   analyze:
     runs-on: ubuntu-latest
+    environment: production
     defaults:
       run:
         working-directory: app
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Create env files
+        run: |
+          cat <<EOF > .env.dev
+          SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+          EOF
+          cat <<EOF > .env.prod
+          SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+          EOF
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -31,12 +39,24 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    environment: production
     defaults:
       run:
         working-directory: app
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Create env files
+        run: |
+          cat <<EOF > .env.dev
+          SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+          EOF
+          cat <<EOF > .env.prod
+          SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+          EOF
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -54,12 +74,24 @@ jobs:
     needs:
       - analyze
       - test
+    environment: production
     defaults:
       run:
         working-directory: app
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Create env files
+        run: |
+          cat <<EOF > .env.dev
+          SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+          EOF
+          cat <<EOF > .env.prod
+          SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+          EOF
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2

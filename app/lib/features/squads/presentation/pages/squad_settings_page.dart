@@ -24,11 +24,14 @@ class SquadSettingsPage extends ConsumerStatefulWidget {
 class _SquadSettingsPageState extends ConsumerState<SquadSettingsPage> {
   late final TextEditingController _nameController;
   SquadVisibility? _visibilityDraft;
+  String _initialName = '';
+  SquadVisibility? _initialVisibility;
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController();
+    _nameController.addListener(_onNameChanged);
 
     Future.microtask(() async {
       await ref.read(squadSettingsProvider.notifier).load(widget.squadId);
@@ -37,6 +40,7 @@ class _SquadSettingsPageState extends ConsumerState<SquadSettingsPage> {
 
   @override
   void dispose() {
+    _nameController.removeListener(_onNameChanged);
     _nameController.dispose();
     super.dispose();
   }
@@ -112,27 +116,25 @@ class _SquadSettingsPageState extends ConsumerState<SquadSettingsPage> {
                     _DangerZoneSection(
                       nameController: _nameController,
                       visibilityDraft: _visibilityDraft!,
+                      isDirty: _isDangerZoneDirty,
                       onVisibilityChanged: (visibility) {
                         setState(() {
                           _visibilityDraft = visibility;
                         });
                       },
-                      onSaveName: () async {
+                      onSave: () async {
+                        final visibility = _visibilityDraft;
+
                         await ref
                             .read(squadSettingsProvider.notifier)
                             .updateName(_nameController.text);
-                        ref.invalidate(
-                          squadDetailProvider(widget.squadId),
-                        );
-                      },
-                      onSaveVisibility: () async {
-                        final visibility = _visibilityDraft;
-                        if (visibility == null) {
-                          return;
+
+                        if (visibility != null) {
+                          await ref
+                              .read(squadSettingsProvider.notifier)
+                              .updateVisibility(visibility);
                         }
-                        await ref
-                            .read(squadSettingsProvider.notifier)
-                            .updateVisibility(visibility);
+
                         ref.invalidate(
                           squadDetailProvider(widget.squadId),
                         );
@@ -153,6 +155,23 @@ class _SquadSettingsPageState extends ConsumerState<SquadSettingsPage> {
       _nameController.text = squad.name;
     }
     _visibilityDraft ??= squad.visibility;
+
+    if (_initialName.isEmpty) {
+      _initialName = squad.name;
+    }
+    _initialVisibility ??= squad.visibility;
+  }
+
+  void _onNameChanged() {
+    setState(() {});
+  }
+
+  bool get _isDangerZoneDirty {
+    final currentName = _nameController.text.trim();
+    final initialName = _initialName.trim();
+
+    return currentName != initialName ||
+        _visibilityDraft != _initialVisibility;
   }
 }
 
@@ -289,16 +308,16 @@ class _DangerZoneSection extends StatelessWidget {
   const _DangerZoneSection({
     required this.nameController,
     required this.visibilityDraft,
+    required this.isDirty,
     required this.onVisibilityChanged,
-    required this.onSaveName,
-    required this.onSaveVisibility,
+    required this.onSave,
   });
 
   final TextEditingController nameController;
   final SquadVisibility visibilityDraft;
+  final bool isDirty;
   final ValueChanged<SquadVisibility> onVisibilityChanged;
-  final Future<void> Function() onSaveName;
-  final Future<void> Function() onSaveVisibility;
+  final Future<void> Function() onSave;
 
   @override
   Widget build(BuildContext context) {
@@ -344,49 +363,62 @@ class _DangerZoneSection extends StatelessWidget {
                   textCapitalization: TextCapitalization.sentences,
                 ),
               ),
-              const SizedBox(width: 12),
-              FilledButton(
-                onPressed: onSaveName,
-                child: const Text('Save name'),
-              ),
             ],
           ),
           const SizedBox(height: 16),
           Row(
             children: [
-              Expanded(
-                child: Row(
-                  children: [
-                    Text(
-                      'Visibility',
-                      style: theme.textTheme.bodyMedium,
-                    ),
-                    const SizedBox(width: 12),
-                    Switch.adaptive(
-                      value: visibilityDraft == SquadVisibility.public,
-                      onChanged: (isPublic) {
-                        onVisibilityChanged(
-                          isPublic
-                              ? SquadVisibility.public
-                              : SquadVisibility.private,
-                        );
-                      },
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      visibilityDraft.label,
-                      style: theme.textTheme.bodyMedium,
-                    ),
-                  ],
+              Text(
+                'Visibility',
+                style: theme.textTheme.bodyMedium,
+              ),
+              const Spacer(),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                transitionBuilder: (child, animation) => ScaleTransition(
+                  scale: animation,
+                  child: child,
+                ),
+                child: Icon(
+                  visibilityDraft == SquadVisibility.public
+                      ? Icons.lock_open
+                      : Icons.lock,
+                  key: ValueKey(visibilityDraft == SquadVisibility.public),
+                  size: 18,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
               ),
-              const SizedBox(width: 12),
-              FilledButton.tonal(
-                onPressed: onSaveVisibility,
-                child: const Text('Save visibility'),
+              const SizedBox(width: 8),
+              Text(
+                visibilityDraft.label,
+                style: theme.textTheme.bodyMedium,
+              ),
+              const SizedBox(width: 16),
+              Switch.adaptive(
+                value: visibilityDraft == SquadVisibility.private,
+                onChanged: (isPrivate) {
+                  onVisibilityChanged(
+                    isPrivate
+                        ? SquadVisibility.private
+                        : SquadVisibility.public,
+                  );
+                },
               ),
             ],
           ),
+          const SizedBox(height: 16),
+          if (isDirty)
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton(
+                onPressed: onSave,
+                style: FilledButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
+                ),
+                child: const Text('Save changes'),
+              ),
+            ),
           const SizedBox(height: 16),
           OutlinedButton(
             style: OutlinedButton.styleFrom(

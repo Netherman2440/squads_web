@@ -59,7 +59,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
           } else if (error is UserNotConfirmedFailure) {
             message = 'Email not confirmed. Please check your inbox.';
           } else if (error is NetworkFailure) {
-            message = 'No internet connection.';
+            message = 'Failed to connect to the server. Please try again later.';
           } else if (error is Failure) {
             message = error.message;
           }

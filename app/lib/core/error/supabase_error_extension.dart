@@ -12,7 +12,17 @@ extension SupabaseErrorExtension on Object {
     if (error is AuthException) {
       // Map Supabase Auth Status Codes
       // Reference: https://supabase.com/docs/guides/auth/errors
-      
+
+      final message = error.message.toLowerCase();
+
+      if (error is AuthRetryableFetchException ||
+          message.contains('failed to fetch') ||
+          message.contains('clientexception')) {
+        return const NetworkFailure(
+          'Unable to reach the authentication server. Please check your connection.',
+        );
+      }
+
       if (error.message.contains('Invalid login credentials')) {
         return const InvalidCredentialsFailure();
       }

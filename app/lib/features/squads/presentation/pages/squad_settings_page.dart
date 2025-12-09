@@ -308,7 +308,7 @@ class _DangerZoneSection extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: theme.colorScheme.error.withValues(alpha:0.04),
+        color: theme.colorScheme.error.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: theme.colorScheme.errorContainer,
@@ -332,44 +332,52 @@ class _DangerZoneSection extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          TextField(
-            controller: nameController,
-            decoration: const InputDecoration(
-              labelText: 'Squad name',
-            ),
-            textInputAction: TextInputAction.done,
-            textCapitalization: TextCapitalization.sentences,
-          ),
-          const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerRight,
-            child: FilledButton(
-              onPressed: onSaveName,
-              child: const Text('Save name'),
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Squad name',
+                  ),
+                  textInputAction: TextInputAction.done,
+                  textCapitalization: TextCapitalization.sentences,
+                ),
+              ),
+              const SizedBox(width: 12),
+              FilledButton(
+                onPressed: onSaveName,
+                child: const Text('Save name'),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           Row(
             children: [
               Expanded(
-                child: DropdownButtonFormField<SquadVisibility>(
-                  initialValue: visibilityDraft,
-                  decoration: const InputDecoration(
-                    labelText: 'Visibility',
-                  ),
-                  items: SquadVisibility.values
-                      .map(
-                        (v) => DropdownMenuItem<SquadVisibility>(
-                          value: v,
-                          child: Text(v.label),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      onVisibilityChanged(value);
-                    }
-                  },
+                child: Row(
+                  children: [
+                    Text(
+                      'Visibility',
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                    const SizedBox(width: 12),
+                    Switch.adaptive(
+                      value: visibilityDraft == SquadVisibility.public,
+                      onChanged: (isPublic) {
+                        onVisibilityChanged(
+                          isPublic
+                              ? SquadVisibility.public
+                              : SquadVisibility.private,
+                        );
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      visibilityDraft.label,
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(width: 12),

@@ -148,7 +148,7 @@ For full CI/CD, see planned GitHub Actions workflows.
 - Online-only sessions; football-only MVP.
 - Results affect only participating players.
 
-See [.ai/prd.md](.ai/prd.md) for 19 user stories and metrics.
+See [.ai/prd.md](.ai/prd.md) for all user stories and metrics.
 
 ## Project Status
 - **Development Stage**: MVP planning and initial implementation.
@@ -156,7 +156,7 @@ See [.ai/prd.md](.ai/prd.md) for 19 user stories and metrics.
 - **In Progress**: Core features (auth, squads, drafting) per Clean Architecture with Supabase backend.
 - **Planned**: Full web build, Supabase integration (RLS, functions), CI/CD with GitHub Actions, and hosting for the Flutter Web build.
 - **Version**: 1.0.0+1 (Flutter app).
-- Open issues: Detailed in GitHub repo; contributions welcome (see CONTRIBUTING.md if added).
+- Open issues: Detailed in GitHub repo; contributions welcome.
 
 ## License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. (TBD: Confirm exact license; defaults to MIT for open-source Flutter projects.)
+This project is free to use and modify.

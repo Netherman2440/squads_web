@@ -40,6 +40,18 @@ jobs:
       - name: Flutter test
         run: flutter test
 
+      - name: CodeRabbit review
+        # Assumes CodeRabbit CLI is available on the runner PATH
+        # and CODERABBIT_API_KEY is configured as a repository secret.
+        env:
+          CODERABBIT_API_KEY: ${{ secrets.CODERABBIT_API_KEY }}
+        run: |
+          coderabbit analyze > coderabbit_report.json
+          if grep -q '"severity": "critical"' coderabbit_report.json; then
+            echo "Critical issues found by CodeRabbit. Stopping pipeline."
+            exit 1
+          fi
+
   web-build:
     runs-on: ubuntu-latest
     needs:

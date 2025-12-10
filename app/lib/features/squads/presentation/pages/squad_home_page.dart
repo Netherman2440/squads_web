@@ -18,8 +18,8 @@ class SquadHomePage extends StatelessWidget {
       children: [
         _SquadHeader(squad: squad),
         const SizedBox(height: 16),
-        const Expanded(
-          child: _SquadHomeGrid(),
+        Expanded(
+          child: _SquadHomeGrid(squad: squad),
         ),
       ],
     );
@@ -127,7 +127,11 @@ class _SquadHeader extends StatelessWidget {
 }
 
 class _SquadHomeGrid extends StatelessWidget {
-  const _SquadHomeGrid();
+  const _SquadHomeGrid({
+    required this.squad,
+  });
+
+  final Squad squad;
 
   @override
   Widget build(BuildContext context) {
@@ -174,6 +178,11 @@ class _SquadHomeGrid extends StatelessWidget {
             final tile = tiles[index];
             return InkWell(
               onTap: () {
+                if (tile.title == 'Players') {
+                  context.go('/squads/${squad.squadId}/players');
+                  return;
+                }
+
                 showDialog<void>(
                   context: context,
                   builder: (context) => AlertDialog(

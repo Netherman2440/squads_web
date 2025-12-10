@@ -178,10 +178,7 @@ class _QuickActionsSheet extends StatelessWidget {
               subtitle: const Text('Invite or create a new squad player.'),
               onTap: () {
                 Navigator.of(context).pop();
-                _showPlaceholderDialog(
-                  context,
-                  title: 'Add player',
-                );
+                context.go('/squads/${squad.squadId}/players');
               },
             ),
             ListTile(

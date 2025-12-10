@@ -53,6 +53,11 @@ extension SupabaseErrorExtension on Object {
         return const UnauthorizedFailure();
       }
 
+      if (error.code == '23505' ||
+          error.message.toLowerCase().contains('duplicate key value')) {
+        return const DuplicateNameFailure();
+      }
+
       return ServerFailure(error.message, error.code);
     }
 

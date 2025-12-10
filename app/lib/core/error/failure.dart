@@ -56,3 +56,9 @@ class GuestLoginFailure extends AuthFailure {
 class UnauthorizedFailure extends AuthFailure {
   const UnauthorizedFailure([super.message = 'You do not have permission to access this resource.']);
 }
+
+class DuplicateNameFailure extends Failure {
+  const DuplicateNameFailure(
+    [super.message = 'An entry with this name already exists.'],
+  );
+}

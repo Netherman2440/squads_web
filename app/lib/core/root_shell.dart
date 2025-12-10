@@ -482,13 +482,16 @@ class _SidebarNavigation extends StatelessWidget {
                       _isLocationSelected(location, '/squads/$squadId/home'),
                 ),
                 _SidebarNavItem(
-                  item: const _NavItem(
+                  item: _NavItem(
                     icon: Icons.group,
                     label: 'Players',
-                    path: '',
+                    path: '/squads/$squadId/players',
                   ),
                   isExpanded: isExpanded,
-                  isSelected: false,
+                  isSelected: _isLocationSelected(
+                    location,
+                    '/squads/$squadId/players',
+                  ),
                 ),
                 _SidebarNavItem(
                   item: const _NavItem(

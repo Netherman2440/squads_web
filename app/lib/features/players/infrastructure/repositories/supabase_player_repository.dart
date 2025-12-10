@@ -31,7 +31,7 @@ class SupabasePlayerRepository implements PlayerRepository {
             position,
             base_score,
             score,
-            created_at,
+            created_at
             ''',
           )
           .eq('squad_id', squadId)
@@ -71,7 +71,7 @@ class SupabasePlayerRepository implements PlayerRepository {
             position,
             base_score,
             score,
-            created_at,
+            created_at
             ''',
           )
           .eq('player_id', playerId)
@@ -113,6 +113,7 @@ class SupabasePlayerRepository implements PlayerRepository {
               'name': name,
               'position': position,
               'base_score': baseScore,
+              'score': baseScore,
             },
           )
           .select(
@@ -123,7 +124,7 @@ class SupabasePlayerRepository implements PlayerRepository {
             position,
             base_score,
             score,
-            created_at,
+            created_at
             ''',
           )
           .maybeSingle();
@@ -198,7 +199,7 @@ class SupabasePlayerRepository implements PlayerRepository {
             position,
             base_score,
             score,
-            created_at,
+            created_at
             ''',
           )
           .maybeSingle();

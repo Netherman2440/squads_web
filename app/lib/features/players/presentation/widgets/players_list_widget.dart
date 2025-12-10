@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:app/features/auth/presentation/providers/auth_notifier.dart';
 import 'package:app/features/players/domain/entities/player.dart';
-import 'package:app/features/players/presentation/controllers/players_notifier.dart';
 
-class PlayersListWidget extends ConsumerWidget {
+class PlayersListWidget extends StatelessWidget {
   const PlayersListWidget({
     super.key,
     required this.players,
@@ -15,26 +12,16 @@ class PlayersListWidget extends ConsumerWidget {
   final List<Player> players;
   final String squadId;
 
-  bool _canManagePlayers(WidgetRef ref) {
-    final authEntity = ref.read(authStateProvider).value;
-    if (authEntity == null || authEntity.isAnonymous) {
-      return false;
-    }
-    // For now we assume that role check is done on backend (RLS).
-    // UI will just show actions for authenticated users.
-    return true;
-  }
-
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final canManage = _canManagePlayers(ref);
 
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       itemCount: players.length,
       itemBuilder: (context, index) {
         final player = players[index];
+        final difference = player.score - player.baseScore;
 
         return Card(
           child: ListTile(
@@ -72,50 +59,51 @@ class PlayersListWidget extends ConsumerWidget {
                 ),
                 const SizedBox(width: 4),
                 Text('Score: ${player.score.toStringAsFixed(2)}'),
+                if (difference.abs() > 0) ...[
+                  const SizedBox(width: 12),
+                  _ScoreDifference(
+                    difference: difference,
+                  ),
+                ],
               ],
             ),
-            trailing: canManage
-                ? IconButton(
-                    icon: const Icon(Icons.delete_outline),
-                    tooltip: 'Delete player',
-                    onPressed: () async {
-                      final confirmed = await showDialog<bool>(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('Delete player'),
-                          content: Text(
-                            'Are you sure you want to delete ${player.name}?',
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.of(context).pop(false),
-                              child: const Text('Cancel'),
-                            ),
-                            FilledButton(
-                              onPressed: () =>
-                                  Navigator.of(context).pop(true),
-                              child: const Text('Delete'),
-                            ),
-                          ],
-                        ),
-                      );
-
-                      if (confirmed != true) {
-                        return;
-                      }
-
-                      await ref
-                          .read(playersNotifierProvider.notifier)
-                          .deletePlayer(
-                            squadId: squadId,
-                            playerId: player.playerId,
-                          );
-                    },
-                  )
-                : null,
           ),
         );
       },
+    );
+  }
+}
+
+class _ScoreDifference extends StatelessWidget {
+  const _ScoreDifference({
+    required this.difference,
+  });
+
+  final double difference;
+
+  @override
+  Widget build(BuildContext context) {
+    final isPositiveOrFlat = difference >= 0;
+    final color = isPositiveOrFlat ? Colors.green : Colors.red;
+    final formattedDifference = '${difference >= 0 ? '+' : ''}'
+        '${difference.toStringAsFixed(2)}';
+
+    return Row(
+      children: [
+        Icon(
+          isPositiveOrFlat ? Icons.arrow_drop_up : Icons.arrow_drop_down,
+          size: 16,
+          color: color,
+        ),
+        const SizedBox(width: 2),
+        Text(
+          formattedDifference,
+          style: TextStyle(
+            color: color,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 }

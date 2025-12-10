@@ -182,6 +182,7 @@ class _RootShellState extends ConsumerState<RootShell> {
             top: 0,
             bottom: 0,
             left: 0,
+            width: railWidth,
             child: MouseRegion(
               onHover: (event) {
                 if (_isSidebarPinned || _isSidebarHovered) {
@@ -202,56 +203,60 @@ class _RootShellState extends ConsumerState<RootShell> {
                   _isSidebarHovered = false;
                 });
               },
-              child: SizedBox(
-                width: panelWidth,
-                child: Stack(
-                  children: [
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Material(
-                        color: theme.colorScheme.surfaceContainerHighest,
-                        child: SizedBox(
-                          width: railWidth,
-                          child: _SidebarNavigation(
-                            isExpanded: false,
-                            isGuest: isGuest,
-                            location: location,
-                            squadName: squadName,
-                          ),
-                        ),
-                      ),
+              child: Material(
+                color: theme.colorScheme.surfaceContainerHighest,
+                child: SizedBox(
+                  width: railWidth,
+                  child: _SidebarNavigation(
+                    isExpanded: false,
+                    isGuest: isGuest,
+                    location: location,
+                    squadName: squadName,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 0,
+            bottom: 0,
+            left: isSidebarExpanded ? 0 : -panelWidth,
+            width: panelWidth,
+            child: IgnorePointer(
+              ignoring: !isSidebarExpanded,
+              child: MouseRegion(
+                onEnter: (_) {
+                  if (_isSidebarPinned) {
+                    return;
+                  }
+                  setState(() {
+                    _isSidebarHovered = true;
+                  });
+                },
+                onExit: (_) {
+                  if (_isSidebarPinned) {
+                    return;
+                  }
+                  setState(() {
+                    _isSidebarHovered = false;
+                  });
+                },
+                child: AnimatedOpacity(
+                  duration: const Duration(
+                    milliseconds: 200,
+                  ),
+                  curve: Curves.easeOutCubic,
+                  opacity: isSidebarExpanded ? 1 : 0,
+                  child: Material(
+                    elevation: 8,
+                    color: theme.colorScheme.surfaceContainerHighest,
+                    child: _SidebarNavigation(
+                      isExpanded: true,
+                      isGuest: isGuest,
+                      location: location,
+                      squadName: squadName,
                     ),
-                    AnimatedPositioned(
-                      duration: const Duration(
-                        milliseconds: 220,
-                      ),
-                      curve: Curves.easeOutCubic,
-                      left: isSidebarExpanded ? 0 : -panelWidth,
-                      top: 0,
-                      bottom: 0,
-                      width: panelWidth,
-                      child: IgnorePointer(
-                        ignoring: !isSidebarExpanded,
-                        child: AnimatedOpacity(
-                          duration: const Duration(
-                            milliseconds: 200,
-                          ),
-                          curve: Curves.easeOutCubic,
-                          opacity: isSidebarExpanded ? 1 : 0,
-                          child: Material(
-                            elevation: 8,
-                            color: theme.colorScheme.surfaceContainerHighest,
-                            child: _SidebarNavigation(
-                              isExpanded: true,
-                              isGuest: isGuest,
-                              location: location,
-                              squadName: squadName,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:app/features/players/domain/entities/player.dart';
 import 'package:app/features/players/presentation/controllers/players_notifier.dart';
 
 class CreatePlayerDialog extends ConsumerStatefulWidget {
@@ -21,15 +23,17 @@ class _CreatePlayerDialogState extends ConsumerState<CreatePlayerDialog> {
   late final TextEditingController _positionController;
   late final TextEditingController _baseScoreController;
 
-  String? _errorText;
+  int _sliderValue = 50;
   bool _isSubmitting = false;
+  bool _isUpdatingFromSlider = false;
+  String? _errorText;
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController();
     _positionController = TextEditingController();
-    _baseScoreController = TextEditingController(text: '0');
+    _baseScoreController = TextEditingController(text: '50');
   }
 
   @override
@@ -43,7 +47,6 @@ class _CreatePlayerDialogState extends ConsumerState<CreatePlayerDialog> {
   Future<void> _handleSubmit() async {
     final name = _nameController.text.trim();
     final position = _positionController.text.trim();
-    final baseScoreText = _baseScoreController.text.trim();
 
     if (name.isEmpty) {
       setState(() {
@@ -52,10 +55,11 @@ class _CreatePlayerDialogState extends ConsumerState<CreatePlayerDialog> {
       return;
     }
 
-    final baseScore = int.tryParse(baseScoreText);
-    if (baseScore == null) {
+    final baseScore = _sliderValue;
+
+    if (baseScore < 1 || baseScore > 100) {
       setState(() {
-        _errorText = 'Base score must be an integer.';
+        _errorText = 'Base score must be between 1 and 100.';
       });
       return;
     }
@@ -66,6 +70,18 @@ class _CreatePlayerDialogState extends ConsumerState<CreatePlayerDialog> {
     });
 
     try {
+      final existingPlayers = ref.read(playersNotifierProvider).value ?? [];
+      final nameExists = existingPlayers.any(
+        (player) => player.name.toLowerCase() == name.toLowerCase(),
+      );
+      if (nameExists) {
+        setState(() {
+          _errorText = 'Player with this name already exists.';
+          _isSubmitting = false;
+        });
+        return;
+      }
+
       await ref.read(playersNotifierProvider.notifier).addPlayer(
             squadId: widget.squadId,
             name: name,
@@ -86,9 +102,49 @@ class _CreatePlayerDialogState extends ConsumerState<CreatePlayerDialog> {
     }
   }
 
+  void _handleBaseScoreTextChanged(String value) {
+    if (_isUpdatingFromSlider) {
+      return;
+    }
+
+    final parsed = int.tryParse(value);
+    if (parsed == null) {
+      return;
+    }
+
+    final clamped = parsed.clamp(1, 100);
+    if (clamped == _sliderValue) {
+      return;
+    }
+
+    setState(() {
+      _sliderValue = clamped;
+    });
+  }
+
+  _NearestPlayers _findNearestPlayers(List<Player> players, int target) {
+    final lowerCandidates = players
+        .where((player) => player.score < target)
+        .toList()
+      ..sort((a, b) => b.score.compareTo(a.score));
+    final higherCandidates = players
+        .where((player) => player.score > target)
+        .toList()
+      ..sort((a, b) => a.score.compareTo(b.score));
+
+    return _NearestPlayers(
+      lower: lowerCandidates.isEmpty ? null : lowerCandidates.first,
+      higher: higherCandidates.isEmpty ? null : higherCandidates.first,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final players = ref.watch(playersNotifierProvider).value ?? [];
+    final nearest = _findNearestPlayers(players, _sliderValue);
+    final lowerPlayer = nearest.lower;
+    final higherPlayer = nearest.higher;
 
     return AlertDialog(
       title: const Text('Add player'),
@@ -124,7 +180,68 @@ class _CreatePlayerDialogState extends ConsumerState<CreatePlayerDialog> {
               ),
               keyboardType: TextInputType.number,
               textInputAction: TextInputAction.done,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+              ],
+              onChanged: _handleBaseScoreTextChanged,
             ),
+          const SizedBox(height: 8),
+          Text(
+            'Selected score: $_sliderValue',
+            style: theme.textTheme.bodyMedium,
+          ),
+          Slider(
+            value: _sliderValue.toDouble(),
+            min: 1,
+            max: 100,
+            divisions: 99,
+            label: '$_sliderValue',
+            onChanged: (value) {
+              final rounded = value.round();
+              setState(() {
+                _sliderValue = rounded;
+                _isUpdatingFromSlider = true;
+                _baseScoreController.text = rounded.toString();
+                _isUpdatingFromSlider = false;
+              });
+            },
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 250),
+                  transitionBuilder: (child, animation) => FadeTransition(
+                    opacity: animation,
+                    child: child,
+                  ),
+                  child: _NearestPlayerProfile(
+                    key: ValueKey(lowerPlayer?.playerId ?? 'lower-null'),
+                    label: 'Weaker player',
+                    player: lowerPlayer,
+                    placeholderText: 'No weaker player',
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 250),
+                  transitionBuilder: (child, animation) => FadeTransition(
+                    opacity: animation,
+                    child: child,
+                  ),
+                  child: _NearestPlayerProfile(
+                    key: ValueKey(higherPlayer?.playerId ?? 'higher-null'),
+                    label: 'Stronger player',
+                    player: higherPlayer,
+                    placeholderText: 'No stronger player',
+                  ),
+                ),
+              ),
+            ],
+          ),
             if (_errorText != null) ...[
               const SizedBox(height: 12),
               SelectableText.rich(
@@ -157,6 +274,91 @@ class _CreatePlayerDialogState extends ConsumerState<CreatePlayerDialog> {
                   ),
                 )
               : const Text('Add'),
+        ),
+      ],
+    );
+  }
+}
+
+class _NearestPlayers {
+  final Player? lower;
+  final Player? higher;
+
+  const _NearestPlayers({
+    this.lower,
+    this.higher,
+  });
+}
+
+class _NearestPlayerProfile extends StatelessWidget {
+  const _NearestPlayerProfile({
+    super.key,
+    required this.label,
+    required this.placeholderText,
+    this.player,
+  });
+
+  final String label;
+  final String placeholderText;
+  final Player? player;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: theme.textTheme.labelSmall,
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceVariant,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: theme.colorScheme.outline),
+          ),
+          child: player == null
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.person_outline,
+                      color: theme.colorScheme.outline,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      placeholderText,
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.person,
+                      color: theme.colorScheme.primary,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      player!.name,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Score: ${player!.score.toStringAsFixed(2)}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
         ),
       ],
     );

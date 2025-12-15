@@ -118,63 +118,119 @@ Kryteria akceptacji:
 - Walidacja duplikatów nazwy w obrębie składu (best effort).
 
 US-006
-Tytuł: Draft zbalansowanych drużyn
-Opis: Jako Admin chcę otrzymać deterministyczne propozycje podziału graczy na drużyny z oceną balansu.
+Tytuł: Lista meczy
+Opis: Jako użytkownik chcę móc przeglądać listę meczy w składzie.
 Kryteria akceptacji:
-- Dla do 16 graczy generowanych jest do 20 propozycji, posortowanych od najlepszej.
-- Prezentowany balance score/różnica sił; komunikat o limicie >16.
-- Metadane draftu pozwalają odtworzyć wyniki (seed/timestamp/lista graczy).
+- po kliknięciu na przycisk "Matches" przechodzimy do widoku listy matches
+- widok jest pod adresem /squads/:squadId/matches
 
 US-007
+Tytuł utwórz mecz
+Opis: Jako Admin gdy kliknę na plus w widoku listy meczy chcę przejść do widoku z draftem.
+Kryteria akceptacji:
+- po kliknięciu na plus przechodzimy do widoku z draftem
+- widok jest pod adresem /squads/:squadId/matches/create
+- przycisk plus jest widoczny tylko dla adminó i ownerów.
+
+US-008
+Tytuł: Szczegóły meczu
+Opis: Jako użytkownik chcę móc przeglądać szczegóły meczu.
+Kryteria akceptacji:
+- po kliknięciu na mecz przechodzimy do widoku szczegółów meczu
+- widok jest pod adresem /squads/:squadId/matches/:matchId
+- widok zawiera  datę, wynik, składy drużyn, oraz nawigację .
+
+US-009
+Tytuł: Szybka nawigacja do gracza
+Jako użytkownik chcę móc szybko przejść do szczegółów gracza.
+Kryteria akceptacji:
+- po kliknięciu na gracza przechodzimy do widoku szczegółów gracza
+- widok jest pod adresem /squads/:squadId/players/:playerId
+- widok na razie zmockowany
+
+
+
+US-010
+Tytuł: Draft zbalansowanych drużyn
+Opis: Jako Admin chcę otrzymać deterministyczne propozycje podziału graczy na drużyny.
+Kryteria akceptacji:
+- Mogę swobodnie dodawać i usuwać graczy do draftu.
+- Z wybranej puli graczy losowanych jest do 20 propozycji meczy (zestawów team A i team B).
+- Propozycje są posortowane od najlepszej do najgorszej.
+- Propozycje są deterministyczne, można je odtworzyć.
+
+US-011
 Tytuł: Utworzenie meczu z draftu
 Opis: Jako Admin chcę utworzyć mecz na podstawie wybranej propozycji draftu.
 Kryteria akceptacji:
 - Wybór propozycji tworzy mecz z przypisanymi drużynami.
-- Snapshot uczestników zapisany przy meczu.
 
-US-008
+
+US-012
 Tytuł: Wprowadzenie wyniku meczu
 Opis: Jako Admin chcę wprowadzić wynik, aby zaktualizować rankingi graczy.
 Kryteria akceptacji:
 - Zapis home_score i away_score + score_meta.
-- Po zapisie generowana jest delta wpływająca na ranking graczy, którzy zagrali.
-- Edycja wyniku aktualizuje właściwą deltę i statystyki.
+- Po zapisie generowana jest delta wpływająca na ranking graczy, którzy zagrali. //to do przy score history
+- Edycja wyniku aktualizuje właściwą deltę i statystyki. //to do przy score history
 
-US-009
+US-013
+Tytuł: Edycja detali meczu
+Opis: Jako Admin chcę edytować nazwę i kolor drużyny oraz składy drużyn.
+Kryteria akceptacji:
+- Edycja nazwy i koloru drużyny robi udpate do bazy.
+- jeśli wynik nie jest wpisany to możemy edytować składy drużyn: można dodawać, usuwać graczy i zamieniać między drużynami. 
+
+US-014
+Tytuł: Rematch
+Opis: Jako Admin chcę móc utworzyć rematch meczu.
+Kryteria akcjeptacji:
+- będąc w detalach meczu możemy utworzyć rematch poprzez kliknięcie na przycisk "Rematch".
+- tworzy to nowy mecz z takimi samymi drużynami.
+
+US-015
+Tytuł: Redraw
+Jako Admin chcę móc przeprowadzić redraw meczu.
+Kryteria akceptacji:
+- jeśli do meczu dodano / zabrano gracza pojawia się przycisk "Redraw".
+- kliknięcie tego przycisku przenosi nas do draftu z nową listą zawodników
+- aktualny mecz jest usuwany.
+
+US-016
 Tytuł: Przegląd statystyk składu i graczy
 Opis: Jako Member chcę zobaczyć podstawowe statystyki i trend rankingu.
 Kryteria akceptacji:
 - Widok liczby meczów, W/L, trendu rankingu.
 - Historyczny score widoczny „na dzień meczu”.
 
-US-010
+US-017
 Tytuł: Stworzenie turnieju
 Opis: Jako Owner chcę utworzyć turniej, wybierając graczy i liczbę drużyn, a następnie zaakceptować zestaw drużyn.
 Kryteria akceptacji:
 - Przepływ: wybór graczy → liczba drużyn → draft zestawów → akceptacja.
 - Możliwość edycji nazw i kolorów drużyn.
 
-US-011
+US-018
 Tytuł: Dodawanie meczów w turnieju
 Opis: Jako Admin chcę dodawać kolejne mecze do turnieju.
 Kryteria akceptacji:
 - Dodanie meczu między dowolnymi drużynami turnieju.
 - Wynik wpływa na rankingi tylko grających w tym meczu.
 
-US-012
+US-019
 Tytuł: Edycja składu drużyn w turnieju
 Opis: Jako Admin chcę dokonywać zamian zawodników między drużynami w trakcie turnieju.
 Kryteria akceptacji:
 - Zmiana składu obowiązuje od kolejnych meczów; historia pozostaje spójna dzięki snapshotom.
 
-US-013
+US-020
 Tytuł: Widok turnieju i klasyfikacja (prosta tabela)
 Opis: Jako Member chcę zobaczyć listę meczów turnieju i prostą klasyfikację.
 Kryteria akceptacji:
 - Lista meczów z wynikami; opcjonalnie prosta tabela W/L, różnica goli.
 - Zasady tie‑break (H2H, różnica, gole) mogą być uproszczone lub pominięte w MVP.
 
-US-014
+US-021
 Tytuł: Bezpieczny dostęp i autoryzacja
 Opis: Jako system chcę egzekwować RBAC i widoczność zasobów, aby chronić dane użytkowników.
 Kryteria akceptacji:

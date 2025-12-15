@@ -6,8 +6,7 @@ class Player {
   final int baseScore;
   final double score;
   final DateTime createdAt;
-  final DateTime updatedAt;
-  final bool isDeleted;
+
 
   const Player({
     required this.playerId,
@@ -17,8 +16,6 @@ class Player {
     required this.baseScore,
     required this.score,
     required this.createdAt,
-    required this.updatedAt,
-    this.isDeleted = false,
   });
 
   Player copyWith({
@@ -29,8 +26,6 @@ class Player {
     int? baseScore,
     double? score,
     DateTime? createdAt,
-    DateTime? updatedAt,
-    bool? isDeleted,
   }) {
     return Player(
       playerId: playerId ?? this.playerId,
@@ -40,14 +35,11 @@ class Player {
       baseScore: baseScore ?? this.baseScore,
       score: score ?? this.score,
       createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-      isDeleted: isDeleted ?? this.isDeleted,
     );
   }
 
   factory Player.fromMap(Map<String, dynamic> map) {
     final createdAt = DateTime.parse(map['created_at'] as String);
-    final updatedAtRaw = map['updated_at'] as String?;
 
     return Player(
       playerId: map['player_id'] as String,
@@ -57,10 +49,6 @@ class Player {
       baseScore: map['base_score'] as int,
       score: (map['score'] as num?)?.toDouble() ?? 0.0,
       createdAt: createdAt,
-      updatedAt: updatedAtRaw != null
-          ? DateTime.parse(updatedAtRaw)
-          : createdAt,
-      isDeleted: map['is_deleted'] as bool? ?? false,
     );
   }
 
@@ -73,8 +61,6 @@ class Player {
       'base_score': baseScore,
       'score': score,
       'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt.toIso8601String(),
-      'is_deleted': isDeleted,
     };
   }
 }

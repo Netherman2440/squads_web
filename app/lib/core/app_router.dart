@@ -4,6 +4,7 @@ import 'package:app/core/root_shell.dart';
 import 'package:app/features/auth/presentation/pages/auth_page.dart';
 import 'package:app/features/auth/presentation/pages/register_page.dart';
 import 'package:app/features/squads/presentation/pages/squad_settings_page.dart';
+import 'package:app/features/players/presentation/pages/players_page.dart';
 import 'package:app/features/squads/presentation/pages/squads_page.dart';
 import 'package:app/features/users/presentation/pages/user_page.dart';
 import 'package:app/features/squads/presentation/pages/squad_shell_page.dart';
@@ -16,6 +17,7 @@ enum AppRoute {
   settings,
   profile,
   squadDetails,
+  players,
 }
 
 final appRouter = GoRouter(
@@ -54,6 +56,16 @@ final appRouter = GoRouter(
             final squadId = state.pathParameters['squadId'] ?? '';
             return NoTransitionPage(
               child: SquadShellPage(squadId: squadId),
+            );
+          },
+        ),
+        GoRoute(
+          path: '/squads/:squadId/players',
+          name: AppRoute.players.name,
+          pageBuilder: (context, state) {
+            final squadId = state.pathParameters['squadId'] ?? '';
+            return NoTransitionPage(
+              child: PlayersPage(squadId: squadId),
             );
           },
         ),

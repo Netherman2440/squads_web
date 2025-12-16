@@ -185,6 +185,11 @@ class _SquadHomeGrid extends StatelessWidget {
                   return;
                 }
 
+                if (tile.title == 'Matches') {
+                  context.go('/squads/${squad.squadId}/matches');
+                  return;
+                }
+
                 showDialog<void>(
                   context: context,
                   builder: (context) => AlertDialog(

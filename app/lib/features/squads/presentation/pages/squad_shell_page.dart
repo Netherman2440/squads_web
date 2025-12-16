@@ -190,10 +190,7 @@ class _QuickActionsSheet extends StatelessWidget {
               subtitle: const Text('Schedule a new squad match.'),
               onTap: () {
                 Navigator.of(context).pop();
-                _showPlaceholderDialog(
-                  context,
-                  title: 'Add match',
-                );
+                context.go('/squads/${squad.squadId}/matches');
               },
             ),
             ListTile(

@@ -5,9 +5,12 @@ import 'package:app/features/auth/presentation/pages/auth_page.dart';
 import 'package:app/features/auth/presentation/pages/register_page.dart';
 import 'package:app/features/squads/presentation/pages/squad_settings_page.dart';
 import 'package:app/features/players/presentation/pages/players_page.dart';
+import 'package:app/features/matches/presentation/pages/match_details_page.dart';
+import 'package:app/features/matches/presentation/pages/squad_matches_page.dart';
 import 'package:app/features/squads/presentation/pages/squads_page.dart';
 import 'package:app/features/users/presentation/pages/user_page.dart';
 import 'package:app/features/squads/presentation/pages/squad_shell_page.dart';
+import 'package:app/features/players/presentation/pages/player_details_page.dart';
 
 enum AppRoute {
   auth,
@@ -18,6 +21,9 @@ enum AppRoute {
   profile,
   squadDetails,
   players,
+  matches,
+  matchDetails,
+  playerDetails,
 }
 
 final appRouter = GoRouter(
@@ -66,6 +72,44 @@ final appRouter = GoRouter(
             final squadId = state.pathParameters['squadId'] ?? '';
             return NoTransitionPage(
               child: PlayersPage(squadId: squadId),
+            );
+          },
+        ),
+        GoRoute(
+          path: '/squads/:squadId/players/:playerId',
+          name: AppRoute.playerDetails.name,
+          pageBuilder: (context, state) {
+            final squadId = state.pathParameters['squadId'] ?? '';
+            final playerId = state.pathParameters['playerId'] ?? '';
+            return NoTransitionPage(
+              child: PlayerDetailsPage(
+                squadId: squadId,
+                playerId: playerId,
+              ),
+            );
+          },
+        ),
+        GoRoute(
+          path: '/squads/:squadId/matches',
+          name: AppRoute.matches.name,
+          pageBuilder: (context, state) {
+            final squadId = state.pathParameters['squadId'] ?? '';
+            return NoTransitionPage(
+              child: SquadMatchesPage(squadId: squadId),
+            );
+          },
+        ),
+        GoRoute(
+          path: '/squads/:squadId/matches/:matchId',
+          name: AppRoute.matchDetails.name,
+          pageBuilder: (context, state) {
+            final squadId = state.pathParameters['squadId'] ?? '';
+            final matchId = state.pathParameters['matchId'] ?? '';
+            return NoTransitionPage(
+              child: MatchDetailsPage(
+                squadId: squadId,
+                matchId: matchId,
+              ),
             );
           },
         ),

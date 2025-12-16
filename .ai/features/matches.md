@@ -20,11 +20,10 @@ w stylu zgodnym z aktualnym kodem aplikacji:
 - Routing: `/squads/:squadId/matches`
 - Lista z reużywalnym `MatchTile` (data + wynik).
 
-### US-007: Utwórz mecz (przycisk “+”)
-- “+” widoczne tylko dla **owner/admin**.
-- Routing: `/squads/:squadId/matches/create`
-- Widok “create” zawiera player-selection (legacy draft page style) i przycisk
-  “Draft” (generowanie propozycji).
+### US-007: Utworz mecz (przycisk "+")
+- "+" widoczne tylko dla **owner/admin**.
+- Routing startowy: `/squads/:squadId/matches/draft`.
+- `/matches/draft` to wybor graczy (legacy create page style) z akcja "Generate draft" prowadzaca do `/squads/:squadId/matches/create`, gdzie wybieramy/edytujemy propozycje przed utworzeniem meczu.
 
 ### US-008: Szczegóły meczu
 - Routing: `/squads/:squadId/matches/:matchId`
@@ -41,24 +40,25 @@ w stylu zgodnym z aktualnym kodem aplikacji:
 
 Aktualnie `core/app_router.dart` nie ma tras dla Matches. Plan:
 
-- Dodać do `AppRoute`:
+- Dodac do `AppRoute`:
   - `matches`
   - `matchDetails`
-  - `matchCreate`
-  - (opcjonalnie) `playerDetails` jeśli jeszcze nie istnieje
+  - `matchDraft` (selection `/matches/draft`)
+  - `matchCreate` (draft results `/matches/create`)
+  - (opcjonalnie) `playerDetails` jezeli jeszcze nie istnieje
 
-- Dodać GoRoute’y:
-  - `/squads/:squadId/matches` → `SquadMatchesPage(squadId)`
-  - `/squads/:squadId/matches/create` → `CreateMatchPage(squadId)`
-  - `/squads/:squadId/matches/draft` → `DraftPage(squadId, selectedPlayerIds)` (osobna trasa)
-  - `/squads/:squadId/matches/:matchId` → `MatchDetailsPage(squadId, matchId)`
-  - `/squads/:squadId/players/:playerId` → placeholder (do czasu pełnego Players Details)
+- Dodac GoRoute'y:
+  - `/squads/:squadId/matches` -> `SquadMatchesPage(squadId)`
+  - `/squads/:squadId/matches/draft` -> `DraftSelectionPage(squadId)` (feature Draft)
+  - `/squads/:squadId/matches/create` -> `DraftResultsPage(squadId, selectedPlayerIds)` (feature Draft)
+  - `/squads/:squadId/matches/:matchId` -> `MatchDetailsPage(squadId, matchId)`
+  - `/squads/:squadId/players/:playerId` -> placeholder (do czasu pelnego Players Details)
 
 Integracja UX:
-- Kafelek “Matches” w `SquadHomePage` (grid) powinien nawigować do matches zamiast
-  pokazywać “coming soon”.
-- “Quick actions → Add match” w `SquadShellPage` powinno prowadzić do create flow.
-
+- Kafelek `Matches` w `SquadHomePage` (grid) powinien nawigowac do `/matches` zamiast pokazywac `coming soon`.
+- Przycisk `+` (quick actions/Add match) prowadzi do `/squads/:squadId/matches/draft`.
+- Po `Create Match` w `/matches/create` przechodzimy do `/matches/:matchId` i invalidujemy liste matches.
+- Szczegoly UI dla `/matches/draft` + `/matches/create` sa opisane w `.ai/features/draft.md`.
 ---
 
 ## Kontrakt DB (źródło: `.ai/db_plan.md` 147–205)
@@ -96,7 +96,7 @@ istnieją** w `team_players`.
 Decyzje (MVP):
 - **Nie dodajemy snapshotów** do `team_players`.
 - `player.name` bierzemy zawsze **aktualne** z `players`.
-- `player.score` na razie bierzemy **aktualne** z `players`, a w przyszłości
+- `player.score` na razie bierzemy **aktualne** z `players`, a w przyszłości // TODO: zasilic to score_history, gdy bedzie gotowe.
   będziemy je wyliczać na podstawie `score_history`.
 ---
 
@@ -191,6 +191,7 @@ Każdy use case ma `.execute(...)` i Provider jak w Players.
 
 - `DeleteMatch`
 - `UpdateMatchScore`
+  - // TODO: po wpisaniu wyniku wolamy logike score_history (ApplyMatchScoreToPlayersUseCase) i przeliczamy ranking graczy.
 - `UpdateMatchTeams`
 - `UpdateTeamColor` (i ewentualnie `UpdateTeamName`)
 
@@ -246,32 +247,10 @@ UI:
   - klik na gracza → `/squads/:squadId/players/:playerId` (mock jeśli brak)
 - (później) przyciski `Rematch`, `Redraw` tylko dla owner/admin
 
-### 3) `/matches/create` → `CreateMatchPage` (player-selection + “Draft”)
-Cel: odtworzyć legacy UX:
-- `available players` + `selected players`
-- search dla available
-- responsywnie:
-  - narrow: selected na górze, available na dole (obie scrollowalne)
-  - wide: available po lewej, selected po prawej
-- w appbar akcja “Draft” aktywna tylko gdy są wybrani gracze
-
-Stan:
-- `CreateMatchController extends Notifier<CreateMatchState>`
-  - `CreateMatchState`:
-    - `selectedPlayerIds`
-    - `searchQuery`
-    - `availablePlayers` (najlepiej z `playersNotifierProvider` / `GetSquadPlayersUseCase`)
-  - metody:
-    - `loadPlayers(squadId)` (AsyncValue lub wewnętrznie oparty o `playersNotifierProvider`)
-    - `togglePlayer(playerId)`
-    - `setSearchQuery(...)`
-
-Nawigacja “Draft”:
-- `onPressed`:
-  - nawigacja do osobnej trasy: `/squads/$squadId/matches/draft`
-  - na stronie draft: `CreateDraftUseCase.execute(selectedPlayers)`
-  - po wyborze propozycji: `CreateMatchUseCase.execute(...)`
-  - po sukcesie: `context.go('/squads/$squadId/matches/$matchId')` + invalidacja listy
+### 3) Draft flow (delegowane do featuru Draft)
+- `/matches/draft` (selection) + `/matches/create` (propozycje + finalizacja) sa opisane w `.ai/features/draft.md`.
+- Matches pilnuje wejscia (FAB/quick action -> `/matches/draft`) oraz wyjscia (po `Create Match` nawigacja do details + invalidacja listy).
+- Poza orkiestracja i integracja use case`u `CreateMatch`, szczegoly UI naleza do zespolu Draft.
 
 ---
 
@@ -308,12 +287,11 @@ Nawigacja “Draft”:
 - Notifier + `MatchDetailsPage`
 - Klik na gracza → placeholder route
 
-### Etap C — “Create flow: selection + create match” (US-007)
-- `/matches/create`: responsywne listy + search
-- Routing do osobnej trasy: `/matches/draft`
-- Integracja z Draft (na razie może zwrócić 1 propozycję)
-- Repo: `createMatch`
-- Use case: `CreateMatch`
+### Etap C - "Draft flow" (US-007)
+- `/matches/draft` (selection) + `/matches/create` (propozycje + finalizacja) zgodnie z `.ai/features/draft.md`.
+- Matches dostarcza routing, integracje na wejscie/wyjscie oraz `CreateMatchUseCase`.
+- Repo: `createMatch`.
+- Use case: `CreateMatch`.
 
 ### Etap D — “Write operations” (pod US-012/US-013/US-014/US-015 w kolejnych sprintach)
 - `UpdateMatchScore`, `UpdateMatchTeams`, `UpdateTeamColor/Name`
@@ -324,8 +302,8 @@ Nawigacja “Draft”:
 
 ## Ustalenia (po review)
 
-- `player.name` i (na razie) `player.score` bierzemy “na żywo” z `players`.
-  W przyszłości `player.score` w kontekście meczu będzie oparte o `score_history`.
+- `player.name` i (na razie) `player.score` bierzemy 'na zywo' z `players`.
+  W przyszlosci `player.score` w kontekscie meczu bedzie oparte o `score_history`.
 - Robimy **dwie trasy**: `/matches/create` i `/matches/draft`.
 - Quick actions “Add match” mile widziane, ale **nie priorytet** na MVP.
 

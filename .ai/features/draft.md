@@ -5,10 +5,10 @@ Ten dokument opisuje **plan wdrożenia featuru Draft** (generowanie propozycji d
 oraz utworzenie meczu z wybranej propozycji), zgodnie z ustaleniami w
 `.ai/features/matches.md`:
 
-- Draft ma osobną trasę: `/squads/:squadId/matches/draft` (oddzielnie od `/create`).
-- W draftach używamy **`Player`** (bez encji `MatchPlayer`).
-- Drafty **nie są zapisywane w DB** (to obiekt tymczasowy/obliczeniowy).
-- Draft jest **deterministyczny** (bez seed/losowości).
+- Flow zaczyna sie na `/squads/:squadId/matches/draft` (wybor graczy) i konczy na `/squads/:squadId/matches/create` (podglad propozycji + finalizacja).
+- Draft korzysta z istniejacych encji **`Player`** (bez `MatchPlayer`).
+- Drafty **nie sa zapisywane w DB** (to nadal obiekt tymczasowy/obliczeniowy).
+- Algorytm jest **deterministyczny** (bez seed/losowosci).
 - Stan w UI: **Riverpod + AsyncValue + AsyncValue.guard** (jak w `PlayersNotifier`).
 
 ---
@@ -34,21 +34,17 @@ Referencja UI (legacy):
 ## Routing i integracja z Matches
 
 Docelowe trasy (ustalone):
-- `/squads/:squadId/matches/create`
-  - wybór graczy (available/selected) + akcja przejścia do draftu
 - `/squads/:squadId/matches/draft`
-  - ekran propozycji draftu + możliwość edycji rosterów + “Create Match”
+  - ekran wyboru graczy (available/selected) + search + akcja przejscia do draftu.
+  - tutaj prowadzi przycisk `+` z `/squads/:squadId/matches`.
+- `/squads/:squadId/matches/create`
+  - ekran propozycji draftu z mozliwoscia edycji rosterow i przyciskiem `Create Match`.
+  - korzysta z wyniku `createDraftUseCase` dla przekazanych graczy.
 
-Kontrakt nawigacji między trasami:
-- `matches/create` przekazuje do `matches/draft`:
-  - `squadId`
-  - `selectedPlayerIds` (albo pełne obiekty `Player`, ale rekomendujemy IDs +
-    pobranie/odczyt z providerów Players dla spójności)
-- `matches/draft` po “Create Match”:
-  - wywołuje `CreateMatchUseCase` (z featuru Matches) z **aktualnym stanem** obu list
-    (po ewentualnych zmianach użytkownika)
-  - nawigacja do `/squads/:squadId/matches/:matchId`
-
+Kontrakt nawigacji i odpowiedzialnosci:
+- `matches/draft` po kliknieciu "Generate draft" przekazuje `squadId` oraz `selectedPlayerIds` (IDs, a odczyt Playerow robimy z providerow Players) do `matches/create`.
+- `matches/create` po "Create Match" wywoluje `CreateMatchUseCase` (Matches) z aktualnym stanem obu list i po sukcesie przechodzi do `/squads/:squadId/matches/:matchId`.
+- Feature Draft konczy sie na wyborze finalnego zestawu druzyn; przejscie do szczegolow meczu jest juz czescia featuru Matches.
 ---
 
 ## Model domenowy (Draft)
@@ -135,87 +131,91 @@ Na start możemy zwrócić 1–3 propozycje:
 
 ---
 
-## Presentation (UI) — `/matches/draft`
+## Presentation (UI)
 
-Inspiracja: legacy `CreateMatchPage`:
-- strzałki lewo/prawo zmieniają propozycję
-- przy zmianie propozycji resetujemy edycje do “oryginału”
-- dwa scrollowalne składy obok siebie
-- “Create Match” bierze **aktualny stan** kolumn
+### 1) `/matches/draft` - DraftSelectionPage
+Cel: odtworzyc legacy UX wyboru zawodnikow przed wygenerowaniem draftu.
+- `available players` + `selected players` (tap/drag pomiedzy listami)
+- search dla listy available
+- layout responsywny: narrow -> selected na gorze, available na dole; wide -> available po lewej, selected po prawej
+- AppBar: tytul "Draft" + akcja "Generate draft" aktywna tylko gdy `selectedPlayerIds.isNotEmpty`
 
-### Struktura ekranu
-- AppBar:
-  - tytuł: “Draft”
-  - akcja: “Create Match”
-- Góra:
-  - nawigacja propozycji: `← [Draft i z N] →`
-- Nad rosterami:
-  - summary: `Home total` i `Away total`
-- Body:
-  - dwa panele (wide: obok siebie; narrow: jeden pod drugim)
-  - roster A i roster B (scroll)
-  - drag & drop playerów między listami
+Stan i logika:
+- `DraftSelectionController extends Notifier<AsyncValue<DraftSelectionState>>`
+  - `selectedPlayerIds`
+  - `searchQuery`
+  - `availablePlayers` (najlepiej reuse `playersNotifierProvider` / `GetSquadPlayersUseCase`)
+  - metody: `loadPlayers(squadId)`, `togglePlayer(playerId)` (walidacja limitu <= 16), `setSearchQuery(...)`, `clearSelection()`
+  - `generateDraft()` -> `context.go('/squads/$squadId/matches/create', extra: selectedPlayerIds);`
+- UI pokazuje komunikat limitu >16 jeszcze przed przejsciem na kolejny ekran
 
-### Stan (Riverpod)
-Rekomendacja: jeden Notifier dla całej sesji draftu:
+### 2) `/matches/create` - DraftResultsPage
+Inspiracja: legacy `CreateMatchPage`.
+- strzalki lewo/prawo zmieniaja propozycje
+- przy zmianie propozycji resetujemy edycje do oryginalu
+- dwa scrollowalne sklady obok siebie (wide) lub jeden pod drugim (narrow)
+- `Create Match` bierze aktualny stan kolumn
+
+Struktura:
+- AppBar: tytul "Draft" + akcja "Create Match"
+- Gora: nawigacja propozycji: `<< [Draft i z N] >>`
+- Nad rosterami: podsumowanie `Home total` i `Away total`
+- Body: dwa panele, drag & drop, wypis graczy
+
+Stan:
 - `DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>>`
-  - `DraftSessionState`:
-    - `proposals: List<Draft>`
-    - `selectedIndex: int`
-    - `home: List<Player>` (editable)
-    - `away: List<Player>` (editable)
-    - nie edytujemy nazw drużyn w MVP Draft (domyślne: “FC Biali”, “Czarni United”)
-  - `load({required squadId, required selectedPlayerIds})`:
-    - pobiera `Player` z providerów Players (lub z cache)
-    - `state = AsyncValue.guard(() => createDraftUseCase.execute(players: ...))`
-    - inicjalizuje `home/away` z proposal[0]
-  - `selectProposal(index)`:
-    - resetuje `home/away` do oryginalnej propozycji `index`
-  - `movePlayer(playerId, toSide)` / `swapPlayer(...)`:
-    - przenosi gracza między listami
+  - `proposals: List<Draft>`
+  - `selectedIndex: int`
+  - `home: List<Player>`
+  - `away: List<Player>`
+  - brak edycji nazw/kolorow w MVP
+  - `load({required squadId, required selectedPlayerIds})` -> `AsyncValue.guard(() => createDraftUseCase.execute(players: ...))` i inicjalizuje `home/away` stanem z proposal[0]
+  - `selectProposal(index)` resetuje `home/away`
+  - `movePlayer(playerId, toSide)` / `swapPlayer(...)`
+  - `createMatch()` -> `CreateMatchUseCase.execute(...)`, po sukcesie: `context.go('/squads/$squadId/matches/$matchId')` + invalidacja listy (`squadMatchesProvider`)
 
-### Obsługa błędów i empty state
+Obsluga bledow i empty state:
 - `AsyncValue.error`: pokazujemy `SelectableText.rich` (czerwony tekst)
-- `proposals.isEmpty`: “Brak propozycji — wybierz graczy w /matches/create”
-- limit >16: błąd z czytelnym komunikatem
+- `proposals.isEmpty`: komunikat "Brak propozycji - wroc do /squads/:squadId/matches/draft"
+- limit >16: dedykowany komunikat (rowniez gdy stan wejscia zostal podmieniony na wiekszy)
 
-### Uprawnienia
-- Draft dostępny tylko dla owner/admin (spójnie z Matches).
-
+Uprawnienia:
+- oba ekrany dostepne tylko dla owner/admin (spojne z Matches).
 ---
 
-## Integracja z “dodawaniem/odejmowaniem graczy do draftu” (US-010)
+## Integracja z "dodawaniem/odejmowaniem graczy do draftu" (US-010)
 
-Ta część jest realizowana głównie w `/matches/create`:
-- tam użytkownik dobiera pulę graczy (selected/available)
-- `/matches/draft` jest już “wynikiem” dla wybranej puli
+Ta czesc jest realizowana glownie w `/matches/draft`:
+- tam uzytkownik dobiera pule graczy (selected/available) i pilnuje limitu + walidacji
+- `/matches/create` jest juz "wynikiem" dla przygotowanej puli (edycja rosterow + Create Match)
 
 Opcjonalnie (nie MVP):
-- na `/matches/draft` dodać akcję “Back to selection”,
-  zamiast edycji puli na tym ekranie.
-
+- na `/matches/create` dodajemy akcje "Back to selection" jezeli chcemy latwo zmienic pule bez recznego cofania.
 ---
 
 ## Iteracyjny plan implementacji
 
-### Etap A — Draft route + skeleton UI (bez DnD)
+### Etap A - `/matches/draft` (selection)
 - routing `/matches/draft`
-- `DraftSessionNotifier` + ładowanie proposals
-- nawigacja strzałkami i reset zmian
-- “Create Match” stub (bez wywołania repo)
+- `DraftSelectionController` + ladowanie graczy z Players
+- walidacja limitu <=16 i akcja "Generate draft" przekazujaca IDs do `/matches/create`
 
-### Etap B — Deterministyczny engine + top 20
+### Etap B - `/matches/create` skeleton (bez DnD)
+- routing `/matches/create`
+- `DraftSessionNotifier` + ladowanie proposals
+- nawigacja strzalkami, reset zmian, stub `Create Match`
+
+### Etap C - Deterministyczny engine + top 20
 - implementacja enumeracji kombinacji + sort/tie-break
-- limit >16 + komunikat
+- limit >16 + komunikat (spojny miedzy ekranami)
 
-### Etap C — Edycja składów (drag & drop)
-- przenoszenie zawodników między listami
-- walidacja: gracz nie może być w obu drużynach
+### Etap D - Edycja skladow (drag & drop)
+- przenoszenie zawodnikow miedzy listami
+- walidacja: gracz nie moze byc w obu teamach
 
-### Etap D — Integracja “Create Match”
-- wywołanie `CreateMatchUseCase` z aktualnymi rosterami
-- nawigacja do match details
-
+### Etap E - Integracja `Create Match`
+- wywolanie `CreateMatchUseCase` z aktualnymi rosterami
+- invalidacja listy matches + nawigacja do `/matches/:matchId`
 ---
 
 ## Ustalenia (po review)

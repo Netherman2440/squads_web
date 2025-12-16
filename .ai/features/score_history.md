@@ -1,4 +1,3 @@
-
 ### Score History — plan implementacji (US-012) jako część featuru Players
 
 Ten dokument opisuje plan wdrożenia **score history** (event‑sourcing rankingów),
@@ -223,5 +222,3 @@ Później:
   - czy dodajemy `matches.played_at` i replay po `played_at` (bardziej poprawne długofalowo).
 - Jak traktujemy `score_type = cancelled/walkover`:
   - czy generuje wpisy `score_history`, czy pomijamy.
-
-

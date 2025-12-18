@@ -15,6 +15,7 @@ class DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>> {
   Future<void> load({
     required String squadId,
     required List<String> selectedPlayerIds,
+    bool playWithSubstitute = true,
   }) async {
     state = const AsyncValue.loading();
 
@@ -34,6 +35,7 @@ class DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>> {
 
       final proposals = await ref.read(createDraftUseCaseProvider).execute(
             players: selected,
+            playWithSubstitute: playWithSubstitute,
           );
 
       if (proposals.isEmpty) {

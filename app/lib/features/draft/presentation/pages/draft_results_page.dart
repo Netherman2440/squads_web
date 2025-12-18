@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:app/core/error/failure.dart';
+import 'package:app/core/utils/team_score.dart';
 import 'package:app/features/draft/presentation/controllers/draft_session_notifier.dart';
 import 'package:app/features/draft/presentation/widgets/draft_draggable_player_tile.dart';
 import 'package:app/features/players/domain/entities/player.dart';
@@ -21,6 +22,8 @@ class DraftResultsPage extends ConsumerStatefulWidget {
 }
 
 class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
+  bool _playWithSubstitute = true;
+
   @override
   void initState() {
     super.initState();
@@ -28,6 +31,7 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
       () => ref.read(draftSessionNotifierProvider.notifier).load(
             squadId: widget.squadId,
             selectedPlayerIds: widget.selectedPlayerIds,
+            playWithSubstitute: _playWithSubstitute,
           ),
     );
   }
@@ -39,8 +43,22 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Draft'),
-        actions: const [
-          Padding(
+        actions: [
+          _DraftOptionsButton(
+            isPlayWithSubstituteEnabled: _playWithSubstitute,
+            onTogglePlayWithSubstitute: () {
+              setState(() {
+                _playWithSubstitute = !_playWithSubstitute;
+              });
+
+              ref.read(draftSessionNotifierProvider.notifier).load(
+                    squadId: widget.squadId,
+                    selectedPlayerIds: widget.selectedPlayerIds,
+                    playWithSubstitute: _playWithSubstitute,
+                  );
+            },
+          ),
+          const Padding(
             padding: EdgeInsets.only(right: 8),
             child: _CreateMatchStubButton(),
           ),
@@ -58,8 +76,6 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
               child: Text('No draft proposals. Go back and select players.'),
             );
           }
-
-          final proposal = data.proposals[data.selectedIndex];
 
           return Padding(
             padding: const EdgeInsets.all(16),
@@ -83,8 +99,9 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
                 _TotalsRow(
                   homeTotal: _sum(data.home),
                   awayTotal: _sum(data.away),
-                  proposalHomeTotal: proposal.homeTotalScore,
-                  proposalAwayTotal: proposal.awayTotalScore,
+                  homeCount: data.home.length,
+                  awayCount: data.away.length,
+                  playWithSubstitute: _playWithSubstitute,
                 ),
                 const SizedBox(height: 12),
                 Expanded(
@@ -138,6 +155,41 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
   }
 }
 
+enum _DraftOptionsAction {
+  togglePlayWithSubstitute,
+}
+
+class _DraftOptionsButton extends StatelessWidget {
+  const _DraftOptionsButton({
+    required this.isPlayWithSubstituteEnabled,
+    required this.onTogglePlayWithSubstitute,
+  });
+
+  final bool isPlayWithSubstituteEnabled;
+  final VoidCallback onTogglePlayWithSubstitute;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<_DraftOptionsAction>(
+      tooltip: 'Draft options',
+      onSelected: (value) {
+        switch (value) {
+          case _DraftOptionsAction.togglePlayWithSubstitute:
+            onTogglePlayWithSubstitute();
+        }
+      },
+      itemBuilder: (context) => [
+        CheckedPopupMenuItem<_DraftOptionsAction>(
+          value: _DraftOptionsAction.togglePlayWithSubstitute,
+          checked: isPlayWithSubstituteEnabled,
+          child: const Text('Play with substitute'),
+        ),
+      ],
+      icon: const Icon(Icons.tune),
+    );
+  }
+}
+
 class _CreateMatchStubButton extends StatelessWidget {
   const _CreateMatchStubButton();
 
@@ -187,22 +239,44 @@ class _TotalsRow extends StatelessWidget {
   const _TotalsRow({
     required this.homeTotal,
     required this.awayTotal,
-    required this.proposalHomeTotal,
-    required this.proposalAwayTotal,
+    required this.homeCount,
+    required this.awayCount,
+    required this.playWithSubstitute,
   });
 
   final double homeTotal;
   final double awayTotal;
-  final double proposalHomeTotal;
-  final double proposalAwayTotal;
+  final int homeCount;
+  final int awayCount;
+  final bool playWithSubstitute;
 
   @override
   Widget build(BuildContext context) {
+    final effectiveHome = effectiveTeamScore(
+      totalScore: homeTotal,
+      teamSize: homeCount,
+      opponentTeamSize: awayCount,
+      playWithSubstitute: playWithSubstitute,
+    );
+
+    final effectiveAway = effectiveTeamScore(
+      totalScore: awayTotal,
+      teamSize: awayCount,
+      opponentTeamSize: homeCount,
+      playWithSubstitute: playWithSubstitute,
+    );
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        _TotalChip(label: 'Home total', value: homeTotal),
-        _TotalChip(label: 'Away total', value: awayTotal),
+        _TotalChip(
+          label: 'Home score',
+          value: effectiveHome,
+        ),
+        _TotalChip(
+          label: 'Away score',
+          value: effectiveAway,
+        ),
       ],
     );
   }
@@ -286,7 +360,9 @@ class _RosterPanel extends StatelessWidget {
                       : ListView.builder(
                           itemCount: players.length,
                           itemBuilder: (context, index) {
-                            final p = players[index];
+                            final sortedPlayers = [...players]
+                              ..sort((a, b) => b.score.compareTo(a.score));
+                            final p = sortedPlayers[index];
                             return DraftDraggablePlayerTile(
                               player: p,
                               trailing: const Icon(Icons.drag_indicator),

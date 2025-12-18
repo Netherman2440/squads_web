@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:app/core/error/failure.dart';
+import 'package:app/features/players/presentation/widgets/create_player_dialog.dart';
 import 'package:app/features/squads/domain/entities/squad.dart';
 import 'package:app/features/squads/domain/entities/user_squad_role.dart';
 import 'package:app/features/squads/presentation/pages/squad_home_page.dart';
@@ -178,9 +179,11 @@ class _QuickActionsSheet extends StatelessWidget {
               subtitle: const Text('Invite or create a new squad player.'),
               onTap: () {
                 Navigator.of(context).pop();
-                _showPlaceholderDialog(
-                  context,
-                  title: 'Add player',
+                showDialog<void>(
+                  context: context,
+                  builder: (context) => CreatePlayerDialog(
+                    squadId: squad.squadId,
+                  ),
                 );
               },
             ),
@@ -190,10 +193,7 @@ class _QuickActionsSheet extends StatelessWidget {
               subtitle: const Text('Schedule a new squad match.'),
               onTap: () {
                 Navigator.of(context).pop();
-                _showPlaceholderDialog(
-                  context,
-                  title: 'Add match',
-                );
+                context.go('/squads/${squad.squadId}/matches/draft');
               },
             ),
             ListTile(

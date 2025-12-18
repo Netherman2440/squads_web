@@ -46,7 +46,8 @@ class _DraftSelectionPageState extends ConsumerState<DraftSelectionPage> {
                 tooltip: 'Generate draft',
                 onPressed: canGenerate
                     ? () {
-                        final ids = data.selectedPlayerIds.toList(growable: false);
+                        final ids =
+                            data.selectedPlayerIds.toList(growable: false);
                         context.go(
                           '/squads/${widget.squadId}/matches/create',
                           extra: ids,
@@ -238,7 +239,7 @@ class _SelectedPlayersPanel extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Selected players',
+                  'Selected players ($selectedCount)',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 TextButton(

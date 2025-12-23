@@ -31,6 +31,7 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
       () => ref.read(draftSessionNotifierProvider.notifier).load(
             squadId: widget.squadId,
             selectedPlayerIds: widget.selectedPlayerIds,
+            algorithm: ref.read(draftAlgorithmProvider),
             playWithSubstitute: _playWithSubstitute,
           ),
     );
@@ -39,6 +40,7 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(draftSessionNotifierProvider);
+    final algorithm = ref.watch(draftAlgorithmProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -54,6 +56,17 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
               ref.read(draftSessionNotifierProvider.notifier).load(
                     squadId: widget.squadId,
                     selectedPlayerIds: widget.selectedPlayerIds,
+                    algorithm: algorithm,
+                    playWithSubstitute: _playWithSubstitute,
+                  );
+            },
+            algorithm: algorithm,
+            onSetAlgorithm: (next) {
+              ref.read(draftAlgorithmProvider.notifier).setAlgorithm(next);
+              ref.read(draftSessionNotifierProvider.notifier).load(
+                    squadId: widget.squadId,
+                    selectedPlayerIds: widget.selectedPlayerIds,
+                    algorithm: next,
                     playWithSubstitute: _playWithSubstitute,
                   );
             },
@@ -157,16 +170,22 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
 
 enum _DraftOptionsAction {
   togglePlayWithSubstitute,
+  useCombinatory,
+  useGreedy,
 }
 
 class _DraftOptionsButton extends StatelessWidget {
   const _DraftOptionsButton({
     required this.isPlayWithSubstituteEnabled,
     required this.onTogglePlayWithSubstitute,
+    required this.algorithm,
+    required this.onSetAlgorithm,
   });
 
   final bool isPlayWithSubstituteEnabled;
   final VoidCallback onTogglePlayWithSubstitute;
+  final DraftAlgorithm algorithm;
+  final ValueChanged<DraftAlgorithm> onSetAlgorithm;
 
   @override
   Widget build(BuildContext context) {
@@ -176,6 +195,10 @@ class _DraftOptionsButton extends StatelessWidget {
         switch (value) {
           case _DraftOptionsAction.togglePlayWithSubstitute:
             onTogglePlayWithSubstitute();
+          case _DraftOptionsAction.useCombinatory:
+            onSetAlgorithm(DraftAlgorithm.combinatory);
+          case _DraftOptionsAction.useGreedy:
+            onSetAlgorithm(DraftAlgorithm.greedy);
         }
       },
       itemBuilder: (context) => [
@@ -183,6 +206,17 @@ class _DraftOptionsButton extends StatelessWidget {
           value: _DraftOptionsAction.togglePlayWithSubstitute,
           checked: isPlayWithSubstituteEnabled,
           child: const Text('Play with substitute'),
+        ),
+        const PopupMenuDivider(),
+        CheckedPopupMenuItem<_DraftOptionsAction>(
+          value: _DraftOptionsAction.useCombinatory,
+          checked: algorithm == DraftAlgorithm.combinatory,
+          child: const Text('Algorithm: Combinatory'),
+        ),
+        CheckedPopupMenuItem<_DraftOptionsAction>(
+          value: _DraftOptionsAction.useGreedy,
+          checked: algorithm == DraftAlgorithm.greedy,
+          child: const Text('Algorithm: Greedy'),
         ),
       ],
       icon: const Icon(Icons.tune),

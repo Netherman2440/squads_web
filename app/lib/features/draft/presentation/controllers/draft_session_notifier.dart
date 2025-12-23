@@ -6,6 +6,27 @@ import 'package:app/features/draft/presentation/state/draft_session_state.dart';
 import 'package:app/features/players/application/usecases/get_squad_players_usecase.dart';
 import 'package:app/features/players/domain/entities/player.dart';
 
+enum DraftAlgorithm {
+  combinatory,
+  greedy,
+}
+
+class DraftAlgorithmNotifier extends Notifier<DraftAlgorithm> {
+  @override
+  DraftAlgorithm build() {
+    return DraftAlgorithm.combinatory;
+  }
+
+  void setAlgorithm(DraftAlgorithm algorithm) {
+    state = algorithm;
+  }
+}
+
+final draftAlgorithmProvider =
+    NotifierProvider<DraftAlgorithmNotifier, DraftAlgorithm>(
+  DraftAlgorithmNotifier.new,
+);
+
 class DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>> {
   @override
   AsyncValue<DraftSessionState> build() {
@@ -15,6 +36,7 @@ class DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>> {
   Future<void> load({
     required String squadId,
     required List<String> selectedPlayerIds,
+    required DraftAlgorithm algorithm,
     bool playWithSubstitute = true,
   }) async {
     state = const AsyncValue.loading();
@@ -33,10 +55,16 @@ class DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>> {
         ids: selectedPlayerIds,
       );
 
-      final proposals = await ref.read(createDraftUseCaseProvider).execute(
-            players: selected,
-            playWithSubstitute: playWithSubstitute,
-          );
+      final useCase = switch (algorithm) {
+        DraftAlgorithm.combinatory =>
+          ref.read(combinatoryCreateDraftUseCaseProvider),
+        DraftAlgorithm.greedy => ref.read(greedyCreateDraftUseCaseProvider),
+      };
+
+      final proposals = await useCase.execute(
+        players: selected,
+        playWithSubstitute: playWithSubstitute,
+      );
 
       if (proposals.isEmpty) {
         return const DraftSessionState(

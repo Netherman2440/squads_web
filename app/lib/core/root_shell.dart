@@ -439,11 +439,7 @@ class _SidebarNavigation extends StatelessWidget {
       crossAxisAlignment:
           isExpanded ? CrossAxisAlignment.stretch : CrossAxisAlignment.center,
       children: [
-        if (isExpanded)
-          const _SidebarHeader(
-            title: 'Navigation',
-          )
-        else
+        if (!isExpanded)
           const SizedBox(
             height: 8,
           ),
@@ -521,31 +517,6 @@ class _SidebarNavigation extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _SidebarHeader extends StatelessWidget {
-  const _SidebarHeader({
-    required this.title,
-  });
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Container(
-      height: kToolbarHeight,
-      padding: const EdgeInsets.symmetric(
-        horizontal: 16,
-      ),
-      alignment: Alignment.centerLeft,
-      child: Text(
-        title,
-        style: theme.textTheme.titleMedium,
-      ),
     );
   }
 }

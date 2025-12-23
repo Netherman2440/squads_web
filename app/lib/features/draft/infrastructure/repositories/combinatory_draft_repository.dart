@@ -13,12 +13,18 @@ class CombinatoryDraftRepository implements DraftRepository {
     int limit = 20,
     bool playWithSubstitute = true,
   }) async {
-    if (players.length > 16) {
-      throw const ValidationFailure('Draft supports up to 16 players.');
-    }
-
     if (players.isEmpty) {
       return [];
+    }
+
+    if (players.length < 2) {
+      throw const ValidationFailure(
+        'Draft requires at least 2 players.',
+      );
+    }
+
+    if (players.length > 16) {
+      throw const ValidationFailure('Draft supports up to 16 players.');
     }
 
     final sorted = [...players]

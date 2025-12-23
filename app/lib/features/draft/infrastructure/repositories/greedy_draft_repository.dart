@@ -23,6 +23,12 @@ class GreedyDraftRepository implements DraftRepository {
       return [];
     }
 
+    if (players.length < 2) {
+      throw const ValidationFailure(
+        'Draft requires at least 2 players.',
+      );
+    }
+
     // Greedy draft supports larger groups than the combinatory version, but we
     // still guard against absurd input sizes to keep the UI responsive.
     if (players.length > 200) {

@@ -40,10 +40,12 @@ class _DraftSelectionPageState extends ConsumerState<DraftSelectionPage> {
         actions: [
           state.when(
             data: (data) {
-              final canGenerate = data.selectedPlayerIds.isNotEmpty;
+              final canGenerate = data.selectedPlayerIds.length >= 2;
 
               return IconButton(
-                tooltip: 'Generate draft',
+                tooltip: canGenerate
+                    ? 'Generate draft'
+                    : 'Select at least 2 players to generate draft',
                 onPressed: canGenerate
                     ? () {
                         final ids =

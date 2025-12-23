@@ -42,8 +42,10 @@ class DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>> {
     state = const AsyncValue.loading();
 
     state = await AsyncValue.guard(() async {
-      if (selectedPlayerIds.isEmpty) {
-        throw const ValidationFailure('Select at least one player.');
+      if (selectedPlayerIds.length < 2) {
+        throw const ValidationFailure(
+          'Draft requires at least 2 players.',
+        );
       }
 
       final allPlayers = await ref

@@ -391,16 +391,20 @@ class _RosterPanel extends StatelessWidget {
                       ? const Center(
                           child: Text('No players.'),
                         )
-                      : ListView.builder(
-                          itemCount: players.length,
-                          itemBuilder: (context, index) {
+                      : Builder(
+                          builder: (context) {
                             final sortedPlayers = [...players]
                               ..sort((a, b) => b.score.compareTo(a.score));
-                            final p = sortedPlayers[index];
-                            return DraftDraggablePlayerTile(
-                              player: p,
-                              trailing: const Icon(Icons.drag_indicator),
-                              dragData: p.playerId,
+                            return ListView.builder(
+                              itemCount: sortedPlayers.length,
+                              itemBuilder: (context, index) {
+                                final p = sortedPlayers[index];
+                                return DraftDraggablePlayerTile(
+                                  player: p,
+                                  trailing: const Icon(Icons.drag_indicator),
+                                  dragData: p.playerId,
+                                );
+                              },
                             );
                           },
                         ),

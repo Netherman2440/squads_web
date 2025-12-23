@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:app/core/app_router.dart';
 import 'package:app/core/error/failure.dart';
 import 'package:app/features/players/presentation/widgets/create_player_dialog.dart';
 import 'package:app/features/squads/domain/entities/squad.dart';
@@ -193,7 +194,10 @@ class _QuickActionsSheet extends StatelessWidget {
               subtitle: const Text('Schedule a new squad match.'),
               onTap: () {
                 Navigator.of(context).pop();
-                context.go('/squads/${squad.squadId}/matches/draft');
+                context.goNamed(
+                  AppRoute.draftSelection.name,
+                  pathParameters: {'squadId': squad.squadId},
+                );
               },
             ),
             ListTile(

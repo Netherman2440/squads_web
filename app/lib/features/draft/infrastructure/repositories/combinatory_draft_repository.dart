@@ -1,5 +1,5 @@
 import 'package:app/core/error/failure.dart';
-import 'package:app/core/utils/team_score.dart';
+import 'package:app/core/utils/team_ranking.dart';
 import 'package:app/features/draft/domain/entities/draft.dart';
 import 'package:app/features/draft/domain/repositories/draft_repository.dart';
 import 'package:app/features/players/domain/entities/player.dart';
@@ -36,7 +36,7 @@ class CombinatoryDraftRepository implements DraftRepository {
     final isOdd = n.isOdd;
     final k = n ~/ 2;
 
-    final indexedScores = sorted.map((p) => p.score).toList(growable: false);
+    final indexedRankings = sorted.map((p) => p.ranking).toList(growable: false);
 
     final proposals = <_DraftProposal>[];
 
@@ -62,27 +62,27 @@ class CombinatoryDraftRepository implements DraftRepository {
 
       for (var i = 0; i < n; i++) {
         final player = sorted[i];
-        final score = indexedScores[i];
+        final ranking = indexedRankings[i];
         final isHome = (mask & (1 << i)) != 0;
 
         if (isHome) {
           homePlayers.add(player);
-          homeTotal += score;
+          homeTotal += ranking;
         } else {
           awayPlayers.add(player);
-          awayTotal += score;
+          awayTotal += ranking;
         }
       }
 
-      final effectiveHome = effectiveTeamScore(
-        totalScore: homeTotal,
+      final effectiveHome = effectiveTeamRanking(
+        totalRanking: homeTotal,
         teamSize: homePlayers.length,
         opponentTeamSize: awayPlayers.length,
         playWithSubstitute: isOdd && playWithSubstitute,
       );
 
-      final effectiveAway = effectiveTeamScore(
-        totalScore: awayTotal,
+      final effectiveAway = effectiveTeamRanking(
+        totalRanking: awayTotal,
         teamSize: awayPlayers.length,
         opponentTeamSize: homePlayers.length,
         playWithSubstitute: isOdd && playWithSubstitute,
@@ -96,8 +96,8 @@ class CombinatoryDraftRepository implements DraftRepository {
           draft: Draft(
             homePlayers: homePlayers,
             awayPlayers: awayPlayers,
-            homeTotalScore: homeTotal,
-            awayTotalScore: awayTotal,
+            homeTotalRanking: homeTotal,
+            awayTotalRanking: awayTotal,
           ),
           teamDifference: (effectiveHome - effectiveAway).abs(),
           externalBalance: externalBalance,
@@ -122,7 +122,7 @@ class CombinatoryDraftRepository implements DraftRepository {
 
 class _DraftProposal {
   final Draft draft;
-  final double teamDifference; // absolute difference between team scores
+  final double teamDifference; // absolute difference between team rankings
   final double externalBalance; // sum of differences between corresponding player positions
 
   const _DraftProposal({
@@ -149,16 +149,16 @@ double _calculateExternalBalance(List<Player> homePlayers, List<Player> awayPlay
   if (homePlayers.isEmpty && awayPlayers.isEmpty) return 0.0;
   if (homePlayers.isEmpty || awayPlayers.isEmpty) return double.infinity;
 
-  // Sort both teams by score (best players first)
-  final homeScores = homePlayers.map((p) => p.score).toList()..sort((a, b) => b.compareTo(a));
-  final awayScores = awayPlayers.map((p) => p.score).toList()..sort((a, b) => b.compareTo(a));
+  // Sort both teams by ranking (best players first)
+  final homeRankings = homePlayers.map((p) => p.ranking).toList()..sort((a, b) => b.compareTo(a));
+  final awayRankings = awayPlayers.map((p) => p.ranking).toList()..sort((a, b) => b.compareTo(a));
 
   // Compare corresponding positions
   var totalDifference = 0.0;
-  final minLength = homeScores.length < awayScores.length ? homeScores.length : awayScores.length;
+  final minLength = homeRankings.length < awayRankings.length ? homeRankings.length : awayRankings.length;
 
   for (var i = 0; i < minLength; i++) {
-    totalDifference += (homeScores[i] - awayScores[i]).abs();
+    totalDifference += (homeRankings[i] - awayRankings[i]).abs();
   }
 
   return totalDifference;

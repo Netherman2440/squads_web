@@ -1,7 +1,7 @@
 import 'dart:math';
 
 import 'package:app/core/error/failure.dart';
-import 'package:app/core/utils/team_score.dart';
+import 'package:app/core/utils/team_ranking.dart';
 import 'package:app/features/draft/domain/repositories/draft_repository.dart';
 import 'package:app/features/draft/domain/entities/draft.dart';
 import 'package:app/features/players/domain/entities/player.dart';
@@ -88,15 +88,15 @@ class GreedyDraftRepository implements DraftRepository {
         continue;
       }
 
-      final effectiveHome = effectiveTeamScore(
-        totalScore: draft.homeTotalScore,
+      final effectiveHome = effectiveTeamRanking(
+        totalRanking: draft.homeTotalRanking,
         teamSize: draft.homePlayers.length,
         opponentTeamSize: draft.awayPlayers.length,
         playWithSubstitute: isOdd && playWithSubstitute,
       );
 
-      final effectiveAway = effectiveTeamScore(
-        totalScore: draft.awayTotalScore,
+      final effectiveAway = effectiveTeamRanking(
+        totalRanking: draft.awayTotalRanking,
         teamSize: draft.awayPlayers.length,
         opponentTeamSize: draft.homePlayers.length,
         playWithSubstitute: isOdd && playWithSubstitute,
@@ -148,11 +148,11 @@ Draft _buildGreedyDraft({
 }) {
   final rng = Random(seed);
 
-  final byScore = [...sortedById]
+  final byRanking = [...sortedById]
     ..sort((a, b) {
-      final byScoreDesc = b.score.compareTo(a.score);
-      if (byScoreDesc != 0) {
-        return byScoreDesc;
+      final byRankingDesc = b.ranking.compareTo(a.ranking);
+      if (byRankingDesc != 0) {
+        return byRankingDesc;
       }
 
       // Deterministic per-attempt tie-breaker.
@@ -169,13 +169,13 @@ Draft _buildGreedyDraft({
   // Shuffle within blocks to create different drafts while keeping strong
   // players early in the assignment order.
   final blockSize = 3 + (seed.abs() % 4); // 3..6
-  for (var start = 0; start < byScore.length; start += blockSize) {
-    final end = min(start + blockSize, byScore.length);
+  for (var start = 0; start < byRanking.length; start += blockSize) {
+    final end = min(start + blockSize, byRanking.length);
     for (var i = end - 1; i > start; i--) {
       final j = start + rng.nextInt(i - start + 1);
-      final tmp = byScore[i];
-      byScore[i] = byScore[j];
-      byScore[j] = tmp;
+      final tmp = byRanking[i];
+      byRanking[i] = byRanking[j];
+      byRanking[j] = tmp;
     }
   }
 
@@ -185,22 +185,22 @@ Draft _buildGreedyDraft({
   var homeTotal = 0.0;
   var awayTotal = 0.0;
 
-  for (final player in byScore) {
+  for (final player in byRanking) {
     if (home.length >= homeTargetSize) {
       away.add(player);
-      awayTotal += player.score;
+      awayTotal += player.ranking;
       continue;
     }
 
     if (away.length >= awayTargetSize) {
       home.add(player);
-      homeTotal += player.score;
+      homeTotal += player.ranking;
       continue;
     }
 
     final diffIfHome = _effectiveDiffAfterAdd(
       addToHome: true,
-      addScore: player.score,
+      addRanking: player.ranking,
       homeTotal: homeTotal,
       awayTotal: awayTotal,
       homeTargetSize: homeTargetSize,
@@ -210,7 +210,7 @@ Draft _buildGreedyDraft({
 
     final diffIfAway = _effectiveDiffAfterAdd(
       addToHome: false,
-      addScore: player.score,
+      addRanking: player.ranking,
       homeTotal: homeTotal,
       awayTotal: awayTotal,
       homeTargetSize: homeTargetSize,
@@ -220,13 +220,13 @@ Draft _buildGreedyDraft({
 
     if (diffIfHome < diffIfAway) {
       home.add(player);
-      homeTotal += player.score;
+      homeTotal += player.ranking;
       continue;
     }
 
     if (diffIfAway < diffIfHome) {
       away.add(player);
-      awayTotal += player.score;
+      awayTotal += player.ranking;
       continue;
     }
 
@@ -238,10 +238,10 @@ Draft _buildGreedyDraft({
 
     if (toHome) {
       home.add(player);
-      homeTotal += player.score;
+      homeTotal += player.ranking;
     } else {
       away.add(player);
-      awayTotal += player.score;
+      awayTotal += player.ranking;
     }
   }
 
@@ -251,32 +251,32 @@ Draft _buildGreedyDraft({
   return Draft(
     homePlayers: home,
     awayPlayers: away,
-    homeTotalScore: homeTotal,
-    awayTotalScore: awayTotal,
+    homeTotalRanking: homeTotal,
+    awayTotalRanking: awayTotal,
   );
 }
 
 double _effectiveDiffAfterAdd({
   required bool addToHome,
-  required double addScore,
+  required double addRanking,
   required double homeTotal,
   required double awayTotal,
   required int homeTargetSize,
   required int awayTargetSize,
   required bool playWithSubstitute,
 }) {
-  final nextHomeTotal = addToHome ? homeTotal + addScore : homeTotal;
-  final nextAwayTotal = addToHome ? awayTotal : awayTotal + addScore;
+  final nextHomeTotal = addToHome ? homeTotal + addRanking : homeTotal;
+  final nextAwayTotal = addToHome ? awayTotal : awayTotal + addRanking;
 
-  final effectiveHome = effectiveTeamScore(
-    totalScore: nextHomeTotal,
+  final effectiveHome = effectiveTeamRanking(
+    totalRanking: nextHomeTotal,
     teamSize: homeTargetSize,
     opponentTeamSize: awayTargetSize,
     playWithSubstitute: playWithSubstitute,
   );
 
-  final effectiveAway = effectiveTeamScore(
-    totalScore: nextAwayTotal,
+  final effectiveAway = effectiveTeamRanking(
+    totalRanking: nextAwayTotal,
     teamSize: awayTargetSize,
     opponentTeamSize: homeTargetSize,
     playWithSubstitute: playWithSubstitute,
@@ -302,19 +302,19 @@ Draft _improveBySwaps({
   final home = [...draft.homePlayers];
   final away = [...draft.awayPlayers];
 
-  var homeTotal = draft.homeTotalScore;
-  var awayTotal = draft.awayTotalScore;
+  var homeTotal = draft.homeTotalRanking;
+  var awayTotal = draft.awayTotalRanking;
 
   double currentDiff() {
-    final effectiveHome = effectiveTeamScore(
-      totalScore: homeTotal,
+    final effectiveHome = effectiveTeamRanking(
+      totalRanking: homeTotal,
       teamSize: homeTargetSize,
       opponentTeamSize: awayTargetSize,
       playWithSubstitute: playWithSubstitute,
     );
 
-    final effectiveAway = effectiveTeamScore(
-      totalScore: awayTotal,
+    final effectiveAway = effectiveTeamRanking(
+      totalRanking: awayTotal,
       teamSize: awayTargetSize,
       opponentTeamSize: homeTargetSize,
       playWithSubstitute: playWithSubstitute,
@@ -326,11 +326,11 @@ Draft _improveBySwaps({
   var bestDiff = currentDiff();
   var bestExternal = _calculateExternalBalance(home, away);
 
-  // Focus swaps around top players by score; this is a cheap local improvement.
+  // Focus swaps around top players by ranking; this is a cheap local improvement.
   const maxIterations = 20;
   for (var iteration = 0; iteration < maxIterations; iteration++) {
-    home.sort((a, b) => b.score.compareTo(a.score));
-    away.sort((a, b) => b.score.compareTo(a.score));
+    home.sort((a, b) => b.ranking.compareTo(a.ranking));
+    away.sort((a, b) => b.ranking.compareTo(a.ranking));
 
     final probeHome = min(12, home.length);
     final probeAway = min(12, away.length);
@@ -350,18 +350,18 @@ Draft _improveBySwaps({
       for (final j in awayIndices) {
         final ap = away[j];
 
-        final nextHomeTotal = homeTotal - hp.score + ap.score;
-        final nextAwayTotal = awayTotal - ap.score + hp.score;
+        final nextHomeTotal = homeTotal - hp.ranking + ap.ranking;
+        final nextAwayTotal = awayTotal - ap.ranking + hp.ranking;
 
-        final effectiveHome = effectiveTeamScore(
-          totalScore: nextHomeTotal,
+        final effectiveHome = effectiveTeamRanking(
+          totalRanking: nextHomeTotal,
           teamSize: homeTargetSize,
           opponentTeamSize: awayTargetSize,
           playWithSubstitute: playWithSubstitute,
         );
 
-        final effectiveAway = effectiveTeamScore(
-          totalScore: nextAwayTotal,
+        final effectiveAway = effectiveTeamRanking(
+          totalRanking: nextAwayTotal,
           teamSize: awayTargetSize,
           opponentTeamSize: homeTargetSize,
           playWithSubstitute: playWithSubstitute,
@@ -415,8 +415,8 @@ Draft _improveBySwaps({
     home[bestHomeIdx] = ap;
     away[bestAwayIdx] = hp;
 
-    homeTotal = homeTotal - hp.score + ap.score;
-    awayTotal = awayTotal - ap.score + hp.score;
+    homeTotal = homeTotal - hp.ranking + ap.ranking;
+    awayTotal = awayTotal - ap.ranking + hp.ranking;
   }
 
   home.sort((a, b) => a.playerId.compareTo(b.playerId));
@@ -425,8 +425,8 @@ Draft _improveBySwaps({
   return Draft(
     homePlayers: home,
     awayPlayers: away,
-    homeTotalScore: homeTotal,
-    awayTotalScore: awayTotal,
+    homeTotalRanking: homeTotal,
+    awayTotalRanking: awayTotal,
   );
 }
 
@@ -451,8 +451,8 @@ Draft _canonicalizeDraft({
   return Draft(
     homePlayers: draft.awayPlayers,
     awayPlayers: draft.homePlayers,
-    homeTotalScore: draft.awayTotalScore,
-    awayTotalScore: draft.homeTotalScore,
+    homeTotalRanking: draft.awayTotalRanking,
+    awayTotalRanking: draft.homeTotalRanking,
   );
 }
 
@@ -510,17 +510,17 @@ double _calculateExternalBalance(List<Player> homePlayers, List<Player> awayPlay
   if (homePlayers.isEmpty && awayPlayers.isEmpty) return 0.0;
   if (homePlayers.isEmpty || awayPlayers.isEmpty) return double.infinity;
 
-  final homeScores = homePlayers.map((p) => p.score).toList()
+  final homeRankings = homePlayers.map((p) => p.ranking).toList()
     ..sort((a, b) => b.compareTo(a));
-  final awayScores = awayPlayers.map((p) => p.score).toList()
+  final awayRankings = awayPlayers.map((p) => p.ranking).toList()
     ..sort((a, b) => b.compareTo(a));
 
   var totalDifference = 0.0;
   final minLength =
-      homeScores.length < awayScores.length ? homeScores.length : awayScores.length;
+      homeRankings.length < awayRankings.length ? homeRankings.length : awayRankings.length;
 
   for (var i = 0; i < minLength; i++) {
-    totalDifference += (homeScores[i] - awayScores[i]).abs();
+    totalDifference += (homeRankings[i] - awayRankings[i]).abs();
   }
 
   return totalDifference;

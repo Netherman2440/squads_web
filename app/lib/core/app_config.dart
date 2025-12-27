@@ -1,30 +1,26 @@
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+class AppConfig {
+  static const String supabaseUrl = String.fromEnvironment('SUPABASE_URL');
+  static const String supabaseAnonKey = String.fromEnvironment(
+    'SUPABASE_ANON_KEY',
+  );
 
-enum Environment {
-  dev,
-  prod;
+  static void validate() {
+    final missing = <String>[];
+    if (supabaseUrl.isEmpty) {
+      missing.add('SUPABASE_URL');
+    }
+    if (supabaseAnonKey.isEmpty) {
+      missing.add('SUPABASE_ANON_KEY');
+    }
 
-  static Environment get current {
-    const env = String.fromEnvironment('ENV', defaultValue: 'prod');
-    return Environment.values.firstWhere(
-      (e) => e.name == env,
-      orElse: () => Environment.prod,
-    );
-  }
-
-  String get fileName {
-    switch (this) {
-      case Environment.dev:
-        return '.env.dev';
-      case Environment.prod:
-        return '.env.prod';
+    if (missing.isNotEmpty) {
+      throw StateError(
+        'Missing required config: ${missing.join(', ')}. '
+        'Provide them via --dart-define/--dart-define-from-file '
+        '(for example: flutter run -d chrome --dart-define-from-file=.env).',
+      );
     }
   }
-}
-
-class AppConfig {
-  static String get supabaseUrl => dotenv.env['SUPABASE_URL'] ?? '';
-  static String get supabaseAnonKey => dotenv.env['SUPABASE_ANON_KEY'] ?? '';
 
   const AppConfig();
 }

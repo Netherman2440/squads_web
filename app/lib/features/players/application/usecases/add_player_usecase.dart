@@ -15,21 +15,21 @@ class AddPlayerUseCase {
     required String squadId,
     required String name,
     String? position,
-    required int baseScore,
+    required int baseRanking,
   }) async {
     if (name.trim().isEmpty) {
       throw const ValidationFailure('Player name cannot be empty.');
     }
 
-    if (baseScore < 0) {
-      throw const ValidationFailure('Base score cannot be negative.');
+    if (baseRanking < 0) {
+      throw const ValidationFailure('Base ranking cannot be negative.');
     }
 
     return await _playerRepository.addPlayer(
       squadId: squadId,
       name: name.trim(),
       position: position?.trim(),
-      baseScore: baseScore,
+      baseRanking: baseRanking,
     );
   }
 }

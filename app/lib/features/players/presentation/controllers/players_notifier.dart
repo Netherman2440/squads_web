@@ -35,7 +35,7 @@ class PlayersNotifier extends Notifier<AsyncValue<List<Player>>> {
     required String squadId,
     required String name,
     String? position,
-    required int baseScore,
+    required int baseRanking,
   }) async {
     final authState = ref.read(authStateProvider);
     final authEntity = authState.value;
@@ -56,7 +56,7 @@ class PlayersNotifier extends Notifier<AsyncValue<List<Player>>> {
             squadId: squadId,
             name: name,
             position: position,
-            baseScore: baseScore,
+            baseRanking: baseRanking,
           );
 
       state = state.whenData((players) => [...players, player]);

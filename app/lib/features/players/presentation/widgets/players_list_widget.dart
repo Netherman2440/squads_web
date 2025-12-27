@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:app/core/app_router.dart';
 
 import 'package:app/features/players/domain/entities/player.dart';
 
@@ -21,10 +23,19 @@ class PlayersListWidget extends StatelessWidget {
       itemCount: players.length,
       itemBuilder: (context, index) {
         final player = players[index];
-        final difference = player.score - player.baseScore;
+        final difference = player.ranking - player.baseRanking;
 
         return Card(
           child: ListTile(
+            onTap: () {
+              context.pushNamed(
+                AppRoute.playerDetails.name,
+                pathParameters: {
+                  'squadId': squadId,
+                  'playerId': player.playerId,
+                },
+              );
+            },
             leading: CircleAvatar(
               child: Text(
                 player.name.isNotEmpty ? player.name[0].toUpperCase() : '?',
@@ -50,7 +61,7 @@ class PlayersListWidget extends StatelessWidget {
                   color: theme.colorScheme.secondary,
                 ),
                 const SizedBox(width: 4),
-                Text('Base: ${player.baseScore}'),
+                Text('Base: ${player.baseRanking}'),
                 const SizedBox(width: 12),
                 Icon(
                   Icons.insights,
@@ -58,10 +69,10 @@ class PlayersListWidget extends StatelessWidget {
                   color: theme.colorScheme.tertiary,
                 ),
                 const SizedBox(width: 4),
-                Text('Score: ${player.score.toStringAsFixed(2)}'),
+                Text('Ranking: ${player.ranking.toStringAsFixed(2)}'),
                 if (difference.abs() > 0) ...[
                   const SizedBox(width: 12),
-                  _ScoreDifference(
+                  _RankingDifference(
                     difference: difference,
                   ),
                 ],
@@ -74,8 +85,8 @@ class PlayersListWidget extends StatelessWidget {
   }
 }
 
-class _ScoreDifference extends StatelessWidget {
-  const _ScoreDifference({
+class _RankingDifference extends StatelessWidget {
+  const _RankingDifference({
     required this.difference,
   });
 

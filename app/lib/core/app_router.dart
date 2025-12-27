@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 
+import 'package:app/features/players/presentation/pages/player_details_page.dart';
 import 'package:app/core/root_shell.dart';
 import 'package:app/features/auth/presentation/pages/auth_page.dart';
 import 'package:app/features/auth/presentation/pages/register_page.dart';
@@ -22,6 +23,7 @@ enum AppRoute {
   players,
   draftSelection,
   draftCreate,
+  playerDetails,
 }
 
 final appRouter = GoRouter(
@@ -70,6 +72,20 @@ final appRouter = GoRouter(
             final squadId = state.pathParameters['squadId'] ?? '';
             return NoTransitionPage(
               child: PlayersPage(squadId: squadId),
+            );
+          },
+        ),
+        GoRoute(
+          path: '/squads/:squadId/players/:playerId',
+          name: AppRoute.playerDetails.name,
+          pageBuilder: (context, state) {
+            final squadId = state.pathParameters['squadId'] ?? '';
+            final playerId = state.pathParameters['playerId'] ?? '';
+            return NoTransitionPage(
+              child: PlayerDetailsPage(
+                squadId: squadId,
+                playerId: playerId,
+              ),
             );
           },
         ),

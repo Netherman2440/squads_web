@@ -3,8 +3,8 @@ class Player {
   final String squadId;
   final String name;
   final String? position;
-  final int baseScore;
-  final double score;
+  final int baseRanking;
+  final double ranking;
   final DateTime createdAt;
 
 
@@ -13,8 +13,8 @@ class Player {
     required this.squadId,
     required this.name,
     this.position,
-    required this.baseScore,
-    required this.score,
+    required this.baseRanking,
+    required this.ranking,
     required this.createdAt,
   });
 
@@ -23,8 +23,8 @@ class Player {
     String? squadId,
     String? name,
     String? position,
-    int? baseScore,
-    double? score,
+    int? baseRanking,
+    double? ranking,
     DateTime? createdAt,
   }) {
     return Player(
@@ -32,8 +32,8 @@ class Player {
       squadId: squadId ?? this.squadId,
       name: name ?? this.name,
       position: position ?? this.position,
-      baseScore: baseScore ?? this.baseScore,
-      score: score ?? this.score,
+      baseRanking: baseRanking ?? this.baseRanking,
+      ranking: ranking ?? this.ranking,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -46,8 +46,8 @@ class Player {
       squadId: map['squad_id'] as String,
       name: map['name'] as String,
       position: map['position'] as String?,
-      baseScore: map['base_score'] as int,
-      score: (map['score'] as num?)?.toDouble() ?? 0.0,
+      baseRanking: map['base_score'] as int,
+      ranking: (map['score'] as num?)?.toDouble() ?? 0.0,
       createdAt: createdAt,
     );
   }
@@ -58,8 +58,8 @@ class Player {
       'squad_id': squadId,
       'name': name,
       'position': position,
-      'base_score': baseScore,
-      'score': score,
+      'base_score': baseRanking,
+      'score': ranking,
       'created_at': createdAt.toIso8601String(),
     };
   }

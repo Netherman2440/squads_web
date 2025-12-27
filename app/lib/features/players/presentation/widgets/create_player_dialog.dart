@@ -21,7 +21,7 @@ class CreatePlayerDialog extends ConsumerStatefulWidget {
 class _CreatePlayerDialogState extends ConsumerState<CreatePlayerDialog> {
   late final TextEditingController _nameController;
   late final TextEditingController _positionController;
-  late final TextEditingController _baseScoreController;
+  late final TextEditingController _baseRankingController;
 
   int _sliderValue = 50;
   bool _isSubmitting = false;
@@ -33,14 +33,14 @@ class _CreatePlayerDialogState extends ConsumerState<CreatePlayerDialog> {
     super.initState();
     _nameController = TextEditingController();
     _positionController = TextEditingController();
-    _baseScoreController = TextEditingController(text: '50');
+    _baseRankingController = TextEditingController(text: '50');
   }
 
   @override
   void dispose() {
     _nameController.dispose();
     _positionController.dispose();
-    _baseScoreController.dispose();
+    _baseRankingController.dispose();
     super.dispose();
   }
 
@@ -55,11 +55,11 @@ class _CreatePlayerDialogState extends ConsumerState<CreatePlayerDialog> {
       return;
     }
 
-    final baseScore = _sliderValue;
+    final baseRanking = _sliderValue;
 
-    if (baseScore < 1 || baseScore > 100) {
+    if (baseRanking < 1 || baseRanking > 100) {
       setState(() {
-        _errorText = 'Base score must be between 1 and 100.';
+        _errorText = 'Base ranking must be between 1 and 100.';
       });
       return;
     }
@@ -86,7 +86,7 @@ class _CreatePlayerDialogState extends ConsumerState<CreatePlayerDialog> {
             squadId: widget.squadId,
             name: name,
             position: position.isEmpty ? null : position,
-            baseScore: baseScore,
+            baseRanking: baseRanking,
           );
 
       if (!mounted) {
@@ -102,7 +102,7 @@ class _CreatePlayerDialogState extends ConsumerState<CreatePlayerDialog> {
     }
   }
 
-  void _handleBaseScoreTextChanged(String value) {
+  void _handleBaseRankingTextChanged(String value) {
     if (_isUpdatingFromSlider) {
       return;
     }
@@ -124,13 +124,13 @@ class _CreatePlayerDialogState extends ConsumerState<CreatePlayerDialog> {
 
   _NearestPlayers _findNearestPlayers(List<Player> players, int target) {
     final lowerCandidates = players
-        .where((player) => player.score < target)
+        .where((player) => player.ranking < target)
         .toList()
-      ..sort((a, b) => b.score.compareTo(a.score));
+      ..sort((a, b) => b.ranking.compareTo(a.ranking));
     final higherCandidates = players
-        .where((player) => player.score > target)
+        .where((player) => player.ranking > target)
         .toList()
-      ..sort((a, b) => a.score.compareTo(b.score));
+      ..sort((a, b) => a.ranking.compareTo(b.ranking));
 
     return _NearestPlayers(
       lower: lowerCandidates.isEmpty ? null : lowerCandidates.first,
@@ -173,9 +173,9 @@ class _CreatePlayerDialogState extends ConsumerState<CreatePlayerDialog> {
             ),
             const SizedBox(height: 12),
             TextField(
-              controller: _baseScoreController,
+              controller: _baseRankingController,
               decoration: const InputDecoration(
-                labelText: 'Base score',
+                labelText: 'Base ranking',
                 border: OutlineInputBorder(),
               ),
               keyboardType: TextInputType.number,
@@ -183,11 +183,11 @@ class _CreatePlayerDialogState extends ConsumerState<CreatePlayerDialog> {
               inputFormatters: [
                 FilteringTextInputFormatter.digitsOnly,
               ],
-              onChanged: _handleBaseScoreTextChanged,
+              onChanged: _handleBaseRankingTextChanged,
             ),
           const SizedBox(height: 8),
           Text(
-            'Selected score: $_sliderValue',
+            'Selected ranking: $_sliderValue',
             style: theme.textTheme.bodyMedium,
           ),
           Slider(
@@ -201,7 +201,7 @@ class _CreatePlayerDialogState extends ConsumerState<CreatePlayerDialog> {
               setState(() {
                 _sliderValue = rounded;
                 _isUpdatingFromSlider = true;
-                _baseScoreController.text = rounded.toString();
+                _baseRankingController.text = rounded.toString();
                 _isUpdatingFromSlider = false;
               });
             },
@@ -352,7 +352,7 @@ class _NearestPlayerProfile extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Score: ${player!.score.toStringAsFixed(2)}',
+                      'Ranking: ${player!.ranking.toStringAsFixed(2)}',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),

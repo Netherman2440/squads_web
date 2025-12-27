@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:app/core/error/failure.dart';
-import 'package:app/core/utils/team_score.dart';
+import 'package:app/core/utils/team_ranking.dart';
 import 'package:app/features/draft/presentation/controllers/draft_session_notifier.dart';
 import 'package:app/features/draft/presentation/widgets/draft_draggable_player_tile.dart';
 import 'package:app/features/players/domain/entities/player.dart';
@@ -286,15 +286,15 @@ class _TotalsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveHome = effectiveTeamScore(
-      totalScore: homeTotal,
+    final effectiveHome = effectiveTeamRanking(
+      totalRanking: homeTotal,
       teamSize: homeCount,
       opponentTeamSize: awayCount,
       playWithSubstitute: playWithSubstitute,
     );
 
-    final effectiveAway = effectiveTeamScore(
-      totalScore: awayTotal,
+    final effectiveAway = effectiveTeamRanking(
+      totalRanking: awayTotal,
       teamSize: awayCount,
       opponentTeamSize: homeCount,
       playWithSubstitute: playWithSubstitute,
@@ -304,11 +304,11 @@ class _TotalsRow extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
         _TotalChip(
-          label: 'Home score',
+          label: 'Home ranking',
           value: effectiveHome,
         ),
         _TotalChip(
-          label: 'Away score',
+          label: 'Away ranking',
           value: effectiveAway,
         ),
       ],
@@ -394,7 +394,7 @@ class _RosterPanel extends StatelessWidget {
                       : Builder(
                           builder: (context) {
                             final sortedPlayers = [...players]
-                              ..sort((a, b) => b.score.compareTo(a.score));
+                              ..sort((a, b) => b.ranking.compareTo(a.ranking));
                             return ListView.builder(
                               itemCount: sortedPlayers.length,
                               itemBuilder: (context, index) {
@@ -445,7 +445,7 @@ class _ErrorBody extends StatelessWidget {
 double _sum(List<Player> players) {
   var total = 0.0;
   for (final p in players) {
-    total += p.score;
+    total += p.ranking;
   }
   return total;
 }

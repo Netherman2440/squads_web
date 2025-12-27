@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/app_config.dart';
 import 'core/app_router.dart';
 import 'core/app_theme.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,7 +18,27 @@ Future<void> main() async {
     anonKey: AppConfig.supabaseAnonKey,
   );
 
-  runApp(const ProviderScope(child: MyApp()));
+  await SentryFlutter.init(
+    (options) {
+      options.dsn = 'https://0a2c26a211cf77109b513b6a7f5fc41c@o4510609476288512.ingest.de.sentry.io/4510609477468240';
+      // Adds request headers and IP for users, for more info visit:
+      // https://docs.sentry.io/platforms/dart/guides/flutter/data-management/data-collected/
+      options.sendDefaultPii = true;
+      options.enableLogs = true;
+      // Set tracesSampleRate to 1.0 to capture 100% of transactions for tracing.
+      // We recommend adjusting this value in production.
+      options.tracesSampleRate = 1.0;
+      // The sampling rate for profiling is relative to tracesSampleRate
+      // Setting to 1.0 will profile 100% of sampled transactions:
+      options.profilesSampleRate = 1.0;
+      // Configure Session Replay
+      options.replay.sessionSampleRate = 0.1;
+      options.replay.onErrorSampleRate = 1.0;
+    },
+    appRunner: () => runApp(SentryWidget(child: const ProviderScope(child: MyApp()))),
+  );
+  // TODO: Remove this line after sending the first sample event to sentry.
+  await Sentry.captureException(StateError('This is a sample exception.'));
 }
 
 class MyApp extends StatelessWidget {

@@ -13,7 +13,7 @@ abstract class PlayerRepository {
     required String squadId,
     required String name,
     String? position,
-    required int baseScore,
+    required int baseRanking,
   });
 
   Future<void> deletePlayer({
@@ -23,7 +23,7 @@ abstract class PlayerRepository {
   Future<Player> updatePlayer({
     required String playerId,
     String? name,
-    double? score,
+    String? position,
   });
 }
 

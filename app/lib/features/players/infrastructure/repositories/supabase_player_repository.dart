@@ -99,7 +99,7 @@ class SupabasePlayerRepository implements PlayerRepository {
     required String squadId,
     required String name,
     String? position,
-    required int baseScore,
+    required int baseRanking,
   }) async {
     try {
       final playerId = const Uuid().v4();
@@ -112,8 +112,8 @@ class SupabasePlayerRepository implements PlayerRepository {
               'squad_id': squadId,
               'name': name,
               'position': position,
-              'base_score': baseScore,
-              'score': baseScore,
+              'base_score': baseRanking,
+              'score': baseRanking,
             },
           )
           .select(
@@ -171,7 +171,7 @@ class SupabasePlayerRepository implements PlayerRepository {
   Future<Player> updatePlayer({
     required String playerId,
     String? name,
-    double? score,
+    String? position,
   }) async {
     try {
       final updates = <String, dynamic>{};
@@ -179,8 +179,8 @@ class SupabasePlayerRepository implements PlayerRepository {
       if (name != null) {
         updates['name'] = name;
       }
-      if (score != null) {
-        updates['score'] = score;
+      if (position != null) {
+        updates['position'] = position;
       }
 
       if (updates.isEmpty) {

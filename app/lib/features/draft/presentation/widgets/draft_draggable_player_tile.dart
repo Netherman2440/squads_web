@@ -20,7 +20,7 @@ class DraftDraggablePlayerTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final difference = player.score - player.baseScore;
+    final difference = player.ranking - player.baseRanking;
 
     final tile = Card(
       child: ListTile(
@@ -48,7 +48,7 @@ class DraftDraggablePlayerTile extends StatelessWidget {
               color: theme.colorScheme.secondary,
             ),
             const SizedBox(width: 4),
-            Text('Base: ${player.baseScore}'),
+            Text('Base: ${player.baseRanking}'),
             const SizedBox(width: 12),
             Icon(
               Icons.insights,
@@ -56,10 +56,10 @@ class DraftDraggablePlayerTile extends StatelessWidget {
               color: theme.colorScheme.tertiary,
             ),
             const SizedBox(width: 4),
-            Text('Score: ${player.score.toStringAsFixed(2)}'),
+            Text('Ranking: ${player.ranking.toStringAsFixed(2)}'),
             if (difference.abs() > 0) ...[
               const SizedBox(width: 12),
-              _ScoreDifference(difference: difference),
+              _RankingDifference(difference: difference),
             ],
           ],
         ),
@@ -124,8 +124,8 @@ bool get _shouldUseImmediateDrag {
   }
 }
 
-class _ScoreDifference extends StatelessWidget {
-  const _ScoreDifference({required this.difference});
+class _RankingDifference extends StatelessWidget {
+  const _RankingDifference({required this.difference});
 
   final double difference;
 

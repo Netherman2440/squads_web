@@ -1,22 +1,22 @@
-/// Utilities for computing team scores consistently across the app.
+/// Utilities for computing team rankings consistently across the app.
 ///
 /// When [playWithSubstitute] is enabled and team sizes are uneven (odd number
 /// of total players), the larger team is adjusted as if one player sits out for
 /// an equal share of the match.
 ///
-/// Effective score formula for the larger team:
+/// Effective ranking formula for the larger team:
 ///
-///   effective = totalScore * (m - 1) / m
+///   effective = totalRanking * (m - 1) / m
 ///
 /// where m is the size of the larger team.
-double effectiveTeamScore({
-  required double totalScore,
+double effectiveTeamRanking({
+  required double totalRanking,
   required int teamSize,
   required int opponentTeamSize,
   required bool playWithSubstitute,
 }) {
   if (!playWithSubstitute) {
-    return totalScore;
+    return totalRanking;
   }
 
   if (teamSize <= 0) {
@@ -24,9 +24,9 @@ double effectiveTeamScore({
   }
 
   if (teamSize <= opponentTeamSize) {
-    return totalScore;
+    return totalRanking;
   }
 
   final factor = (teamSize - 1) / teamSize;
-  return totalScore * factor;
+  return totalRanking * factor;
 }

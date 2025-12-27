@@ -16,7 +16,9 @@ class SupabaseRankingRepository implements RankingRepository {
   SupabaseRankingRepository(this._supabase);
 
   @override
-  Future<List<RankingHistoryEntry>> getPlayerRankingHistory(String playerId) async {
+  Future<List<RankingHistoryEntry>> getPlayerRankingHistory(
+    String playerId,
+  ) async {
     try {
       final response = await _supabase
           .from('ranking_history')
@@ -27,10 +29,18 @@ class SupabaseRankingRepository implements RankingRepository {
       final List<dynamic> data = response as List<dynamic>;
 
       return data
-          .map((row) => RankingHistoryEntry.fromMap(Map<String, dynamic>.from(row as Map)))
+          .map(
+            (row) => RankingHistoryEntry.fromMap(
+              Map<String, dynamic>.from(row as Map),
+            ),
+          )
           .toList();
     } catch (e, stack) {
-      _logger.severe('Failed to fetch ranking history for player $playerId', e, stack);
+      _logger.severe(
+        'Failed to fetch ranking history for player $playerId',
+        e,
+        stack,
+      );
       throw e.toFailure();
     }
   }
@@ -50,9 +60,15 @@ class SupabaseRankingRepository implements RankingRepository {
 
       if (response == null) return null;
 
-      return RankingHistoryEntry.fromMap(Map<String, dynamic>.from(response as Map));
+      return RankingHistoryEntry.fromMap(
+        Map<String, dynamic>.from(response as Map),
+      );
     } catch (e, stack) {
-      _logger.severe('Failed to fetch ranking history for match $matchId and player $playerId', e, stack);
+      _logger.severe(
+        'Failed to fetch ranking history for match $matchId and player $playerId',
+        e,
+        stack,
+      );
       throw e.toFailure();
     }
   }
@@ -66,9 +82,14 @@ class SupabaseRankingRepository implements RankingRepository {
     try {
       if (matchId != null) {
         // 1. Fetch existing ranking history entry
-        final entry = await getRankingHistoryEntryByMatch(matchId: matchId, playerId: playerId);
+        final entry = await getRankingHistoryEntryByMatch(
+          matchId: matchId,
+          playerId: playerId,
+        );
         if (entry == null) {
-          throw RankingHistoryNotFoundException('Ranking history entry not found for match $matchId');
+          throw RankingHistoryNotFoundException(
+            'Ranking history entry not found for match $matchId',
+          );
         }
 
         // 2. Check for newer entries with updates (conflict check)
@@ -79,20 +100,30 @@ class SupabaseRankingRepository implements RankingRepository {
             .gt('created_at', entry.createdAt.toIso8601String())
             .not('updated_at', 'is', null)
             .limit(1);
-        
+
         if ((newerEntriesResponse as List).isNotEmpty) {
-          throw RankingUpdateConflictException('Cannot update: newer match result exists');
+          throw RankingUpdateConflictException(
+            'Cannot update: newer match result exists',
+          );
         }
 
         // 3. Calculate change and update
         final change = newRanking - entry.ranking;
-        
-        await _supabase.rpc('update_player_ranking_with_history', params: {
-          'p_player_id': playerId,
-          'p_new_ranking': newRanking,
-          'p_change': change,
-          'p_ranking_history_id': entry.rankingHistoryId,
-        });
+
+        // Update ranking history
+        await _supabase
+            .from('ranking_history')
+            .update({
+              'change': change,
+              'updated_at': DateTime.now().toIso8601String(),
+            })
+            .eq('ranking_history_id', entry.rankingHistoryId);
+
+        // Update player score
+        await _supabase
+            .from('players')
+            .update({'score': newRanking})
+            .eq('player_id', playerId);
       } else {
         // Manual adjustment
         // 1. Fetch current player ranking
@@ -101,24 +132,33 @@ class SupabaseRankingRepository implements RankingRepository {
             .select('score')
             .eq('player_id', playerId)
             .single();
-        
+
         final currentRanking = (playerResponse['score'] as num).toDouble();
         final change = newRanking - currentRanking;
 
         // 2. Create new history entry and update player
-        await _supabase.rpc('create_manual_ranking_adjustment', params: {
-          'p_player_id': playerId,
-          'p_new_ranking': newRanking,
-          'p_change': change,
-          'p_previous_ranking': currentRanking,
+        await _supabase.from('ranking_history').insert({
+          'player_id': playerId,
+          'ranking': currentRanking,
+          'change': change,
+          'match_id': null,
         });
+
+        await _supabase
+            .from('players')
+            .update({'score': newRanking})
+            .eq('player_id', playerId);
       }
     } on RankingHistoryNotFoundException {
       rethrow;
     } on RankingUpdateConflictException {
       rethrow;
     } catch (e, stack) {
-      _logger.severe('Failed to update player ranking for player $playerId', e, stack);
+      _logger.severe(
+        'Failed to update player ranking for player $playerId',
+        e,
+        stack,
+      );
       throw e.toFailure();
     }
   }
@@ -141,9 +181,15 @@ class SupabaseRankingRepository implements RankingRepository {
           .select()
           .single();
 
-      return RankingHistoryEntry.fromMap(Map<String, dynamic>.from(response as Map));
+      return RankingHistoryEntry.fromMap(
+        Map<String, dynamic>.from(response as Map),
+      );
     } catch (e, stack) {
-      _logger.severe('Failed to create match ranking entry for player $playerId', e, stack);
+      _logger.severe(
+        'Failed to create match ranking entry for player $playerId',
+        e,
+        stack,
+      );
       throw e.toFailure();
     }
   }
@@ -153,4 +199,3 @@ final rankingRepositoryProvider = Provider<RankingRepository>((ref) {
   final supabase = ref.read(supabaseProvider);
   return SupabaseRankingRepository(supabase);
 });
-

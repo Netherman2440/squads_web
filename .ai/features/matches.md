@@ -1,66 +1,80 @@
 
-### Matches — plan implementacji (US-006…US-009 + fundament pod draft/score history)
+### Matches — plan implementacji (US-006…US-016)
 
-Ten dokument opisuje **plan wdrożenia featuru Matches** (lista, szczegóły, create-flow),
+Ten dokument opisuje **plan wdrożenia featuru Matches** (lista, szczegóły, create-flow, zarządzanie),
 w stylu zgodnym z aktualnym kodem aplikacji:
 
-- Strony/widoki są możliwie **bezstanowe** (`ConsumerWidget`), a dane dostarczamy przez
-  Riverpoda.
-- Stan asynchroniczny: **`AsyncValue` + `AsyncValue.guard`** (jak w
-  `PlayersNotifier`).
+- Strony/widoki są możliwie **bezstanowe** (`ConsumerWidget`), a dane dostarczamy przez Riverpod.
+- Stan asynchroniczny: **`AsyncValue` + `AsyncValue.guard`**.
 - Notifier → UseCase `.execute()` → Repository (interfejs domenowy) → Supabase repo.
 - Uprawnienia UI oparte o `Squad.role` (owner/admin) z `squadDetailProvider`.
 
 ---
 
-## Stories (źródło: `prd.md` 119–197) //trochę też dopisałem
+## Stories (źródło: `prd.md` 119–197 + update)
 
 ### US-006: Lista meczy
 - Wejście z kafla “Matches” na stronie squadu.
 - Routing: `/squads/:squadId/matches`
 - Lista z reużywalnym `MatchTile` (data + wynik).
+- Sortowanie: od najnowszych.
 
 ### US-007: Utworz mecz (przycisk "+")
 - "+" widoczne tylko dla **owner/admin**.
 - Routing startowy: `/squads/:squadId/matches/draft`.
-- `/matches/draft` to wybor graczy (legacy create page style) z akcja "Generate draft" prowadzaca do `/squads/:squadId/matches/create`, gdzie wybieramy/edytujemy propozycje przed utworzeniem meczu.
+- `/matches/draft` to wybór graczy (legacy create page style) z akcją "Generate draft" prowadzącą do `/squads/:squadId/matches/create`, gdzie wybieramy/edytujemy propozycje przed utworzeniem meczu.
 
 ### US-008: Szczegóły meczu
 - Routing: `/squads/:squadId/matches/:matchId`
-- Widok zawiera: datę, wynik, składy drużyn i kolory oraz dodatkowe przyciski na pasku edit, redraw i rematch.
-- UWAGA: każdy tile wiświetla nie player.ranking tylko match ranking history entry.ranking !!! czyli wyświetlamy taki ranking jaki gracz miał przed tym meczem a nie jego aktualny ranking
-- bazowo zawsze home team ma przy sobie kwadracik z kolorem białym a away ma kolor czarny 
+- Widok zawiera: datę, wynik, składy drużyn i kolory oraz dodatkowe przyciski na pasku (edit, redraw, rematch) dla admina.
+- **UWAGA:** Każdy tile wyświetla nie `player.ranking` (aktualny), tylko ranking z `ranking_history` dla tego meczu (snapshot historyczny). Wyświetlamy siłę gracza w momencie rozgrywania meczu.
+- Bazowo zawsze home team ma przy sobie kwadracik z kolorem białym, a away ma kolor czarny.
+
 ### US-009: Szybka nawigacja do gracza
-- Kliknięcie gracza w składzie przenosi do:
-  `/squads/:squadId/players/:playerId`
+- Kliknięcie gracza w składzie przenosi do: `/squads/:squadId/players/:playerId`
 
-Rematch:
-po kliknięciu 
+### US-010: Edycja meczu (Edit Mode)
+- Jako admin mogę wejść w tryb 'edit'.
+- Na pasku pojawiają się przyciski: Save, Cancel, Redraft, Add Player, Swap Teams, Delete Match.
+- Tile zawodników stają się **draggable** - można je przeciągać pomiędzy drużynami (jak w `/matches/create`).
+- Mogę zmienić kolor drużyny klikając w kwadracik i wybierając kolor z palety.
+- **Swap Teams**: zamienia graczy miejscami (Home <-> Away) - tylko w UI, zapis przy Save.
+- Edycja jest możliwa nawet po wpisaniu wyniku (patrz sekcja o recompute).
 
-### Us 010: Edit
-- Jako admin mogę wejść w tryb 'edit'
-- na pasku pojawiają mi się wtedy przyciski do zapisu, cofnięcia zmian, przycisk redraft, add player, swap teams DELETE MATCH
-- tile zawodników stają się dragable można je przeciagać pomiędzy drużynami jak w /matches/create
-- mogę wpisać wynik 
-- mogę zmienić kolor drużyny klikając w kwadracik  i wybrać kolor z palety 
-- kliknięcie swap teams zamieni graczy miejscami away <-> home 
-### US-011: Delete match
-- usunięcia gracza z meczu powinno skutkować usunieciem tez jego wpisu w score history
+### US-011: Dodawanie/Usuwanie graczy w edycji
+- **Add Player**:
+  - Otwiera szybką wyszukiwarkę graczy (overlay/modal).
+  - Po wyszukaniu: przeciągamy (drag) gracza z wyszukiwarki do wybranej drużyny.
+  - Logika: Dodanie gracza do meczu skutkuje utworzeniem wpisu w `ranking_history` (lub aktualizacją przy zapisie).
+- **Remove Player**:
+  - Usunięcie gracza z meczu skutkuje usunięciem jego wpisu w `ranking_history` dotyczącym tego meczu.
 
-### US 012 Add player 
-- otwiera mi się szybka wyszukiwarka jakiego gracza bym chciał dodać
-- idealne flow: po kliknięciu gracza wchodzimy 'drag' - wyszukiwarka staje się mocno przezroczysta a nowego gracza możemy przeciągnąć do jednej lub drugiej drużyny
-- jesli użytkownik tylko kliknie to nic się nie dzieje, musi rozpocząć drag żeby przenieśc gracza z wyszukiwarki do match details
-- w logice powinno to dodać w score history odpowiedni wpis dla nowego gracza
+### US-012: Delete Match
+- Usunięcie meczu powoduje usunięcie wszystkich powiązanych wpisów w `ranking_history`.
+- Wywołuje przeliczenie rankingu graczy (revert zmian).
 
-### US Rm Player
-- usunięcie gracza powinno skutkować również usunięciem jego wpisu w score hisotry dotyczącym tego meczu
+### US-013: Redraft (w trybie edycji)
+- Dostępne dla admina (zazwyczaj przed wpisaniem wyniku, ale technicznie możliwe też później).
+- Kliknięcie przenosi nas z powrotem do `/matches/draft` z **aktualnie wybranymi zawodnikami** (Available + Selected).
+- Po przejściu całego flow Draftu i zatwierdzeniu ("Save/Update"), **aktualizujemy** obecny mecz nowymi składami (zamiast tworzyć nowy duplikat).
+- Zmiany aplikują się dopiero po zatwierdzeniu w flow draftu (nie usuwamy starego meczu od razu po kliknięciu Redraft).
 
-### US-011: Redraft
-- Jako admin przed wpisaniem wyniku mam możliwość kliknięcia przycisku redraft
-- Kliknięcie go przenosi nas z powrotem do /matches/draft z aktualnie wybranymi zawodnikami  i przenosi tych zawodników od razu do Selected players
-- (jesli wcześniej dodałem gracza do meczu to ten gracz też trafia do Selected Players!)
+### US-014: Rematch
+- Dostępne z poziomu detali (nie w trybie edit).
+- Tworzy **nowy** mecz z tymi samymi składami, ale zamienionymi stronami (Home <-> Away).
+- Nawigacja do `/matches/:newMatchId`.
 
+### US-015: Update match score (Wpisanie wyniku)
+- Jako admin chcę móc wpisać/zmienić wynik meczu.
+- Aktualizacja wyniku powoduje wywołanie logiki `Score History`:
+  - Obliczenie delty rankingu.
+  - Aktualizacja wpisów w `ranking_history`.
+  - Aktualizacja `player.ranking` (poprzez dodanie/odjęcie różnicy).
+- **Obsługa starych meczy**:
+  - Można edytować wynik meczu z przeszłości.
+  - Zmiana w starym meczu aktualizuje `player.ranking` o różnicę delty (np. stara delta +2, nowa 0 -> ranking -2).
+  - **Note**: Wpisy w `ranking_history` dla *późniejszych* meczy (chronologicznie nowszych) zachowują swoje historyczne wartości `ranking` (snapshoty), co jest akceptowalne (pokazują stan wiedzy "na wtedy"), mimo że aktualny ranking gracza uległ zmianie.
+- **Warning**: Jeśli różnica w rankingu między drużynami jest > `appConfig.rankingDiffWarning` (np. 10%), pokazujemy warning: "Wybrane drużyny są nierówne, na pewno chcesz wpisać wynik?".
 
 ### US-012 Update match score 
 - Jako admin chce móc zmienić wynik meczu
@@ -142,14 +156,7 @@ Integracja UX:
 - Szczegoly UI dla `/matches/draft` + `/matches/create` sa opisane w `.ai/features/draft.md`. /done
 ---
 
-## Kontrakt DB (źródło: `.ai/db_plan.md` 147–205)
-
-//todo
-Dodać kolumny do `squads`:
-- rankingUpdate (bool) deffault true
-- changeMultiplier (pewnie jakieś double)
-- (jak nazwać kolumnę mówiącą o róznych zmianach dla doświadczonych i nowych graczach)
-
+## Kontrakt DB
 
 ### Tabele
 - `matches`:
@@ -168,52 +175,41 @@ Dodać kolumny do `squads`:
   - `name`, `color` (nullable)
   - `created_at`
   - UNIQUE `(match_id, side)`
-  - UNIQUE `(match_id, team_id)` (dla FK w `team_players`)
 
 - `team_players`:
   - `match_id` (FK)
   - `team_id`
   - `player_id` (FK → `players`, RESTRICT)
   - PK `(match_id, team_id, player_id)`
-  - UNIQUE `(match_id, player_id)` (gracz nie może być w obu teamach)
+  - UNIQUE `(match_id, player_id)`
+
+Dodatkowe kolumny w `squads` (do ustawień):
+- `ranking_enabled` (bool, default true)
+- `ranking_multiplier` (double, default 1.0)
+- `use_experience_factor` (bool, default true)
 
 ---
 
 ## Model domenowy (Matches)
 
 ### Encje
-Proponowane encje (feature-first: `features/matches/domain/...`):
-
-Match Score
-MatchScoreType
-tuple[int,int] score //home:away
-dict meta data
-
 - `Match`
-  - `matchId`, `squadId`, `tournamentId?`
-  - `scoreType?` (enum)
-  - `homeScore?`, `awayScore?` => score: MatchScore
-  - `scoreMeta` (`Map<String, dynamic>`)
+  - `matchId`, `squadId`
+  - `scoreType?`
+  - `homeScore?`, `awayScore?`
+  - `scoreMeta`
   - `createdAt`
-  - `homeTeam`, `awayTeam` (opcjonalnie w “list view” mogą być null i ładowane dopiero w details)
+  - `homeTeam`, `awayTeam` (Team)
 
 - `Team`
   - `teamId`, `matchId`
   - `side` (enum: home/away)
   - `name?`, `color?`
-  - `players` (`List<Player>`) — encja z `features/players/domain/entities/player.dart`
-
-MatchDetails:Match //nie wiem czy to dobry pomysł ale możemy też to tak rozdzielić
-- `homeTeam`, `awayTeam` (opcjonalnie w “list view” mogą być null i ładowane dopiero w details)
-
-> Nie tworzymy osobnej encji `MatchPlayer` w domenie Matches.
-> Skład drużyn trzymamy jako `List<Player>`.
+  - `players` (`List<Player>`)
 
 ### Enumy
 - `MatchScoreType`: `regular`, `penalties`, `walkover`, `cancelled`
-  - mapowanie do DB enum `match_score_type`
 - `Side`: `home`, `away`
-  - mapowanie do DB enum `side_enum`
 
 ---
 
@@ -283,32 +279,30 @@ i nazewnictwo w stylu get_squad_matches_use_case daje klase GetSquadMatchesUseCa
   - input: `squadId`, `homePlayerIds`, `awayPlayerIds`, `teamName/color?`, `tournamentId?`
   -trzeba tutaj wywołac oprcz matchRepo.createMatch
   to jeszcze rankingRepo.createMatchRankingEntry
-  - output: `Match` //może zwracać to ale przy przejściu do details i tak potrzebujemy teams więc jeśli match details to wtedy nie wiem co tu zwrócić
+  - output: `Match` 
 
 
 - `DeleteMatch`
-  tutaj podobnie - pamiętajmy oprócz matchrepo to update `player.ranking -= entry.change` i rankingRepo.delete(`entry`)
+  - Woła `matchRepo.deleteMatch`.
+  - Woła `rankingRepo.deleteMatchRankingEntry`.
+  - Aktualizuje `player.ranking` (odejmuje zmiany wynikające z usuniętego meczu, jeśli były).
 
-  
 - `UpdateMatchScore`
-  - update match score, for each player:
-  get ranking for this match (!!! entry.Ranking a nie current ranking!!!) calculate delta, update ranking history 
-  calculate `player.ranking += entry.change`, update playerRanking
-  - to bardzo ważne żeby brać ranking dla danego meczu, bo może być case że wpisujemy wynik do meczu z przeszłości. Wtedy żeby przypadkiem nam się nie spushował cały stary ranking jako akutalny .
+  - Update wyniku w `matchRepo`.
+  - Dla każdego gracza:
+    - Pobiera wpis z historii (entry) dla tego meczu.
+    - Liczy nową deltę.
+    - Aktualizuje wpis w historii.
+    - Aktualizuje `player.ranking += (newDelta - oldDelta)`.
+  - Logika obsługuje edycję starych meczy (aktualizuje bieżący ranking o różnicę, pozostawiając historyczne snapshoty w późniejszych meczach bez zmian).
 
-
-- `UpdateMatchTeams`
-- `UpdateTeamColor` (i ewentualnie `UpdateTeamName`)
--
-
-### Orchestracje (zależne od draft / create flow)
-- `SwapTeams`
-  - → `matchRepository.getMatch` -> udpate teams (zamieniając players), 
-- `Rematch`
-  - `GetMatch(matchId)` → `CreateMatch(...)` z tymi samymi drużynami, zamienionymi miejscami (nowy match), rankingRepo.createMatchEntry
-- `Redraw`
-  - `GetMatch(matchId)`  =>  nawigacja do create/draft z preselected players,
-    a następnie `DeleteMatch(matchId)` (zgodnie z PRD) 
+- `UpdateMatchTeams` (używany przez Save po Swap/Add/Remove)
+  - Update składów w `matchRepo`.
+  - Jeśli mecz ma już wynik -> nie możliweZ
+  get players for match (aktualnych)
+  - dla każdego gracza sprawdzamy czy ma rankinge entry
+  - Jeśli dodajemy gracza -> `createMatchRankingEntry`.
+  - Jeśli usuwamy gracza -> `deleteMatchRankingEntry` (dla tego gracza).
 
 ---
 
@@ -341,7 +335,13 @@ Uprawnienia:
   - `canManage = squad.role == owner || admin`
 
 ### 2) `/matches/:matchId` → `MatchDetailsPage`
-Cel: szczegóły meczu.
+- `MatchDetailsNotifier`.
+- Header: Wynik, Data.
+- Lists: Home / Away Players.
+- Tryb Edit (Admin):
+  - Drag & Drop zawodników.
+  - Floating/Action buttons: Save, Cancel, Add Player.
+- Warning przy zapisie wyniku (jeśli nierówne rankingi).
 
 Stan:
 - `MatchDetailsNotifier extends Notifier<AsyncValue<Match>>`

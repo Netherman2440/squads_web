@@ -13,7 +13,7 @@ w stylu zgodnym z aktualnym kodem aplikacji:
 
 ---
 
-## Stories (źródło: `prd.md` 119–197)
+## Stories (źródło: `prd.md` 119–197) //trochę też dopisałem
 
 ### US-006: Lista meczy
 - Wejście z kafla “Matches” na stronie squadu.
@@ -27,12 +27,93 @@ w stylu zgodnym z aktualnym kodem aplikacji:
 
 ### US-008: Szczegóły meczu
 - Routing: `/squads/:squadId/matches/:matchId`
-- Widok zawiera: datę, wynik, składy drużyn oraz nawigację.
-
+- Widok zawiera: datę, wynik, składy drużyn i kolory oraz dodatkowe przyciski na pasku edit, redraw i rematch.
+- UWAGA: każdy tile wiświetla nie player.ranking tylko match ranking history entry.ranking !!! czyli wyświetlamy taki ranking jaki gracz miał przed tym meczem a nie jego aktualny ranking
+- bazowo zawsze home team ma przy sobie kwadracik z kolorem białym a away ma kolor czarny 
 ### US-009: Szybka nawigacja do gracza
 - Kliknięcie gracza w składzie przenosi do:
   `/squads/:squadId/players/:playerId`
-- Na MVP: może być **mock/placeholder** (zgodnie z story).
+
+Rematch:
+po kliknięciu 
+
+### Us 010: Edit
+- Jako admin mogę wejść w tryb 'edit'
+- na pasku pojawiają mi się wtedy przyciski do zapisu, cofnięcia zmian, przycisk redraft, add player, swap teams DELETE MATCH
+- tile zawodników stają się dragable można je przeciagać pomiędzy drużynami jak w /matches/create
+- mogę wpisać wynik 
+- mogę zmienić kolor drużyny klikając w kwadracik  i wybrać kolor z palety 
+- kliknięcie swap teams zamieni graczy miejscami away <-> home 
+### US-011: Delete match
+- usunięcia gracza z meczu powinno skutkować usunieciem tez jego wpisu w score history
+
+### US 012 Add player 
+- otwiera mi się szybka wyszukiwarka jakiego gracza bym chciał dodać
+- idealne flow: po kliknięciu gracza wchodzimy 'drag' - wyszukiwarka staje się mocno przezroczysta a nowego gracza możemy przeciągnąć do jednej lub drugiej drużyny
+- jesli użytkownik tylko kliknie to nic się nie dzieje, musi rozpocząć drag żeby przenieśc gracza z wyszukiwarki do match details
+- w logice powinno to dodać w score history odpowiedni wpis dla nowego gracza
+
+### US Rm Player
+- usunięcie gracza powinno skutkować również usunięciem jego wpisu w score hisotry dotyczącym tego meczu
+
+### US-011: Redraft
+- Jako admin przed wpisaniem wyniku mam możliwość kliknięcia przycisku redraft
+- Kliknięcie go przenosi nas z powrotem do /matches/draft z aktualnie wybranymi zawodnikami  i przenosi tych zawodników od razu do Selected players
+- (jesli wcześniej dodałem gracza do meczu to ten gracz też trafia do Selected Players!)
+
+
+### US-012 Update match score 
+- Jako admin chce móc zmienić wynik meczu
+- Aktualizacja wyniku meczu powoduje:
+- to że nie mogę już dłużej edytować drużyn ( po kliknięciu edit od razu nie widzę redraft i add player,)
+- wywołuje to aktualizację score history wszystkich graczy którzy brali 
+
+### US-013 Squad ranking settings
+- Jako admin chce mieć kontrolę nad tym w jaki sposób aktualizowany jest ranking graczy 
+- chce mieć kontrolę nad tym:
+0) CZY WGL RANKING POWINIEN SIĘ ZMIENIAĆ
+a) czy zmiana ma być różna dla doświadczonych graczy i dla nowych czy wszyscy zawodnicy z jednej drużyny dostają taką samą change do rankingu.
+b) jak mocno powinnien się zmieniać ranking per bramka różnicy
+
+chciałbym to przedstawić jako interaktywną sekcję wewnątrz Danger Zone
+toggle do zmiany opcji a)
+ slider z 3 opcjami pod b)
+- mała zmiana
+- deffaut 
+- big change
+nad sliderem pokazuje nam średnią zmianę rankingu / branka różnicy dla naszych ustawień
+ta zmiana aktualizuje się przy każdej zmianie wartości w tej sekcji
+zmiana tych ustawień nie wywołuje od razu business logic, buimy specjalnie kliknąć przycisk Save
+
+
+### Squad ranking explenation
+- Jako użytkownik gdy najade w  player details na player.ranking mogę kliknąć w ikonę informacji
+- Kliknięcie pokazuje mi kartę informacyjną o tym jak ranking jest obliczany. 
+-karta jest parametryzowana przez ustawienia składu i w zależności od tych ustawień wyświetla inną zawartość
+
+###Calculate player score
+Obliczamy zmianę rankingu zgodnie z wzorem:
+
+(home_score - away_score ) * [changeMultiplier]
+
+gdzie 
+changeMultiplier = [numerator] / [denominator]
+
+[numerator] - ustalony mnożnik w ustawieniach. Do wyboru jest 0.5, 1, 2, 
+
+[denominator] = 1 ( jeśli change ma być równy dla nwoych i starych) albo [player.matches.count (minimum 1)] * appConfig.changeFactor = 0.2f.
+
+### Update player ranking
+- chce zaktualizować wynik gracza aby móc balansować drużyny
+- aktualizacja przebiega zawsze zgodnie z ustalonym wzorem dla danego skłądu 
+
+
+
+### Zabezpieczenia update match score:
+-nie da sie zaktualizować wyniku meczu jeśli istnieje nowszy mecz z już wpisanym wynikiem ( jeśli ten mecz nei miał wcześniej wpisanego wyniku)
+- jeśli różnica w rankingu między drużynami jest > appconfig.scorewarning ( 10 ) to pokazujemy warning w stylu:
+"Wybrane drużyny są nie równe, na pewno chcesz wpisać wynik?" coś w tym stylu
+
 
 ---
 
@@ -43,25 +124,32 @@ Aktualnie `core/app_router.dart` nie ma tras dla Matches. Plan:
 - Dodac do `AppRoute`:
   - `matches`
   - `matchDetails`
-  - `matchDraft` (selection `/matches/draft`)
-  - `matchCreate` (draft results `/matches/create`)
-  - (opcjonalnie) `playerDetails` jezeli jeszcze nie istnieje
+  - `matchDraft` (selection `/matches/draft`) done
+  - `matchCreate` (draft results `/matches/create`) done 
+  - (opcjonalnie) `playerDetails` done
 
 - Dodac GoRoute'y:
   - `/squads/:squadId/matches` -> `SquadMatchesPage(squadId)`
-  - `/squads/:squadId/matches/draft` -> `DraftSelectionPage(squadId)` (feature Draft)
-  - `/squads/:squadId/matches/create` -> `DraftResultsPage(squadId, selectedPlayerIds)` (feature Draft)
+  - `/squads/:squadId/matches/draft` -> `DraftSelectionPage(squadId)` (feature Draft) /done
+  - `/squads/:squadId/matches/create` -> `DraftResultsPage(squadId, selectedPlayerIds)` (feature Draft) /done
   - `/squads/:squadId/matches/:matchId` -> `MatchDetailsPage(squadId, matchId)`
-  - `/squads/:squadId/players/:playerId` -> placeholder (do czasu pelnego Players Details)
+  - `/squads/:squadId/players/:playerId` -> placeholder (do czasu pelnego Players Details) /done
 
 Integracja UX:
 - Kafelek `Matches` w `SquadHomePage` (grid) powinien nawigowac do `/matches` zamiast pokazywac `coming soon`.
-- Przycisk `+` (quick actions/Add match) prowadzi do `/squads/:squadId/matches/draft`.
-- Po `Create Match` w `/matches/create` przechodzimy do `/matches/:matchId` i invalidujemy liste matches.
-- Szczegoly UI dla `/matches/draft` + `/matches/create` sa opisane w `.ai/features/draft.md`.
+- Przycisk `+` (quick actions/Add match) prowadzi do `/squads/:squadId/matches/draft`. /done
+- Po `Create Match` w `/matches/create` przechodzimy do `/matches/:matchId`.
+- Szczegoly UI dla `/matches/draft` + `/matches/create` sa opisane w `.ai/features/draft.md`. /done
 ---
 
 ## Kontrakt DB (źródło: `.ai/db_plan.md` 147–205)
+
+//todo
+Dodać kolumny do `squads`:
+- rankingUpdate (bool) deffault true
+- changeMultiplier (pewnie jakieś double)
+- (jak nazwać kolumnę mówiącą o róznych zmianach dla doświadczonych i nowych graczach)
+
 
 ### Tabele
 - `matches`:
@@ -73,7 +161,7 @@ Integracja UX:
   - `score_meta` (jsonb, default `{}`)
   - `created_at`
 
-- `teams` (snapshot per match):
+- `teams`:
   - `team_id` (UUID, PK)
   - `match_id` (FK)
   - `side` (enum `side_enum`, home/away)
@@ -89,15 +177,6 @@ Integracja UX:
   - PK `(match_id, team_id, player_id)`
   - UNIQUE `(match_id, player_id)` (gracz nie może być w obu teamach)
 
-### Uwaga o “snapshot”
-Twoje notatki zakładały `MatchPlayer.name/score`. W obecnym planie DB te pola **nie
-istnieją** w `team_players`.
-
-Decyzje (MVP):
-- **Nie dodajemy snapshotów** do `team_players`.
-- `player.name` bierzemy zawsze **aktualne** z `players`.
-- `player.score` na razie bierzemy **aktualne** z `players`, a w przyszłości // TODO: zasilic to score_history, gdy bedzie gotowe.
-  będziemy je wyliczać na podstawie `score_history`.
 ---
 
 ## Model domenowy (Matches)
@@ -105,10 +184,15 @@ Decyzje (MVP):
 ### Encje
 Proponowane encje (feature-first: `features/matches/domain/...`):
 
+Match Score
+MatchScoreType
+tuple[int,int] score //home:away
+dict meta data
+
 - `Match`
   - `matchId`, `squadId`, `tournamentId?`
   - `scoreType?` (enum)
-  - `homeScore?`, `awayScore?`
+  - `homeScore?`, `awayScore?` => score: MatchScore
   - `scoreMeta` (`Map<String, dynamic>`)
   - `createdAt`
   - `homeTeam`, `awayTeam` (opcjonalnie w “list view” mogą być null i ładowane dopiero w details)
@@ -118,6 +202,9 @@ Proponowane encje (feature-first: `features/matches/domain/...`):
   - `side` (enum: home/away)
   - `name?`, `color?`
   - `players` (`List<Player>`) — encja z `features/players/domain/entities/player.dart`
+
+MatchDetails:Match //nie wiem czy to dobry pomysł ale możemy też to tak rozdzielić
+- `homeTeam`, `awayTeam` (opcjonalnie w “list view” mogą być null i ładowane dopiero w details)
 
 > Nie tworzymy osobnej encji `MatchPlayer` w domenie Matches.
 > Skład drużyn trzymamy jako `List<Player>`.
@@ -140,7 +227,7 @@ Interfejs (MVP + pod przyszłe story):
     `score_type`
   - **nie pobieramy teams** (teams są ładowane dopiero w `getMatch`)
 
-- `Future<Match> getMatch({required String matchId})`
+- `Future<Match> getMatch({required String matchId})` //albo =>MatchDeatils
   - details: match + teams + team_players + odczyt graczy z `players`
     (żeby zbudować `Team.players` jako `List<Player>`)
 
@@ -174,11 +261,18 @@ Sugestia query shape dla `getMatch`:
   - teams rows
   - team_players rows + select `players` po `player_id in (...)`
 
+
+### RankingRepository
+dodac metody
+-deleteMatchRankingEntry 
+-updateMatchRankingEntry
+
 ---
 
 ## Use case’y (Application)
 
-Każdy use case ma `.execute(...)` i Provider jak w Players.
+Każdy use case ma `.execute(...)` i Provider jak w Players. 
+i nazewnictwo w stylu get_squad_matches_use_case daje klase GetSquadMatchesUseCase
 
 ### Read
 - `GetSquadMatches` → `matchRepository.getSquadMatches`
@@ -187,23 +281,34 @@ Każdy use case ma `.execute(...)` i Provider jak w Players.
 ### Write
 - `CreateMatch`
   - input: `squadId`, `homePlayerIds`, `awayPlayerIds`, `teamName/color?`, `tournamentId?`
-  - output: `Match`
+  -trzeba tutaj wywołac oprcz matchRepo.createMatch
+  to jeszcze rankingRepo.createMatchRankingEntry
+  - output: `Match` //może zwracać to ale przy przejściu do details i tak potrzebujemy teams więc jeśli match details to wtedy nie wiem co tu zwrócić
+
 
 - `DeleteMatch`
+  tutaj podobnie - pamiętajmy oprócz matchrepo to update `player.ranking -= entry.change` i rankingRepo.delete(`entry`)
+
+  
 - `UpdateMatchScore`
-  - // TODO: po wpisaniu wyniku wolamy logike score_history (ApplyMatchScoreToPlayersUseCase) i przeliczamy ranking graczy.
+  - update match score, for each player:
+  get ranking for this match (!!! entry.Ranking a nie current ranking!!!) calculate delta, update ranking history 
+  calculate `player.ranking += entry.change`, update playerRanking
+  - to bardzo ważne żeby brać ranking dla danego meczu, bo może być case że wpisujemy wynik do meczu z przeszłości. Wtedy żeby przypadkiem nam się nie spushował cały stary ranking jako akutalny .
+
+
 - `UpdateMatchTeams`
 - `UpdateTeamColor` (i ewentualnie `UpdateTeamName`)
+-
 
 ### Orchestracje (zależne od draft / create flow)
+- `SwapTeams`
+  - → `matchRepository.getMatch` -> udpate teams (zamieniając players), 
 - `Rematch`
-  - `GetMatch(matchId)` → `CreateMatch(...)` z tymi samymi rosterami (nowy match)
+  - `GetMatch(matchId)` → `CreateMatch(...)` z tymi samymi drużynami, zamienionymi miejscami (nowy match), rankingRepo.createMatchEntry
 - `Redraw`
-  - `GetMatch(matchId)` → nawigacja do create/draft z preselected players,
-    a następnie `DeleteMatch(matchId)` (zgodnie z PRD)
-
-> W MVP `UpdateMatchScore` nie aktualizuje jeszcze rankingów – to spina `score_history`
-> (osobny plan w `score_history.md`).
+  - `GetMatch(matchId)`  =>  nawigacja do create/draft z preselected players,
+    a następnie `DeleteMatch(matchId)` (zgodnie z PRD) 
 
 ---
 
@@ -214,19 +319,21 @@ Każdy use case ma `.execute(...)` i Provider jak w Players.
   (bez SnackBarów).
 - Puste stany obsługujemy w ekranie.
 - `RefreshIndicator` dla listy.
+-consumer widgety, riverpod, strony raczej są stateless, tylko notifierami przeładowujemy kontent
 
 ### 1) `/matches` → `SquadMatchesPage`
 Cel: lista + nawigacja do details + “+” dla owner/admin.
-
+Sortujemy je po dacie i mamy wybór najnowsze najstarsze 
 Stan:
 - `SquadMatchesNotifier extends Notifier<AsyncValue<List<Match>>>`
   - `load(squadId)` → `AsyncValue.guard(() => useCase.execute(...))`
   - `refresh(squadId)` → deleguje do `load`
 
 Widgety:
-- `MatchTile` (re-używalny)
+- `MatchTile` (re-używalny: przyda nam się do /players/$playerId/matches)
   - data meczu (format podobny do legacy: Today/Yesterday + fallback `dd.MM.yyyy HH:mm`)
   - wynik: dwa boxy jak w legacy (puste gdy brak wyniku)
+
 
 Uprawnienia:
 - w `SquadMatchesPage` watch:
@@ -241,11 +348,12 @@ Stan:
   - `load(matchId)`
 
 UI:
-- header: data + wynik + score_type
+- header: data + wynik + score_type (score_type na razie nie pokazujmy)
 - sekcje: Home team / Away team
   - listy graczy jako `ListView.builder` 
-  - klik na gracza → `/squads/:squadId/players/:playerId` (mock jeśli brak)
-- (później) przyciski `Rematch`, `Redraw` tylko dla owner/admin
+  - klik na gracza → `/squads/:squadId/players/:playerId`
+-  przyciski `Rematch`, `Redraw`, `Edit` tylko dla owner/admin
+- w stanie Edit tak jak w stories(nie pamiętam numeru) mamy dragable players i przycisk addplayer i save cancel
 
 ### 3) Draft flow (delegowane do featuru Draft)
 - `/matches/draft` (selection) + `/matches/create` (propozycje + finalizacja) sa opisane w `.ai/features/draft.md`.
@@ -302,9 +410,7 @@ UI:
 
 ## Ustalenia (po review)
 
-- `player.name` i (na razie) `player.score` bierzemy 'na zywo' z `players`.
-  W przyszlosci `player.score` w kontekscie meczu bedzie oparte o `score_history`.
-- Robimy **dwie trasy**: `/matches/create` i `/matches/draft`.
-- Quick actions “Add match” mile widziane, ale **nie priorytet** na MVP.
+- `player.name` i  `player.ranking` bierzemy 'na zywo' z `players`.
+
 
 

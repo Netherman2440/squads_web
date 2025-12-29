@@ -6,6 +6,8 @@ import 'package:app/features/auth/presentation/pages/auth_page.dart';
 import 'package:app/features/auth/presentation/pages/register_page.dart';
 import 'package:app/features/draft/presentation/pages/draft_results_page.dart';
 import 'package:app/features/draft/presentation/pages/draft_selection_page.dart';
+import 'package:app/features/matches/presentation/pages/match_details_page.dart';
+import 'package:app/features/matches/presentation/pages/squad_matches_page.dart';
 import 'package:app/features/squads/presentation/pages/squad_settings_page.dart';
 import 'package:app/features/players/presentation/pages/players_page.dart';
 import 'package:app/features/squads/presentation/pages/squads_page.dart';
@@ -24,6 +26,8 @@ enum AppRoute {
   draftSelection,
   draftCreate,
   playerDetails,
+  matches,
+  matchDetails,
 }
 
 final appRouter = GoRouter(
@@ -90,6 +94,16 @@ final appRouter = GoRouter(
           },
         ),
         GoRoute(
+          path: '/squads/:squadId/matches',
+          name: AppRoute.matches.name,
+          pageBuilder: (context, state) {
+            final squadId = state.pathParameters['squadId'] ?? '';
+            return NoTransitionPage(
+              child: SquadMatchesPage(squadId: squadId),
+            );
+          },
+        ),
+        GoRoute(
           path: '/squads/:squadId/matches/draft',
           name: AppRoute.draftSelection.name,
           pageBuilder: (context, state) {
@@ -111,6 +125,20 @@ final appRouter = GoRouter(
               child: DraftResultsPage(
                 squadId: squadId,
                 selectedPlayerIds: selectedIds,
+              ),
+            );
+          },
+        ),
+        GoRoute(
+          path: '/squads/:squadId/matches/:matchId',
+          name: AppRoute.matchDetails.name,
+          pageBuilder: (context, state) {
+            final squadId = state.pathParameters['squadId'] ?? '';
+            final matchId = state.pathParameters['matchId'] ?? '';
+            return NoTransitionPage(
+              child: MatchDetailsPage(
+                squadId: squadId,
+                matchId: matchId,
               ),
             );
           },

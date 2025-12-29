@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:app/core/app_router.dart';
 import 'package:app/features/squads/domain/entities/squad.dart';
 import 'package:app/features/squads/domain/entities/user_squad_role.dart';
 
 class SquadHomePage extends StatelessWidget {
-  const SquadHomePage({
-    super.key,
-    required this.squad,
-  });
+  const SquadHomePage({super.key, required this.squad});
 
   final Squad squad;
 
@@ -18,20 +16,14 @@ class SquadHomePage extends StatelessWidget {
       children: [
         _SquadHeader(squad: squad),
         const SizedBox(height: 16),
-        Expanded(
-          child: _SquadHomeGrid(
-            squad: squad,
-          ),
-        ),
+        Expanded(child: _SquadHomeGrid(squad: squad)),
       ],
     );
   }
 }
 
 class _SquadHeader extends StatelessWidget {
-  const _SquadHeader({
-    required this.squad,
-  });
+  const _SquadHeader({required this.squad});
 
   final Squad squad;
 
@@ -129,9 +121,7 @@ class _SquadHeader extends StatelessWidget {
 }
 
 class _SquadHomeGrid extends StatelessWidget {
-  const _SquadHomeGrid({
-    required this.squad,
-  });
+  const _SquadHomeGrid({required this.squad});
 
   final Squad squad;
 
@@ -185,13 +175,19 @@ class _SquadHomeGrid extends StatelessWidget {
                   return;
                 }
 
+                if (tile.title == 'Matches') {
+                  context.pushNamed(
+                    AppRoute.matches.name,
+                    pathParameters: {'squadId': squad.squadId},
+                  );
+                  return;
+                }
+
                 showDialog<void>(
                   context: context,
                   builder: (context) => AlertDialog(
                     title: Text(tile.title),
-                    content: const SelectableText(
-                      'This page is coming soon.',
-                    ),
+                    content: const SelectableText('This page is coming soon.'),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(),
@@ -211,21 +207,11 @@ class _SquadHomeGrid extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      tile.icon,
-                      size: 32,
-                      color: theme.colorScheme.primary,
-                    ),
+                    Icon(tile.icon, size: 32, color: theme.colorScheme.primary),
                     const SizedBox(height: 12),
-                    Text(
-                      tile.title,
-                      style: theme.textTheme.titleMedium,
-                    ),
+                    Text(tile.title, style: theme.textTheme.titleMedium),
                     const SizedBox(height: 8),
-                    Text(
-                      tile.description,
-                      style: theme.textTheme.bodySmall,
-                    ),
+                    Text(tile.description, style: theme.textTheme.bodySmall),
                   ],
                 ),
               ),
@@ -248,5 +234,3 @@ class _SquadHomeTileData {
   final String title;
   final String description;
 }
-
-

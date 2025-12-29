@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import 'package:go_router/go_router.dart';
+import 'package:app/core/app_router.dart';
 import 'package:app/core/error/failure.dart';
 import 'package:app/core/utils/team_ranking.dart';
 import 'package:app/features/draft/presentation/controllers/draft_session_notifier.dart';
 import 'package:app/features/draft/presentation/widgets/draft_draggable_player_tile.dart';
+import 'package:app/features/matches/domain/entities/match.dart';
+import 'package:app/features/matches/presentation/controllers/create_match_controller.dart';
+import 'package:app/features/matches/presentation/controllers/squad_matches_notifier.dart';
 import 'package:app/features/players/domain/entities/player.dart';
 
 class DraftResultsPage extends ConsumerStatefulWidget {
@@ -12,10 +16,12 @@ class DraftResultsPage extends ConsumerStatefulWidget {
     super.key,
     required this.squadId,
     required this.selectedPlayerIds,
+    this.matchId,
   });
 
   final String squadId;
   final List<String> selectedPlayerIds;
+  final String? matchId;
 
   @override
   ConsumerState<DraftResultsPage> createState() => _DraftResultsPageState();
@@ -28,7 +34,9 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
   void initState() {
     super.initState();
     Future.microtask(
-      () => ref.read(draftSessionNotifierProvider.notifier).load(
+      () => ref
+          .read(draftSessionNotifierProvider.notifier)
+          .load(
             squadId: widget.squadId,
             selectedPlayerIds: widget.selectedPlayerIds,
             algorithm: ref.read(draftAlgorithmProvider),
@@ -53,7 +61,9 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
                 _playWithSubstitute = !_playWithSubstitute;
               });
 
-              ref.read(draftSessionNotifierProvider.notifier).load(
+              ref
+                  .read(draftSessionNotifierProvider.notifier)
+                  .load(
                     squadId: widget.squadId,
                     selectedPlayerIds: widget.selectedPlayerIds,
                     algorithm: algorithm,
@@ -63,7 +73,9 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
             algorithm: algorithm,
             onSetAlgorithm: (next) {
               ref.read(draftAlgorithmProvider.notifier).setAlgorithm(next);
-              ref.read(draftSessionNotifierProvider.notifier).load(
+              ref
+                  .read(draftSessionNotifierProvider.notifier)
+                  .load(
                     squadId: widget.squadId,
                     selectedPlayerIds: widget.selectedPlayerIds,
                     algorithm: next,
@@ -71,16 +83,17 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
                   );
             },
           ),
-          const Padding(
-            padding: EdgeInsets.only(right: 8),
-            child: _CreateMatchStubButton(),
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: _CreateMatchButton(
+              squadId: widget.squadId,
+              matchId: widget.matchId,
+            ),
           ),
         ],
       ),
       body: state.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(),
-        ),
+        loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => _ErrorBody(error: error),
         data: (data) {
           if (data.proposals.isEmpty) {
@@ -100,13 +113,13 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
                   onPrev: data.selectedIndex == 0
                       ? null
                       : () => ref
-                          .read(draftSessionNotifierProvider.notifier)
-                          .selectProposal(data.selectedIndex - 1),
+                            .read(draftSessionNotifierProvider.notifier)
+                            .selectProposal(data.selectedIndex - 1),
                   onNext: data.selectedIndex == data.proposals.length - 1
                       ? null
                       : () => ref
-                          .read(draftSessionNotifierProvider.notifier)
-                          .selectProposal(data.selectedIndex + 1),
+                            .read(draftSessionNotifierProvider.notifier)
+                            .selectProposal(data.selectedIndex + 1),
                 ),
                 const SizedBox(height: 12),
                 _TotalsRow(
@@ -129,10 +142,7 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
                             players: data.home,
                             onAcceptPlayerId: (playerId) => ref
                                 .read(draftSessionNotifierProvider.notifier)
-                                .movePlayer(
-                                  playerId: playerId,
-                                  toHome: true,
-                                ),
+                                .movePlayer(playerId: playerId, toHome: true),
                           ),
                         ),
                         const SizedBox(width: 12, height: 12),
@@ -142,10 +152,7 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
                             players: data.away,
                             onAcceptPlayerId: (playerId) => ref
                                 .read(draftSessionNotifierProvider.notifier)
-                                .movePlayer(
-                                  playerId: playerId,
-                                  toHome: false,
-                                ),
+                                .movePlayer(playerId: playerId, toHome: false),
                           ),
                         ),
                       ];
@@ -168,11 +175,7 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
   }
 }
 
-enum _DraftOptionsAction {
-  togglePlayWithSubstitute,
-  useCombinatory,
-  useGreedy,
-}
+enum _DraftOptionsAction { togglePlayWithSubstitute, useCombinatory, useGreedy }
 
 class _DraftOptionsButton extends StatelessWidget {
   const _DraftOptionsButton({
@@ -224,15 +227,87 @@ class _DraftOptionsButton extends StatelessWidget {
   }
 }
 
-class _CreateMatchStubButton extends StatelessWidget {
-  const _CreateMatchStubButton();
+class _CreateMatchButton extends ConsumerWidget {
+  const _CreateMatchButton({required this.squadId, this.matchId});
+
+  final String squadId;
+  final String? matchId;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final draftState = ref.watch(draftSessionNotifierProvider);
+    final createMatchState = ref.watch(createMatchControllerProvider);
+
+    final isLoading = createMatchState.isLoading;
+
     return IconButton(
-      tooltip: 'Create Match (not implemented yet)',
-      onPressed: null,
-      icon: const Icon(Icons.check_circle_outline),
+      tooltip: matchId != null ? 'Update Match' : 'Create Match',
+      onPressed: isLoading
+          ? null
+          : () async {
+              final draftData = draftState.asData?.value;
+              if (draftData == null) return;
+
+              Match? match;
+              if (matchId != null) {
+                match = await ref
+                    .read(createMatchControllerProvider.notifier)
+                    .updateMatch(
+                      matchId: matchId!,
+                      homePlayers: draftData.home,
+                      awayPlayers: draftData.away,
+                    );
+              } else {
+                match = await ref
+                    .read(createMatchControllerProvider.notifier)
+                    .createMatch(
+                      squadId: squadId,
+                      homePlayers: draftData.home,
+                      awayPlayers: draftData.away,
+                      // Could prompt for team names/colors here if needed
+                    );
+              }
+
+              if (context.mounted && match != null) {
+                ref.invalidate(squadMatchesProvider(squadId));
+                if (matchId != null) {
+                  // If updating, we might just want to pop back to details?
+                  // Or go to details (replace current route).
+                  // Since we are in draft flow stack, we probably want to Go to details.
+                  context.goNamed(
+                    AppRoute.matchDetails.name,
+                    pathParameters: {
+                      'squadId': squadId,
+                      'matchId': match.matchId,
+                    },
+                  );
+                } else {
+                  context.goNamed(
+                    AppRoute.matchDetails.name,
+                    pathParameters: {
+                      'squadId': squadId,
+                      'matchId': match.matchId,
+                    },
+                  );
+                }
+              } else if (context.mounted && createMatchState.hasError) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Failed to ${matchId != null ? 'update' : 'create'} match: ${createMatchState.error}',
+                    ),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+      icon: isLoading
+          ? const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.check_circle_outline),
     );
   }
 }
@@ -255,15 +330,9 @@ class _ProposalNavigator extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        IconButton(
-          onPressed: onPrev,
-          icon: const Icon(Icons.chevron_left),
-        ),
+        IconButton(onPressed: onPrev, icon: const Icon(Icons.chevron_left)),
         Text('Draft ${index + 1} of $total'),
-        IconButton(
-          onPressed: onNext,
-          icon: const Icon(Icons.chevron_right),
-        ),
+        IconButton(onPressed: onNext, icon: const Icon(Icons.chevron_right)),
       ],
     );
   }
@@ -303,33 +372,22 @@ class _TotalsRow extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        _TotalChip(
-          label: 'Home ranking',
-          value: effectiveHome,
-        ),
-        _TotalChip(
-          label: 'Away ranking',
-          value: effectiveAway,
-        ),
+        _TotalChip(label: 'Home ranking', value: effectiveHome),
+        _TotalChip(label: 'Away ranking', value: effectiveAway),
       ],
     );
   }
 }
 
 class _TotalChip extends StatelessWidget {
-  const _TotalChip({
-    required this.label,
-    required this.value,
-  });
+  const _TotalChip({required this.label, required this.value});
 
   final String label;
   final double value;
 
   @override
   Widget build(BuildContext context) {
-    return Chip(
-      label: Text('$label: ${value.toStringAsFixed(1)}'),
-    );
+    return Chip(label: Text('$label: ${value.toStringAsFixed(1)}'));
   }
 }
 
@@ -381,16 +439,11 @@ class _RosterPanel extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
+                Text(title, style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 8),
                 Expanded(
                   child: players.isEmpty
-                      ? const Center(
-                          child: Text('No players.'),
-                        )
+                      ? const Center(child: Text('No players.'))
                       : Builder(
                           builder: (context) {
                             final sortedPlayers = [...players]
@@ -433,9 +486,7 @@ class _ErrorBody extends StatelessWidget {
       child: SelectableText.rich(
         TextSpan(
           text: message,
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.error,
-          ),
+          style: TextStyle(color: Theme.of(context).colorScheme.error),
         ),
       ),
     );

@@ -1,13 +1,8 @@
 import 'package:app/features/squads/domain/entities/user_squad_role.dart';
 
-enum SquadVisibility {
-  public,
-  private,
-}
+enum SquadVisibility { public, private }
 
-enum SportType {
-  football,
-}
+enum SportType { football }
 
 extension SquadVisibilityParser on SquadVisibility {
   static SquadVisibility fromString(String? value) {
@@ -43,10 +38,15 @@ class Squad {
   final SportType sportType;
   final DateTime createdAt;
   final SquadRole role;
+
   /// True when squad has at least one member with `pending` role.
   ///
   /// This is derived from memberships, not stored on `squads` table.
   final bool hasPendingMembers;
+
+  final bool rankingUpdate;
+  final double rankingMultiplier;
+  final bool useExperienceFactor;
 
   const Squad({
     required this.squadId,
@@ -57,6 +57,9 @@ class Squad {
     required this.createdAt,
     this.role = SquadRole.none,
     this.hasPendingMembers = false,
+    this.rankingUpdate = true,
+    this.rankingMultiplier = 1.0,
+    this.useExperienceFactor = true,
   });
 
   Squad copyWith({
@@ -68,6 +71,9 @@ class Squad {
     DateTime? createdAt,
     SquadRole? role,
     bool? hasPendingMembers,
+    bool? rankingUpdate,
+    double? rankingMultiplier,
+    bool? useExperienceFactor,
   }) {
     return Squad(
       squadId: squadId ?? this.squadId,
@@ -78,6 +84,9 @@ class Squad {
       createdAt: createdAt ?? this.createdAt,
       role: role ?? this.role,
       hasPendingMembers: hasPendingMembers ?? this.hasPendingMembers,
+      rankingUpdate: rankingUpdate ?? this.rankingUpdate,
+      rankingMultiplier: rankingMultiplier ?? this.rankingMultiplier,
+      useExperienceFactor: useExperienceFactor ?? this.useExperienceFactor,
     );
   }
 
@@ -86,23 +95,30 @@ class Squad {
       squadId: map['squad_id'] as String,
       ownerId: map['owner_id'] as String,
       name: map['name'] as String,
-      visibility:
-          SquadVisibilityParser.fromString(map['visibility'] as String?),
+      visibility: SquadVisibilityParser.fromString(
+        map['visibility'] as String?,
+      ),
       sportType: SportTypeParser.fromString(map['sport_type'] as String?),
       createdAt: DateTime.parse(map['created_at'] as String),
       role: SquadRoleParser.fromString(map['role'] as String?),
       hasPendingMembers: false,
+      rankingUpdate: map['ranking_update'] as bool? ?? true,
+      rankingMultiplier: (map['ranking_multiplier'] as num?)?.toDouble() ?? 1.0,
+      useExperienceFactor: map['use_experience_factor'] as bool? ?? true,
     );
   }
 
   Map<String, dynamic> toMap() => {
-        'squad_id': squadId,
-        'owner_id': ownerId,
-        'name': name,
-        'visibility': visibility.name,
-        'sport_type': sportType.name,
-        'created_at': createdAt.toIso8601String(),
-        'role': role.name,
-        'has_pending_members': hasPendingMembers,
-      };
+    'squad_id': squadId,
+    'owner_id': ownerId,
+    'name': name,
+    'visibility': visibility.name,
+    'sport_type': sportType.name,
+    'created_at': createdAt.toIso8601String(),
+    'role': role.name,
+    'has_pending_members': hasPendingMembers,
+    'ranking_update': rankingUpdate,
+    'ranking_multiplier': rankingMultiplier,
+    'use_experience_factor': useExperienceFactor,
+  };
 }

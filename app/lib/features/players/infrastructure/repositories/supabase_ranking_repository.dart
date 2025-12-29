@@ -164,6 +164,48 @@ class SupabaseRankingRepository implements RankingRepository {
   }
 
   @override
+  Future<double> updateMatchRankingChange({
+    required String playerId,
+    required String matchId,
+    required double newDelta,
+  }) async {
+    try {
+      // 1. Fetch entry
+      final entry = await getRankingHistoryEntryByMatch(
+        matchId: matchId,
+        playerId: playerId,
+      );
+      if (entry == null) {
+        throw RankingHistoryNotFoundException('Entry not found');
+      }
+
+      // 2. Calculate diff
+      final oldDelta = entry.change ?? 0.0;
+      final diff = newDelta - oldDelta;
+
+      if (diff == 0) return 0.0; // No change
+
+      // 3. Update history
+      await _supabase
+          .from('ranking_history')
+          .update({
+            'change': newDelta,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('ranking_history_id', entry.rankingHistoryId);
+
+      return diff;
+    } catch (e, stack) {
+      _logger.severe(
+        'Failed to update match ranking change for player $playerId in match $matchId',
+        e,
+        stack,
+      );
+      throw e.toFailure();
+    }
+  }
+
+  @override
   Future<RankingHistoryEntry> createMatchRankingEntry({
     required String playerId,
     required String matchId,
@@ -187,6 +229,50 @@ class SupabaseRankingRepository implements RankingRepository {
     } catch (e, stack) {
       _logger.severe(
         'Failed to create match ranking entry for player $playerId',
+        e,
+        stack,
+      );
+      throw e.toFailure();
+    }
+  }
+
+  @override
+  Future<void> deleteMatchRankingEntry({
+    required String playerId,
+    required String matchId,
+  }) async {
+    try {
+      // 1. Fetch entry
+      final entry = await getRankingHistoryEntryByMatch(
+        matchId: matchId,
+        playerId: playerId,
+      );
+      if (entry == null) return; // Already gone
+
+      // 2. Revert score
+      final oldDelta = entry.change;
+      if (oldDelta != null && oldDelta != 0) {
+        final playerRes = await _supabase
+            .from('players')
+            .select('score')
+            .eq('player_id', playerId)
+            .single();
+        final currentScore = (playerRes['score'] as num).toDouble();
+        final newScore = currentScore - oldDelta;
+        await _supabase
+            .from('players')
+            .update({'score': newScore})
+            .eq('player_id', playerId);
+      }
+
+      // 3. Delete entry
+      await _supabase
+          .from('ranking_history')
+          .delete()
+          .eq('ranking_history_id', entry.rankingHistoryId);
+    } catch (e, stack) {
+      _logger.severe(
+        'Failed to delete match ranking entry for player $playerId',
         e,
         stack,
       );

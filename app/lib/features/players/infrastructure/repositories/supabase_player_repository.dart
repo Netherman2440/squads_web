@@ -17,14 +17,11 @@ class SupabasePlayerRepository implements PlayerRepository {
   SupabasePlayerRepository(this._supabase);
 
   @override
-  Future<List<Player>> getSquadPlayers({
-    required String squadId,
-  }) async {
+  Future<List<Player>> getSquadPlayers({required String squadId}) async {
     try {
       final response = await _supabase
           .from('players')
-          .select(
-            '''
+          .select('''
             player_id,
             squad_id,
             name,
@@ -32,39 +29,27 @@ class SupabasePlayerRepository implements PlayerRepository {
             base_score,
             score,
             created_at
-            ''',
-          )
+            ''')
           .eq('squad_id', squadId)
           .order('created_at', ascending: true);
 
       final List<dynamic> data = response as List<dynamic>;
 
       return data
-          .map(
-            (row) => Player.fromMap(
-              Map<String, dynamic>.from(row as Map),
-            ),
-          )
+          .map((row) => Player.fromMap(Map<String, dynamic>.from(row as Map)))
           .toList();
     } catch (e, stack) {
-      _logger.severe(
-        'Failed to fetch players for squad $squadId',
-        e,
-        stack,
-      );
+      _logger.severe('Failed to fetch players for squad $squadId', e, stack);
       throw e.toFailure();
     }
   }
 
   @override
-  Future<Player> getPlayer({
-    required String playerId,
-  }) async {
+  Future<Player> getPlayer({required String playerId}) async {
     try {
       final response = await _supabase
           .from('players')
-          .select(
-            '''
+          .select('''
             player_id,
             squad_id,
             name,
@@ -72,8 +57,7 @@ class SupabasePlayerRepository implements PlayerRepository {
             base_score,
             score,
             created_at
-            ''',
-          )
+            ''')
           .eq('player_id', playerId)
           .maybeSingle();
 
@@ -81,15 +65,9 @@ class SupabasePlayerRepository implements PlayerRepository {
         throw const NotFoundFailure('Player not found.');
       }
 
-      return Player.fromMap(
-        Map<String, dynamic>.from(response as Map),
-      );
+      return Player.fromMap(Map<String, dynamic>.from(response as Map));
     } catch (e, stack) {
-      _logger.severe(
-        'Failed to fetch player $playerId',
-        e,
-        stack,
-      );
+      _logger.severe('Failed to fetch player $playerId', e, stack);
       throw e.toFailure();
     }
   }
@@ -106,18 +84,15 @@ class SupabasePlayerRepository implements PlayerRepository {
 
       final response = await _supabase
           .from('players')
-          .insert(
-            {
-              'player_id': playerId,
-              'squad_id': squadId,
-              'name': name,
-              'position': position,
-              'base_score': baseRanking,
-              'score': baseRanking,
-            },
-          )
-          .select(
-            '''
+          .insert({
+            'player_id': playerId,
+            'squad_id': squadId,
+            'name': name,
+            'position': position,
+            'base_score': baseRanking,
+            'score': baseRanking,
+          })
+          .select('''
             player_id,
             squad_id,
             name,
@@ -125,44 +100,26 @@ class SupabasePlayerRepository implements PlayerRepository {
             base_score,
             score,
             created_at
-            ''',
-          )
+            ''')
           .maybeSingle();
 
       if (response == null) {
-        throw const ServerFailure(
-          'Failed to insert player. No data returned.',
-        );
+        throw const ServerFailure('Failed to insert player. No data returned.');
       }
 
-      return Player.fromMap(
-        Map<String, dynamic>.from(response as Map),
-      );
+      return Player.fromMap(Map<String, dynamic>.from(response as Map));
     } catch (e, stack) {
-      _logger.severe(
-        'Failed to add player to squad $squadId',
-        e,
-        stack,
-      );
+      _logger.severe('Failed to add player to squad $squadId', e, stack);
       throw e.toFailure();
     }
   }
 
   @override
-  Future<void> deletePlayer({
-    required String playerId,
-  }) async {
+  Future<void> deletePlayer({required String playerId}) async {
     try {
-      await _supabase
-          .from('players')
-          .delete()
-          .eq('player_id', playerId);
+      await _supabase.from('players').delete().eq('player_id', playerId);
     } catch (e, stack) {
-      _logger.severe(
-        'Failed to delete player $playerId',
-        e,
-        stack,
-      );
+      _logger.severe('Failed to delete player $playerId', e, stack);
       throw e.toFailure();
     }
   }
@@ -191,8 +148,7 @@ class SupabasePlayerRepository implements PlayerRepository {
           .from('players')
           .update(updates)
           .eq('player_id', playerId)
-          .select(
-            '''
+          .select('''
             player_id,
             squad_id,
             name,
@@ -200,23 +156,32 @@ class SupabasePlayerRepository implements PlayerRepository {
             base_score,
             score,
             created_at
-            ''',
-          )
+            ''')
           .maybeSingle();
 
       if (response == null) {
         throw const NotFoundFailure('Player not found.');
       }
 
-      return Player.fromMap(
-        Map<String, dynamic>.from(response as Map),
-      );
+      return Player.fromMap(Map<String, dynamic>.from(response as Map));
     } catch (e, stack) {
-      _logger.severe(
-        'Failed to update player $playerId',
-        e,
-        stack,
-      );
+      _logger.severe('Failed to update player $playerId', e, stack);
+      throw e.toFailure();
+    }
+  }
+
+  @override
+  Future<void> updatePlayerRanking({
+    required String playerId,
+    required double newRanking,
+  }) async {
+    try {
+      await _supabase
+          .from('players')
+          .update({'score': newRanking})
+          .eq('player_id', playerId);
+    } catch (e, stack) {
+      _logger.severe('Failed to update ranking for player $playerId', e, stack);
       throw e.toFailure();
     }
   }
@@ -226,5 +191,3 @@ final playerRepositoryProvider = Provider<PlayerRepository>((ref) {
   final supabase = ref.read(supabaseProvider);
   return SupabasePlayerRepository(supabase);
 });
-
-

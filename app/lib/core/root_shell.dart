@@ -6,10 +6,7 @@ import 'package:app/features/auth/presentation/providers/auth_notifier.dart';
 import 'package:app/features/squads/presentation/state/squad_detail_notifier.dart';
 
 class RootShell extends ConsumerStatefulWidget {
-  const RootShell({
-    super.key,
-    required this.child,
-  });
+  const RootShell({super.key, required this.child});
 
   final Widget child;
 
@@ -92,16 +89,12 @@ class _RootShellState extends ConsumerState<RootShell> {
 
     return Stack(
       children: [
-        SafeArea(
-          child: widget.child,
-        ),
+        SafeArea(child: widget.child),
         Positioned.fill(
           child: IgnorePointer(
             ignoring: !isSidebarExpanded,
             child: AnimatedOpacity(
-              duration: const Duration(
-                milliseconds: 180,
-              ),
+              duration: const Duration(milliseconds: 180),
               curve: Curves.easeOut,
               opacity: isSidebarExpanded ? 1 : 0,
               child: Stack(
@@ -112,25 +105,21 @@ class _RootShellState extends ConsumerState<RootShell> {
                         _isSidebarPinned = false;
                       });
                     },
-                    child: Container(
-                      color: Colors.black26,
-                    ),
+                    child: Container(color: Colors.black26),
                   ),
                   Align(
                     alignment: Alignment.centerLeft,
                     child: AnimatedSlide(
-                      duration: const Duration(
-                        milliseconds: 220,
-                      ),
+                      duration: const Duration(milliseconds: 220),
                       curve: Curves.easeOutCubic,
                       offset: isSidebarExpanded
                           ? Offset.zero
                           : const Offset(-1, 0),
                       child: Material(
                         elevation: 8,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .surfaceContainerHighest,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainerHighest,
                         child: SizedBox(
                           width: panelWidth,
                           child: _SidebarNavigation(
@@ -169,12 +158,8 @@ class _RootShellState extends ConsumerState<RootShell> {
           Positioned.fill(
             child: Row(
               children: [
-                const SizedBox(
-                  width: railWidth,
-                ),
-                Expanded(
-                  child: widget.child,
-                ),
+                const SizedBox(width: railWidth),
+                Expanded(child: widget.child),
               ],
             ),
           ),
@@ -242,9 +227,7 @@ class _RootShellState extends ConsumerState<RootShell> {
                   });
                 },
                 child: AnimatedOpacity(
-                  duration: const Duration(
-                    milliseconds: 200,
-                  ),
+                  duration: const Duration(milliseconds: 200),
                   curve: Curves.easeOutCubic,
                   opacity: isSidebarExpanded ? 1 : 0,
                   child: Material(
@@ -290,9 +273,7 @@ class _RootShellState extends ConsumerState<RootShell> {
             });
           },
         ),
-        const SizedBox(
-          width: 8,
-        ),
+        const SizedBox(width: 8),
         const Text('Squads'),
       ],
     );
@@ -306,16 +287,8 @@ class _RootShellState extends ConsumerState<RootShell> {
             onPressed: () {
               context.go('/auth');
             },
-            icon: const Icon(
-              Icons.login,
-              color: Colors.white,
-            ),
-            label: const Text(
-              'Zaloguj',
-              style: TextStyle(
-                color: Colors.white,
-              ),
-            ),
+            icon: const Icon(Icons.login, color: Colors.white),
+            label: const Text('Zaloguj', style: TextStyle(color: Colors.white)),
           ),
         ],
       );
@@ -326,9 +299,7 @@ class _RootShellState extends ConsumerState<RootShell> {
       title: title,
       actions: [
         Padding(
-          padding: const EdgeInsets.only(
-            right: 12,
-          ),
+          padding: const EdgeInsets.only(right: 12),
           child: PopupMenuButton<_ProfileMenuAction>(
             tooltip: email,
             position: PopupMenuPosition.under,
@@ -371,22 +342,15 @@ class _RootShellState extends ConsumerState<RootShell> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const CircleAvatar(
-                  child: Icon(Icons.person),
-                ),
-                const SizedBox(
-                  width: 8,
-                ),
+                const CircleAvatar(child: Icon(Icons.person)),
+                const SizedBox(width: 8),
                 Text(
                   email,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.white,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: Colors.white),
                 ),
-                const Icon(
-                  Icons.arrow_drop_down,
-                  color: Colors.white,
-                ),
+                const Icon(Icons.arrow_drop_down, color: Colors.white),
               ],
             ),
           ),
@@ -396,10 +360,7 @@ class _RootShellState extends ConsumerState<RootShell> {
   }
 }
 
-enum _ProfileMenuAction {
-  profile,
-  logout,
-}
+enum _ProfileMenuAction { profile, logout }
 
 class _SidebarNavigation extends StatelessWidget {
   const _SidebarNavigation({
@@ -420,34 +381,22 @@ class _SidebarNavigation extends StatelessWidget {
 
     final navItems = <_NavItem>[
       if (!isGuest)
-        const _NavItem(
-          icon: Icons.person,
-          label: 'Profil',
-          path: '/me',
-        ),
-      const _NavItem(
-        icon: Icons.groups,
-        label: 'Squads',
-        path: '/squads',
-      ),
+        const _NavItem(icon: Icons.person, label: 'Profil', path: '/me'),
+      const _NavItem(icon: Icons.groups, label: 'Squads', path: '/squads'),
     ];
 
     final hasSquadSection = squadName != null && squadName!.isNotEmpty;
     final squadId = _extractSquadId(location);
 
     return Column(
-      crossAxisAlignment:
-          isExpanded ? CrossAxisAlignment.stretch : CrossAxisAlignment.center,
+      crossAxisAlignment: isExpanded
+          ? CrossAxisAlignment.stretch
+          : CrossAxisAlignment.center,
       children: [
-        if (!isExpanded)
-          const SizedBox(
-            height: 8,
-          ),
+        if (!isExpanded) const SizedBox(height: 8),
         Expanded(
           child: ListView(
-            padding: const EdgeInsets.symmetric(
-              vertical: 8,
-            ),
+            padding: const EdgeInsets.symmetric(vertical: 8),
             children: [
               for (final item in navItems)
                 _SidebarNavItem(
@@ -469,9 +418,7 @@ class _SidebarNavigation extends StatelessWidget {
                     ),
                   )
                 else
-                  const Divider(
-                    height: 24,
-                  ),
+                  const Divider(height: 24),
                 _SidebarNavItem(
                   item: _NavItem(
                     icon: Icons.home,
@@ -479,8 +426,10 @@ class _SidebarNavigation extends StatelessWidget {
                     path: '/squads/$squadId/home',
                   ),
                   isExpanded: isExpanded,
-                  isSelected:
-                      _isLocationSelected(location, '/squads/$squadId/home'),
+                  isSelected: _isLocationSelected(
+                    location,
+                    '/squads/$squadId/home',
+                  ),
                 ),
                 _SidebarNavItem(
                   item: _NavItem(
@@ -495,13 +444,16 @@ class _SidebarNavigation extends StatelessWidget {
                   ),
                 ),
                 _SidebarNavItem(
-                  item: const _NavItem(
+                  item: _NavItem(
                     icon: Icons.sports_soccer,
                     label: 'Matches',
-                    path: '',
+                    path: '/squads/$squadId/matches',
                   ),
                   isExpanded: isExpanded,
-                  isSelected: false,
+                  isSelected: _isLocationSelected(
+                    location,
+                    '/squads/$squadId/matches',
+                  ),
                 ),
                 _SidebarNavItem(
                   item: const _NavItem(
@@ -540,9 +492,7 @@ class _SidebarNavItem extends StatelessWidget {
       return IconButton(
         icon: Icon(
           item.icon,
-          color: isSelected
-              ? theme.colorScheme.primary
-              : theme.iconTheme.color,
+          color: isSelected ? theme.colorScheme.primary : theme.iconTheme.color,
         ),
         hoverColor: theme.colorScheme.primary.withValues(alpha: 0.18),
         tooltip: item.label,
@@ -558,15 +508,12 @@ class _SidebarNavItem extends StatelessWidget {
     return ListTile(
       leading: Icon(
         item.icon,
-        color: isSelected
-            ? theme.colorScheme.primary
-            : theme.iconTheme.color,
+        color: isSelected ? theme.colorScheme.primary : theme.iconTheme.color,
       ),
       title: Text(item.label),
       selected: isSelected,
       hoverColor: theme.colorScheme.primary.withValues(alpha: 0.18),
-      selectedTileColor:
-          theme.colorScheme.primary.withValues(alpha: 0.22),
+      selectedTileColor: theme.colorScheme.primary.withValues(alpha: 0.22),
       onTap: () {
         if (item.path.isEmpty) {
           return;
@@ -578,11 +525,7 @@ class _SidebarNavItem extends StatelessWidget {
 }
 
 class _NavItem {
-  const _NavItem({
-    required this.icon,
-    required this.label,
-    required this.path,
-  });
+  const _NavItem({required this.icon, required this.label, required this.path});
 
   final IconData icon;
   final String label;
@@ -618,4 +561,3 @@ String? _extractSquadId(String location) {
   }
   return null;
 }
-

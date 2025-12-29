@@ -1,13 +1,9 @@
 import '../entities/player.dart';
 
 abstract class PlayerRepository {
-  Future<List<Player>> getSquadPlayers({
-    required String squadId,
-  });
+  Future<List<Player>> getSquadPlayers({required String squadId});
 
-  Future<Player> getPlayer({
-    required String playerId,
-  });
+  Future<Player> getPlayer({required String playerId});
 
   Future<Player> addPlayer({
     required String squadId,
@@ -16,15 +12,16 @@ abstract class PlayerRepository {
     required int baseRanking,
   });
 
-  Future<void> deletePlayer({
-    required String playerId,
-  });
+  Future<void> deletePlayer({required String playerId});
 
   Future<Player> updatePlayer({
     required String playerId,
     String? name,
     String? position,
   });
+
+  Future<void> updatePlayerRanking({
+    required String playerId,
+    required double newRanking,
+  });
 }
-
-

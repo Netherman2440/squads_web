@@ -382,35 +382,57 @@ UI:
 ## Iteracyjny plan implementacji (żeby nie robić “wszystkiego naraz”)
 
 ### Etap A — “Matches list MVP” (US-006)
-- Routing + nawigacja z `SquadHomePage` do `/matches`
-- Domain `Match` (wersja “list item”)
-- Repo: `getSquadMatches`
-- Use case: `GetSquadMatches`
-- Notifier + page + `MatchTile`
+- [x] Routing + nawigacja z `SquadHomePage` do `/matches`
+- [x] Domain `Match` (wersja “list item”)
+- [x] Repo: `getSquadMatches`
+- [x] Use case: `GetSquadMatches`
+- [x] Notifier + page + `MatchTile`
 
 ### Etap B — “Match details read-only” (US-008 + US-009 mock)
-- Routing `/matches/:matchId`
-- Repo: `getMatch` (match + teams + players)
-- Use case: `GetMatch`
-- Notifier + `MatchDetailsPage`
-- Klik na gracza → placeholder route
+- [x] Routing `/matches/:matchId`
+- [x] Repo: `getMatch` (match)
+- [x] Team repo: `getMatchTeams` (teams + players + snapshot rankingu z `ranking_history`)
+- [x] Use case: `GetMatch`
+- [x] Notifier + `MatchDetailsPage`
+- [x] Klik na gracza → `/squads/:squadId/players/:playerId` (zmiana URL)
 
 ### Etap C - "Draft flow" (US-007)
-- `/matches/draft` (selection) + `/matches/create` (propozycje + finalizacja) zgodnie z `.ai/features/draft.md`.
-- Matches dostarcza routing, integracje na wejscie/wyjscie oraz `CreateMatchUseCase`.
-- Repo: `createMatch`.
-- Use case: `CreateMatch`.
+- [x] `/matches/draft` (selection) + `/matches/create` (propozycje + finalizacja) zgodnie z `.ai/features/draft.md`.
+- [x] Matches dostarcza routing, integracje na wejscie/wyjscie oraz `CreateMatchUseCase`.
+- [x] Repo: `createMatch`.
+- [x] Use case: `CreateMatch`.
+- [x] Invalidacja listy matches po utworzeniu (żeby nowy mecz był widoczny po powrocie)
 
 ### Etap D — “Write operations” (pod US-012/US-013/US-014/US-015 w kolejnych sprintach)
-- `UpdateMatchScore`, `UpdateMatchTeams`, `UpdateTeamColor/Name`
-- `Rematch`, `Redraw`
-- Integracja z `score_history` (osobny feature plan)
-
+- [x] `UpdateMatchScore`
+- [x] `UpdateMatchTeams` (w tym Add/Remove przez update rosterów)
+- [x] `Rematch`
+- [x] `Redraw` 
+- [ ] `UpdateTeamColor/Name` (nie zaimplementowane)
+- [x] Integracja z `score_history` (osobny feature plan)
+- [x] `DeleteMatch` (implementacja usunięcia meczu i cofnięcia rankingu)
+- [x] Invalidacja ranking history po update score (odświeżenie Player Details / graph)
+- [ ] Squad Settings z wzorem obliczania ranking update
 ---
 
 ## Ustalenia (po review)
 
-- `player.name` i  `player.ranking` bierzemy 'na zywo' z `players`.
+- `player.name` bierzemy 'na zywo' z `players`.
+- `player.ranking` w **Match Details** to snapshot z `ranking_history` (obecnie: `ranking_history.ranking + change`).
 
+---
 
+## Implementacja — dodatkowe poprawki UX (po testach)
 
+- Match Details:
+  - tryb edit ma akcje w AppBar (Save/Cancel)
+  - Delete jako ikona w trybie **no-edit** obok ołówka
+  - score nie pozwala wpisać wartości ujemnych (tylko cyfry)
+  - drag&drop pomiędzy drużynami działa
+  - w trakcie drag pojawia się drop-zone z “X” do usuwania zawodnika z meczu (UI)
+  - Add Player: panel z wyszukiwaniem i listą dostępnych graczy (spoza meczu) + drag do drużyny
+  - przy nazwie drużyny jest kwadracik z kolorem + efektywny ranking drużyny (jak w draft)
+
+- Redraft:
+  - `/matches/draft` przyjmuje `selectedIds` oraz `matchId` (jeśli podane, startuje od razu z Selected)
+  - `/matches/create` przyjmuje `matchId`; jeśli jest, to finalizacja robi update istniejącego meczu zamiast tworzyć nowy

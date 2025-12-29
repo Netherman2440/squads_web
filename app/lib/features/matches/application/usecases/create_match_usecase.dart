@@ -4,12 +4,10 @@ import 'package:app/features/matches/domain/entities/team.dart';
 import 'package:app/features/matches/domain/entities/match_enums.dart';
 import 'package:app/features/matches/domain/repositories/match_repository.dart';
 import 'package:app/features/matches/domain/repositories/team_repository.dart';
-import 'package:app/features/matches/infrastructure/repositories/supabase_match_repository.dart';
-import 'package:app/features/matches/infrastructure/repositories/supabase_team_repository.dart';
+import 'package:app/features/matches/matches_providers.dart';
 import 'package:app/features/players/domain/repositories/player_repository.dart';
 import 'package:app/features/players/domain/repositories/ranking_repository.dart';
-import 'package:app/features/players/infrastructure/repositories/supabase_player_repository.dart';
-import 'package:app/features/players/infrastructure/repositories/supabase_ranking_repository.dart';
+import 'package:app/features/players/players_providers.dart';
 
 class CreateMatchUseCase {
   final MatchRepository _matchRepository;

@@ -1,9 +1,6 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
-
-import 'package:app/core/global_dependencies.dart';
 import 'package:app/core/error/failure.dart';
 import 'package:app/core/error/supabase_error_extension.dart';
 
@@ -275,8 +272,3 @@ class SupabaseMatchRepository implements MatchRepository {
     }
   }
 }
-
-final matchRepositoryProvider = Provider<MatchRepository>((ref) {
-  final supabase = ref.read(supabaseProvider);
-  return SupabaseMatchRepository(supabase);
-});

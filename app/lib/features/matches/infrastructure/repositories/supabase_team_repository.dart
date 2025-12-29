@@ -1,9 +1,6 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
-
-import 'package:app/core/global_dependencies.dart';
 import 'package:app/core/error/supabase_error_extension.dart';
 import 'package:app/features/matches/domain/entities/team.dart';
 import 'package:app/features/matches/domain/repositories/team_repository.dart';
@@ -272,8 +269,3 @@ class SupabaseTeamRepository implements TeamRepository {
     }
   }
 }
-
-final teamRepositoryProvider = Provider<TeamRepository>((ref) {
-  final supabase = ref.read(supabaseProvider);
-  return SupabaseTeamRepository(supabase);
-});

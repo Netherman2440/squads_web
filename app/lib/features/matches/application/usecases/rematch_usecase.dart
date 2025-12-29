@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/features/matches/application/usecases/create_match_usecase.dart';
 import 'package:app/features/matches/domain/entities/match.dart';
 import 'package:app/features/matches/domain/repositories/match_repository.dart';
-import 'package:app/features/matches/infrastructure/repositories/supabase_match_repository.dart';
+import 'package:app/features/matches/matches_providers.dart';
 
 class RematchUseCase {
   final MatchRepository _matchRepository;

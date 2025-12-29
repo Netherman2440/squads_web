@@ -10,6 +10,8 @@ class MatchPlayerTile extends StatelessWidget {
     this.onTap,
     this.dragData,
     this.snapshotRanking,
+    this.onDragStarted,
+    this.onDragEnd,
   });
 
   final Player player;
@@ -19,16 +21,13 @@ class MatchPlayerTile extends StatelessWidget {
 
   /// If provided, this ranking is shown instead of player.ranking
   final double? snapshotRanking;
+  final VoidCallback? onDragStarted;
+  final VoidCallback? onDragEnd;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     // In match history, we should show the snapshot ranking if available.
     final displayRanking = snapshotRanking ?? player.ranking;
-
-    // Difference from base ranking (maybe not relevant for historical match, but okay for now)
-    final difference = displayRanking - player.baseRanking;
 
     final tile = Card(
       child: ListTile(
@@ -38,38 +37,7 @@ class MatchPlayerTile extends StatelessWidget {
           ),
         ),
         title: Text(player.name),
-        subtitle: Row(
-          children: [
-            if (player.position != null &&
-                player.position!.trim().isNotEmpty) ...[
-              Icon(
-                Icons.sports_soccer,
-                size: 16,
-                color: theme.colorScheme.primary,
-              ),
-              const SizedBox(width: 4),
-              Text(player.position!),
-              const SizedBox(width: 12),
-            ],
-            Icon(
-              Icons.star_border,
-              size: 16,
-              color: theme.colorScheme.secondary,
-            ),
-            const SizedBox(width: 4),
-            Text('Base: ${player.baseRanking}'),
-            const SizedBox(width: 12),
-            Icon(Icons.insights, size: 16, color: theme.colorScheme.tertiary),
-            const SizedBox(width: 4),
-            Text('Ranking: ${displayRanking.toStringAsFixed(2)}'),
-            // Only show diff if it's current ranking, or maybe just always?
-            // User didn't specify, but keeping it consistent with draft tile.
-            if (difference.abs() > 0) ...[
-              const SizedBox(width: 12),
-              _RankingDifference(difference: difference),
-            ],
-          ],
-        ),
+        subtitle: Text(displayRanking.toStringAsFixed(2)),
         trailing: trailing,
         onTap: onTap,
       ),
@@ -94,6 +62,8 @@ class MatchPlayerTile extends StatelessWidget {
       return Draggable<Object>(
         data: data,
         feedback: feedback,
+        onDragStarted: onDragStarted,
+        onDragEnd: (_) => onDragEnd?.call(),
         childWhenDragging: childWhenDragging,
         child: tile,
       );
@@ -102,6 +72,8 @@ class MatchPlayerTile extends StatelessWidget {
     return LongPressDraggable<Object>(
       data: data,
       feedback: feedback,
+      onDragStarted: onDragStarted,
+      onDragEnd: (_) => onDragEnd?.call(),
       childWhenDragging: childWhenDragging,
       child: tile,
     );
@@ -125,32 +97,5 @@ bool get _shouldUseImmediateDrag {
   }
 }
 
-class _RankingDifference extends StatelessWidget {
-  const _RankingDifference({required this.difference});
-
-  final double difference;
-
-  @override
-  Widget build(BuildContext context) {
-    final isPositiveOrFlat = difference >= 0;
-    final color = isPositiveOrFlat ? Colors.green : Colors.red;
-    final formattedDifference =
-        '${difference >= 0 ? '+' : ''}'
-        '${difference.toStringAsFixed(2)}';
-
-    return Row(
-      children: [
-        Icon(
-          isPositiveOrFlat ? Icons.arrow_drop_up : Icons.arrow_drop_down,
-          size: 16,
-          color: color,
-        ),
-        const SizedBox(width: 2),
-        Text(
-          formattedDifference,
-          style: TextStyle(color: color, fontWeight: FontWeight.w600),
-        ),
-      ],
-    );
-  }
-}
+// Intentionally no ranking change indicator here. Match details should show
+// only the snapshot ranking.

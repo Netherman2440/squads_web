@@ -43,7 +43,7 @@ class SupabaseMatchRepository implements MatchRepository {
   @override
   Future<Match> getMatch({required String matchId}) async {
     try {
-      // 1. Fetch Match
+      // MatchRepository returns match row only (without teams).
       final matchResponse = await _supabase
           .from('matches')
           .select()
@@ -55,65 +55,7 @@ class SupabaseMatchRepository implements MatchRepository {
       }
 
       final matchData = Map<String, dynamic>.from(matchResponse as Map);
-      var match = Match.fromJson(matchData);
-
-      // 2. Fetch Teams
-      final teamsResponse = await _supabase
-          .from('teams')
-          .select()
-          .eq('match_id', matchId);
-
-      final List<dynamic> teamsData = teamsResponse as List<dynamic>;
-      List<Team> teams = teamsData
-          .map((row) => Team.fromJson(Map<String, dynamic>.from(row as Map)))
-          .toList();
-
-      // 3. For each team, fetch players
-      List<Team> teamsWithPlayers = [];
-      for (var team in teams) {
-        // Fetch team_players
-        final teamPlayersResponse = await _supabase
-            .from('team_players')
-            .select('player_id')
-            .eq('match_id', matchId)
-            .eq('team_id', team.teamId);
-
-        final List<dynamic> teamPlayersData =
-            teamPlayersResponse as List<dynamic>;
-        if (teamPlayersData.isEmpty) {
-          teamsWithPlayers.add(team);
-          continue;
-        }
-
-        final playerIds = teamPlayersData
-            .map((tp) => tp['player_id'] as String)
-            .toList();
-
-        // Fetch players details
-        final playersResponse = await _supabase
-            .from('players')
-            .select()
-            .inFilter('player_id', playerIds);
-
-        final List<dynamic> playersData = playersResponse as List<dynamic>;
-        final players = playersData
-            .map((row) => Player.fromMap(Map<String, dynamic>.from(row as Map)))
-            .toList();
-
-        teamsWithPlayers.add(team.copyWith(players: players));
-      }
-
-      // Assign teams to match
-      final homeTeam = teamsWithPlayers.firstWhere(
-        (t) => t.side == Side.home,
-        orElse: () => throw const ServerFailure('Home team missing'),
-      );
-      final awayTeam = teamsWithPlayers.firstWhere(
-        (t) => t.side == Side.away,
-        orElse: () => throw const ServerFailure('Away team missing'),
-      );
-
-      return match.copyWith(homeTeam: homeTeam, awayTeam: awayTeam);
+      return Match.fromJson(matchData);
     } catch (e, stack) {
       _logger.severe('Failed to fetch match $matchId', e, stack);
       throw e.toFailure();
@@ -129,8 +71,6 @@ class SupabaseMatchRepository implements MatchRepository {
   }) async {
     try {
       final matchId = const Uuid().v4();
-      final homeTeamId = const Uuid().v4();
-      final awayTeamId = const Uuid().v4();
       final now = DateTime.now().toUtc();
 
       // We should use a transaction or batch these if possible,
@@ -151,68 +91,12 @@ class SupabaseMatchRepository implements MatchRepository {
 
       await _supabase.from('matches').insert(matchData);
 
-      // 2. Insert Teams
-      final homeTeamData = {
-        'team_id': homeTeamId,
-        'match_id': matchId,
-        'side': 'home', // or Side.home.name if stringified correctly
-        'name': homeTeam.name,
-        'color': homeTeam.color,
-        'created_at': now.toIso8601String(),
-      };
-      final awayTeamData = {
-        'team_id': awayTeamId,
-        'match_id': matchId,
-        'side': 'away',
-        'name': awayTeam.name,
-        'color': awayTeam.color,
-        'created_at': now.toIso8601String(),
-      };
-
-      await _supabase.from('teams').insert([homeTeamData, awayTeamData]);
-
-      // 3. Insert Team Players
-      final List<Map<String, dynamic>> teamPlayersRows = [];
-
-      for (final player in homeTeam.players) {
-        teamPlayersRows.add({
-          'match_id': matchId,
-          'team_id': homeTeamId,
-          'player_id': player.playerId,
-          'tournament_id': tournamentId,
-          'created_at': now.toIso8601String(),
-        });
-      }
-      for (final player in awayTeam.players) {
-        teamPlayersRows.add({
-          'match_id': matchId,
-          'team_id': awayTeamId,
-          'player_id': player.playerId,
-          'tournament_id': tournamentId,
-          'created_at': now.toIso8601String(),
-        });
-      }
-
-      if (teamPlayersRows.isNotEmpty) {
-        await _supabase.from('team_players').insert(teamPlayersRows);
-      }
-
-      // Return the full match object
+      // Teams and team_players are created via TeamRepository.
       return Match(
         matchId: matchId,
         squadId: squadId,
         tournamentId: tournamentId,
         createdAt: now,
-        homeTeam: homeTeam.copyWith(
-          teamId: homeTeamId,
-          matchId: matchId,
-          side: Side.home,
-        ),
-        awayTeam: awayTeam.copyWith(
-          teamId: awayTeamId,
-          matchId: matchId,
-          side: Side.away,
-        ),
       );
     } catch (e, stack) {
       _logger.severe('Failed to create match for squad $squadId', e, stack);
@@ -240,9 +124,10 @@ class SupabaseMatchRepository implements MatchRepository {
   }) async {
     try {
       final updates = <String, dynamic>{};
-      if (scoreType != null)
+      if (scoreType != null) {
         updates['score_type'] =
             scoreType.name; // assuming name matches enum string
+      }
       // Allow setting null scores if needed? Or just updates?
       // The requirement implies setting the score.
       if (homeScore != null) updates['home_score'] = homeScore;

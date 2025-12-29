@@ -2,7 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/core/error/failure.dart';
 import 'package:app/features/matches/domain/entities/match.dart';
 import 'package:app/features/matches/domain/repositories/match_repository.dart';
+import 'package:app/features/matches/domain/repositories/team_repository.dart';
 import 'package:app/features/matches/infrastructure/repositories/supabase_match_repository.dart';
+import 'package:app/features/matches/infrastructure/repositories/supabase_team_repository.dart';
+import 'package:app/features/matches/application/usecases/get_match_usecase.dart';
 import 'package:app/features/players/domain/repositories/ranking_repository.dart';
 import 'package:app/features/players/domain/repositories/player_repository.dart';
 import 'package:app/features/players/infrastructure/repositories/supabase_player_repository.dart';
@@ -11,15 +14,19 @@ import 'package:app/features/squads/application/get_squad_use_case.dart';
 
 class UpdateMatchScoreUseCase {
   final MatchRepository _matchRepository;
+  final TeamRepository _teamRepository;
   final RankingRepository _rankingRepository;
   final PlayerRepository _playerRepository;
   final GetSquadUseCase _getSquadUseCase;
+  final GetMatchUseCase _getMatchUseCase;
 
   UpdateMatchScoreUseCase(
     this._matchRepository,
+    this._teamRepository,
     this._rankingRepository,
     this._playerRepository,
     this._getSquadUseCase,
+    this._getMatchUseCase,
   );
 
   Future<Match> execute({
@@ -36,7 +43,7 @@ class UpdateMatchScoreUseCase {
     );
 
     // 2. Update Match Score
-    final match = await _matchRepository.updateMatchScore(
+    await _matchRepository.updateMatchScore(
       matchId: matchId,
       homeScore: homeScore,
       awayScore: awayScore,
@@ -47,30 +54,34 @@ class UpdateMatchScoreUseCase {
       final delta =
           (homeScore - awayScore).toDouble() * squad.rankingMultiplier;
 
-      if (match.homeTeam == null || match.awayTeam == null) {
-        throw const ServerFailure('Teams not found in match');
-      }
+      final teams = await _teamRepository.getMatchTeams(matchId);
+      final homeTeam = teams.firstWhere(
+        (t) => t.side.name == 'home',
+        orElse: () => throw const ServerFailure('Home team missing'),
+      );
+      final awayTeam = teams.firstWhere(
+        (t) => t.side.name == 'away',
+        orElse: () => throw const ServerFailure('Away team missing'),
+      );
 
       final futures = <Future>[];
 
-      for (final player in match.homeTeam!.players) {
+      for (final player in homeTeam.players) {
         futures.add(
           _updatePlayerRanking(
             playerId: player.playerId,
             matchId: matchId,
             newDelta: delta,
-            currentRanking: player.ranking,
           ),
         );
       }
 
-      for (final player in match.awayTeam!.players) {
+      for (final player in awayTeam.players) {
         futures.add(
           _updatePlayerRanking(
             playerId: player.playerId,
             matchId: matchId,
             newDelta: -delta,
-            currentRanking: player.ranking,
           ),
         );
       }
@@ -78,14 +89,13 @@ class UpdateMatchScoreUseCase {
       await Future.wait(futures);
     }
 
-    return match;
+    return _getMatchUseCase.execute(matchId: matchId);
   }
 
   Future<void> _updatePlayerRanking({
     required String playerId,
     required String matchId,
     required double newDelta,
-    required double currentRanking,
   }) async {
     // 1. Update ranking history and get the difference
     final diff = await _rankingRepository.updateMatchRankingChange(
@@ -96,9 +106,10 @@ class UpdateMatchScoreUseCase {
 
     // 2. Update player score if there is a difference
     if (diff != 0) {
+      final current = await _playerRepository.getPlayer(playerId: playerId);
       await _playerRepository.updatePlayerRanking(
         playerId: playerId,
-        newRanking: currentRanking + diff,
+        newRanking: current.ranking + diff,
       );
     }
   }
@@ -109,8 +120,10 @@ final updateMatchScoreUseCaseProvider = Provider<UpdateMatchScoreUseCase>((
 ) {
   return UpdateMatchScoreUseCase(
     ref.read(matchRepositoryProvider),
+    ref.read(teamRepositoryProvider),
     ref.read(rankingRepositoryProvider),
     ref.read(playerRepositoryProvider),
     ref.read(getSquadUseCaseProvider),
+    ref.read(getMatchUseCaseProvider),
   );
 });

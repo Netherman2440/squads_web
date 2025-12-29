@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/features/matches/domain/repositories/match_repository.dart';
+import 'package:app/features/matches/domain/repositories/team_repository.dart';
 import 'package:app/features/matches/infrastructure/repositories/supabase_match_repository.dart';
+import 'package:app/features/matches/infrastructure/repositories/supabase_team_repository.dart';
 import 'package:app/features/players/domain/repositories/player_repository.dart';
 import 'package:app/features/players/domain/repositories/ranking_repository.dart';
 import 'package:app/features/players/infrastructure/repositories/supabase_player_repository.dart';
@@ -8,11 +10,13 @@ import 'package:app/features/players/infrastructure/repositories/supabase_rankin
 
 class UpdateMatchTeamsUseCase {
   final MatchRepository _matchRepository;
+  final TeamRepository _teamRepository;
   final RankingRepository _rankingRepository;
   final PlayerRepository _playerRepository;
 
   UpdateMatchTeamsUseCase(
     this._matchRepository,
+    this._teamRepository,
     this._rankingRepository,
     this._playerRepository,
   );
@@ -30,23 +34,18 @@ class UpdateMatchTeamsUseCase {
       throw Exception('Cannot update teams for a match with score');
     }
 
-    // 2. Update teams in MatchRepo
-    await _matchRepository.updateMatchTeams(
+    // 2. Fetch current players (before update) to diff ranking history entries
+    final currentTeams = await _teamRepository.getMatchTeams(matchId);
+    final currentPlayers = [for (final team in currentTeams) ...team.players];
+    final currentPlayerIds = currentPlayers.map((p) => p.playerId).toSet();
+
+    // 3. Update teams
+    await _teamRepository.updateMatchTeams(
       matchId: matchId,
       homePlayerIds: homePlayerIds,
       awayPlayerIds: awayPlayerIds,
     );
 
-    // 3. Handle Ranking History entries
-    if (match.homeTeam == null || match.awayTeam == null) {
-      // Should not happen if getMatch returns full details, but safety check.
-      return;
-    }
-    final currentPlayers = [
-      ...match.homeTeam!.players,
-      ...match.awayTeam!.players,
-    ];
-    final currentPlayerIds = currentPlayers.map((p) => p.playerId).toSet();
     final newPlayerIds = {...homePlayerIds, ...awayPlayerIds};
 
     // Identify Added Players
@@ -86,6 +85,7 @@ final updateMatchTeamsUseCaseProvider = Provider<UpdateMatchTeamsUseCase>((
 ) {
   return UpdateMatchTeamsUseCase(
     ref.read(matchRepositoryProvider),
+    ref.read(teamRepositoryProvider),
     ref.read(rankingRepositoryProvider),
     ref.read(playerRepositoryProvider),
   );

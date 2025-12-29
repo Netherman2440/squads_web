@@ -94,8 +94,24 @@ final appRouter = GoRouter(
           name: AppRoute.draftSelection.name,
           pageBuilder: (context, state) {
             final squadId = state.pathParameters['squadId'] ?? '';
+            final extra = state.extra;
+
+            List<String> selectedIds = const [];
+            String? matchId;
+
+            if (extra is Map<String, dynamic>) {
+              selectedIds =
+                  (extra['selectedIds'] as List<dynamic>?)?.cast<String>() ??
+                  [];
+              matchId = extra['matchId'] as String?;
+            }
+
             return NoTransitionPage(
-              child: DraftSelectionPage(squadId: squadId),
+              child: DraftSelectionPage(
+                squadId: squadId,
+                initialSelectedIds: selectedIds,
+                matchId: matchId,
+              ),
             );
           },
         ),

@@ -8,6 +8,7 @@ import 'package:app/features/draft/presentation/controllers/draft_session_notifi
 import 'package:app/features/draft/presentation/widgets/draft_draggable_player_tile.dart';
 import 'package:app/features/matches/domain/entities/match.dart';
 import 'package:app/features/matches/presentation/controllers/create_match_controller.dart';
+import 'package:app/features/matches/presentation/controllers/squad_matches_notifier.dart';
 import 'package:app/features/players/domain/entities/player.dart';
 
 class DraftResultsPage extends ConsumerStatefulWidget {
@@ -268,6 +269,7 @@ class _CreateMatchButton extends ConsumerWidget {
               }
 
               if (context.mounted && match != null) {
+                ref.invalidate(squadMatchesProvider(squadId));
                 if (matchId != null) {
                   // If updating, we might just want to pop back to details?
                   // Or go to details (replace current route).

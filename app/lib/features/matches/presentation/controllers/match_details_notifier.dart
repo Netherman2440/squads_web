@@ -5,6 +5,7 @@ import 'package:app/features/matches/application/usecases/delete_match_usecase.d
 import 'package:app/features/matches/application/usecases/update_match_teams_usecase.dart';
 import 'package:app/features/matches/application/usecases/rematch_usecase.dart';
 import 'package:app/features/matches/domain/entities/match.dart';
+import 'package:app/features/players/presentation/controllers/player_details_controller.dart';
 
 part 'match_details_notifier.g.dart';
 
@@ -38,6 +39,15 @@ class MatchDetailsNotifier extends _$MatchDetailsNotifier {
             homeScore: homeScore,
             awayScore: awayScore,
           );
+
+      // Invalidate ranking history/player details for affected players so UI refreshes.
+      final players = <String>{
+        for (final p in updatedMatch.homeTeam?.players ?? const []) p.playerId,
+        for (final p in updatedMatch.awayTeam?.players ?? const []) p.playerId,
+      };
+      for (final playerId in players) {
+        ref.invalidate(playerDetailsProvider(playerId));
+      }
       return updatedMatch;
     });
   }

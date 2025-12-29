@@ -11,9 +11,13 @@ class DraftSelectionPage extends ConsumerStatefulWidget {
   const DraftSelectionPage({
     super.key,
     required this.squadId,
+    this.initialSelectedIds,
+    this.matchId,
   });
 
   final String squadId;
+  final List<String>? initialSelectedIds;
+  final String? matchId;
 
   @override
   ConsumerState<DraftSelectionPage> createState() => _DraftSelectionPageState();
@@ -26,7 +30,10 @@ class _DraftSelectionPageState extends ConsumerState<DraftSelectionPage> {
     Future.microtask(
       () => ref
           .read(draftSelectionControllerProvider.notifier)
-          .loadPlayers(squadId: widget.squadId),
+          .loadPlayers(
+            squadId: widget.squadId,
+            initialSelectedIds: widget.initialSelectedIds,
+          ),
     );
   }
 
@@ -48,11 +55,15 @@ class _DraftSelectionPageState extends ConsumerState<DraftSelectionPage> {
                     : 'Select at least 2 players to generate draft',
                 onPressed: canGenerate
                     ? () {
-                        final ids =
-                            data.selectedPlayerIds.toList(growable: false);
+                        final ids = data.selectedPlayerIds.toList(
+                          growable: false,
+                        );
                         context.go(
                           '/squads/${widget.squadId}/matches/create',
-                          extra: ids,
+                          extra: {
+                            'selectedIds': ids,
+                            'matchId': widget.matchId,
+                          },
                         );
                       }
                     : null,
@@ -65,9 +76,7 @@ class _DraftSelectionPageState extends ConsumerState<DraftSelectionPage> {
         ],
       ),
       body: state.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(),
-        ),
+        loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => _ErrorBody(error: error),
         data: (data) {
           final available = _filterAvailable(
@@ -130,9 +139,7 @@ class _DraftSelectionPageState extends ConsumerState<DraftSelectionPage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: panels,
                             )
-                          : Column(
-                              children: panels,
-                            ),
+                          : Column(children: panels),
                     ),
                   ],
                 );
@@ -193,9 +200,7 @@ class _AvailablePlayersPanel extends StatelessWidget {
             const SizedBox(height: 8),
             Expanded(
               child: players.isEmpty
-                  ? const Center(
-                      child: Text('No available players.'),
-                    )
+                  ? const Center(child: Text('No available players.'))
                   : ListView.builder(
                       itemCount: players.length,
                       itemBuilder: (context, index) {
@@ -253,9 +258,7 @@ class _SelectedPlayersPanel extends StatelessWidget {
             const SizedBox(height: 8),
             Expanded(
               child: players.isEmpty
-                  ? const Center(
-                      child: Text('No players selected yet.'),
-                    )
+                  ? const Center(child: Text('No players selected yet.'))
                   : ListView.builder(
                       itemCount: players.length,
                       itemBuilder: (context, index) {
@@ -291,9 +294,7 @@ class _ErrorBody extends StatelessWidget {
       child: SelectableText.rich(
         TextSpan(
           text: message,
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.error,
-          ),
+          style: TextStyle(color: Theme.of(context).colorScheme.error),
         ),
       ),
     );
@@ -310,9 +311,7 @@ class _InlineErrorText extends StatelessWidget {
     return SelectableText.rich(
       TextSpan(
         text: message,
-        style: TextStyle(
-          color: Theme.of(context).colorScheme.error,
-        ),
+        style: TextStyle(color: Theme.of(context).colorScheme.error),
       ),
     );
   }

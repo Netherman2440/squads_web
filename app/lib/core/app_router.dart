@@ -36,37 +36,30 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/auth',
       name: AppRoute.auth.name,
-      pageBuilder: (context, state) => const NoTransitionPage(
-        child: AuthPage(),
-      ),
+      pageBuilder: (context, state) =>
+          const NoTransitionPage(child: AuthPage()),
     ),
     GoRoute(
       path: '/auth/register',
       name: AppRoute.authRegister.name,
-      pageBuilder: (context, state) => const NoTransitionPage(
-        child: RegisterPage(),
-      ),
+      pageBuilder: (context, state) =>
+          const NoTransitionPage(child: RegisterPage()),
     ),
     ShellRoute(
-      builder: (context, state, child) => RootShell(
-        child: child,
-      ),
+      builder: (context, state, child) => RootShell(child: child),
       routes: [
         GoRoute(
           path: '/squads',
           name: AppRoute.squads.name,
-          pageBuilder: (context, state) => const NoTransitionPage(
-            child: SquadsPage(),
-          ),
+          pageBuilder: (context, state) =>
+              const NoTransitionPage(child: SquadsPage()),
         ),
         GoRoute(
           path: '/squads/:squadId',
           name: AppRoute.squadDetails.name,
           pageBuilder: (context, state) {
             final squadId = state.pathParameters['squadId'] ?? '';
-            return NoTransitionPage(
-              child: SquadShellPage(squadId: squadId),
-            );
+            return NoTransitionPage(child: SquadShellPage(squadId: squadId));
           },
         ),
         GoRoute(
@@ -74,9 +67,7 @@ final appRouter = GoRouter(
           name: AppRoute.players.name,
           pageBuilder: (context, state) {
             final squadId = state.pathParameters['squadId'] ?? '';
-            return NoTransitionPage(
-              child: PlayersPage(squadId: squadId),
-            );
+            return NoTransitionPage(child: PlayersPage(squadId: squadId));
           },
         ),
         GoRoute(
@@ -86,10 +77,7 @@ final appRouter = GoRouter(
             final squadId = state.pathParameters['squadId'] ?? '';
             final playerId = state.pathParameters['playerId'] ?? '';
             return NoTransitionPage(
-              child: PlayerDetailsPage(
-                squadId: squadId,
-                playerId: playerId,
-              ),
+              child: PlayerDetailsPage(squadId: squadId, playerId: playerId),
             );
           },
         ),
@@ -98,9 +86,7 @@ final appRouter = GoRouter(
           name: AppRoute.matches.name,
           pageBuilder: (context, state) {
             final squadId = state.pathParameters['squadId'] ?? '';
-            return NoTransitionPage(
-              child: SquadMatchesPage(squadId: squadId),
-            );
+            return NoTransitionPage(child: SquadMatchesPage(squadId: squadId));
           },
         ),
         GoRoute(
@@ -119,12 +105,24 @@ final appRouter = GoRouter(
           pageBuilder: (context, state) {
             final squadId = state.pathParameters['squadId'] ?? '';
             final extra = state.extra;
-            final selectedIds = extra is List<String> ? extra : const <String>[];
+
+            List<String> selectedIds = const [];
+            String? matchId;
+
+            if (extra is List<String>) {
+              selectedIds = extra;
+            } else if (extra is Map<String, dynamic>) {
+              selectedIds =
+                  (extra['selectedIds'] as List<dynamic>?)?.cast<String>() ??
+                  [];
+              matchId = extra['matchId'] as String?;
+            }
 
             return NoTransitionPage(
               child: DraftResultsPage(
                 squadId: squadId,
                 selectedPlayerIds: selectedIds,
+                matchId: matchId,
               ),
             );
           },
@@ -136,10 +134,7 @@ final appRouter = GoRouter(
             final squadId = state.pathParameters['squadId'] ?? '';
             final matchId = state.pathParameters['matchId'] ?? '';
             return NoTransitionPage(
-              child: MatchDetailsPage(
-                squadId: squadId,
-                matchId: matchId,
-              ),
+              child: MatchDetailsPage(squadId: squadId, matchId: matchId),
             );
           },
         ),
@@ -148,9 +143,7 @@ final appRouter = GoRouter(
           name: AppRoute.squadHome.name,
           pageBuilder: (context, state) {
             final squadId = state.pathParameters['squadId'] ?? '';
-            return NoTransitionPage(
-              child: SquadShellPage(squadId: squadId),
-            );
+            return NoTransitionPage(child: SquadShellPage(squadId: squadId));
           },
         ),
         GoRoute(
@@ -158,17 +151,14 @@ final appRouter = GoRouter(
           name: AppRoute.settings.name,
           pageBuilder: (context, state) {
             final squadId = state.pathParameters['squadId'] ?? '';
-            return NoTransitionPage(
-              child: SquadSettingsPage(squadId: squadId),
-            );
+            return NoTransitionPage(child: SquadSettingsPage(squadId: squadId));
           },
         ),
         GoRoute(
           path: '/me',
           name: AppRoute.profile.name,
-          pageBuilder: (context, state) => const NoTransitionPage(
-            child: UserPage(),
-          ),
+          pageBuilder: (context, state) =>
+              const NoTransitionPage(child: UserPage()),
         ),
       ],
     ),

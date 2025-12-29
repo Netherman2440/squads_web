@@ -13,6 +13,7 @@ class DraftSelectionController
 
   Future<void> loadPlayers({
     required String squadId,
+    List<String>? initialSelectedIds,
   }) async {
     state = const AsyncValue.loading();
 
@@ -23,15 +24,13 @@ class DraftSelectionController
 
       return DraftSelectionState(
         players: players,
-        selectedPlayerIds: <String>{},
+        selectedPlayerIds: initialSelectedIds?.toSet() ?? <String>{},
         searchQuery: '',
       );
     });
   }
 
-  void togglePlayer({
-    required String playerId,
-  }) {
+  void togglePlayer({required String playerId}) {
     final current = state.value;
     if (current == null) {
       return;
@@ -42,19 +41,14 @@ class DraftSelectionController
     if (selected.contains(playerId)) {
       selected.remove(playerId);
       state = AsyncValue.data(
-        current.copyWith(
-          selectedPlayerIds: selected,
-          validationMessage: null,
-        ),
+        current.copyWith(selectedPlayerIds: selected, validationMessage: null),
       );
       return;
     }
 
     if (selected.length >= 16) {
       state = AsyncValue.data(
-        current.copyWith(
-          validationMessage: 'You can select up to 16 players.',
-        ),
+        current.copyWith(validationMessage: 'You can select up to 16 players.'),
       );
       return;
     }
@@ -62,10 +56,7 @@ class DraftSelectionController
     selected.add(playerId);
 
     state = AsyncValue.data(
-      current.copyWith(
-        selectedPlayerIds: selected,
-        validationMessage: null,
-      ),
+      current.copyWith(selectedPlayerIds: selected, validationMessage: null),
     );
   }
 
@@ -75,11 +66,7 @@ class DraftSelectionController
       return;
     }
 
-    state = AsyncValue.data(
-      current.copyWith(
-        searchQuery: value,
-      ),
-    );
+    state = AsyncValue.data(current.copyWith(searchQuery: value));
   }
 
   void clearSelection() {
@@ -89,10 +76,7 @@ class DraftSelectionController
     }
 
     state = AsyncValue.data(
-      current.copyWith(
-        selectedPlayerIds: <String>{},
-        validationMessage: null,
-      ),
+      current.copyWith(selectedPlayerIds: <String>{}, validationMessage: null),
     );
   }
 
@@ -110,5 +94,5 @@ class DraftSelectionController
 
 final draftSelectionControllerProvider =
     NotifierProvider<DraftSelectionController, AsyncValue<DraftSelectionState>>(
-  DraftSelectionController.new,
-);
+      DraftSelectionController.new,
+    );

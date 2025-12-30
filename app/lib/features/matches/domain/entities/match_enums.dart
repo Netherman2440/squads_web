@@ -1,12 +1,3 @@
-enum MatchScoreType {
-  regular,
-  penalties,
-  walkover,
-  cancelled,
-}
+enum MatchScoreType { regular, penalties, walkover, cancelled }
 
-enum Side {
-  home,
-  away,
-}
-
+enum Side { home, away }

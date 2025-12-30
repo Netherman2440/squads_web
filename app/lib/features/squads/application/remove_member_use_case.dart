@@ -14,7 +14,11 @@ class RemoveMemberUseCase {
     required String userId,
   }) async {
     // TODO: Add validation logic here (e.g. check permissions)
-    await _membershipRepository.updateMemberRole(squadId, userId, SquadRole.removed);
+    await _membershipRepository.updateMemberRole(
+      squadId,
+      userId,
+      SquadRole.removed,
+    );
   }
 }
 
@@ -22,4 +26,3 @@ final removeMemberUseCaseProvider = Provider<RemoveMemberUseCase>((ref) {
   final membershipRepository = ref.read(membershipRepositoryProvider);
   return RemoveMemberUseCase(membershipRepository);
 });
-

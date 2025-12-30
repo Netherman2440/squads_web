@@ -24,4 +24,3 @@ class SquadMatchesNotifier extends _$SquadMatchesNotifier {
     await _loadMatches();
   }
 }
-

@@ -38,5 +38,3 @@ final addPlayerUseCaseProvider = Provider<AddPlayerUseCase>((ref) {
   final repository = ref.read(playerRepositoryProvider);
   return AddPlayerUseCase(repository);
 });
-
-

@@ -13,21 +13,15 @@ class PlayersNotifier extends Notifier<AsyncValue<List<Player>>> {
     return const AsyncValue.loading();
   }
 
-  Future<void> loadPlayers({
-    required String squadId,
-  }) async {
+  Future<void> loadPlayers({required String squadId}) async {
     state = const AsyncValue.loading();
 
     state = await AsyncValue.guard(() async {
-      return ref
-          .read(getSquadPlayersUseCaseProvider)
-          .execute(squadId: squadId);
+      return ref.read(getSquadPlayersUseCaseProvider).execute(squadId: squadId);
     });
   }
 
-  Future<void> refreshPlayers({
-    required String squadId,
-  }) async {
+  Future<void> refreshPlayers({required String squadId}) async {
     await loadPlayers(squadId: squadId);
   }
 
@@ -41,10 +35,7 @@ class PlayersNotifier extends Notifier<AsyncValue<List<Player>>> {
     final authEntity = authState.value;
 
     if (authEntity == null || authEntity.isAnonymous) {
-      state = AsyncValue.error(
-        const UnauthorizedFailure(),
-        StackTrace.current,
-      );
+      state = AsyncValue.error(const UnauthorizedFailure(), StackTrace.current);
       return;
     }
 
@@ -52,7 +43,9 @@ class PlayersNotifier extends Notifier<AsyncValue<List<Player>>> {
 
     // We optimistically keep the list visible while adding a player.
     try {
-      final player = await ref.read(addPlayerUseCaseProvider).execute(
+      final player = await ref
+          .read(addPlayerUseCaseProvider)
+          .execute(
             squadId: squadId,
             name: name,
             position: position,
@@ -77,19 +70,14 @@ class PlayersNotifier extends Notifier<AsyncValue<List<Player>>> {
     final authEntity = authState.value;
 
     if (authEntity == null || authEntity.isAnonymous) {
-      state = AsyncValue.error(
-        const UnauthorizedFailure(),
-        StackTrace.current,
-      );
+      state = AsyncValue.error(const UnauthorizedFailure(), StackTrace.current);
       return;
     }
 
     final previous = state;
 
     try {
-      await ref
-          .read(deletePlayerUseCaseProvider)
-          .execute(playerId: playerId);
+      await ref.read(deletePlayerUseCaseProvider).execute(playerId: playerId);
 
       state = state.whenData(
         (players) =>
@@ -107,7 +95,5 @@ class PlayersNotifier extends Notifier<AsyncValue<List<Player>>> {
 
 final playersNotifierProvider =
     NotifierProvider<PlayersNotifier, AsyncValue<List<Player>>>(
-  PlayersNotifier.new,
-);
-
-
+      PlayersNotifier.new,
+    );

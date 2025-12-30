@@ -13,8 +13,8 @@ class GetPlayerRankingHistoryUseCase {
   }
 }
 
-final getPlayerRankingHistoryUseCaseProvider = Provider<GetPlayerRankingHistoryUseCase>((ref) {
-  final repository = ref.read(rankingRepositoryProvider);
-  return GetPlayerRankingHistoryUseCase(repository);
-});
-
+final getPlayerRankingHistoryUseCaseProvider =
+    Provider<GetPlayerRankingHistoryUseCase>((ref) {
+      final repository = ref.read(rankingRepositoryProvider);
+      return GetPlayerRankingHistoryUseCase(repository);
+    });

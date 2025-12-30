@@ -11,19 +11,14 @@ class GetSquadSettingsMembersUseCase {
   final SquadRepository _squadRepository;
   final UserRepository _userRepository;
 
-  GetSquadSettingsMembersUseCase(
-    this._squadRepository,
-    this._userRepository,
-  );
+  GetSquadSettingsMembersUseCase(this._squadRepository, this._userRepository);
 
   Future<List<SquadMember>> execute(String squadId) async {
     final members = await _squadRepository.getSquadMembers(squadId);
 
     final userIds = members.map((m) => m.userId).toSet().toList();
     final users = await _userRepository.getUsers(userIds);
-    final emailByUserId = {
-      for (final user in users) user.id: user.email,
-    };
+    final emailByUserId = {for (final user in users) user.id: user.email};
 
     final enrichedMembers = members
         .map(
@@ -38,15 +33,18 @@ class GetSquadSettingsMembersUseCase {
 
     // Filter out banned/removed if any (though currently repository fetches by squad_id which might include them based on schema,
     // usually soft-deletes are handled by repo or flags. Assuming removed rows are deleted or have 'removed' role).
-    final activeMembers = enrichedMembers.where((m) =>
-        m.role != SquadRole.removed &&
-        m.role != SquadRole.none &&
-        m.role != SquadRole.declined);
+    final activeMembers = enrichedMembers.where(
+      (m) =>
+          m.role != SquadRole.removed &&
+          m.role != SquadRole.none &&
+          m.role != SquadRole.declined,
+    );
 
     // Sort: Pending > Owner > Admin > Member
-    final sortedMembers = activeMembers.toList()..sort((a, b) {
-      return _getRolePriority(a.role).compareTo(_getRolePriority(b.role));
-    });
+    final sortedMembers = activeMembers.toList()
+      ..sort((a, b) {
+        return _getRolePriority(a.role).compareTo(_getRolePriority(b.role));
+      });
 
     return sortedMembers;
   }
@@ -69,11 +67,7 @@ class GetSquadSettingsMembersUseCase {
 
 final getSquadSettingsMembersUseCaseProvider =
     Provider<GetSquadSettingsMembersUseCase>((ref) {
-  final squadRepository = ref.read(squadRepositoryProvider);
-  final userRepository = ref.read(userRepositoryProvider);
-  return GetSquadSettingsMembersUseCase(
-    squadRepository,
-    userRepository,
-  );
-});
-
+      final squadRepository = ref.read(squadRepositoryProvider);
+      final userRepository = ref.read(userRepositoryProvider);
+      return GetSquadSettingsMembersUseCase(squadRepository, userRepository);
+    });

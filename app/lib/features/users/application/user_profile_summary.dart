@@ -17,10 +17,5 @@ class UserProfileSummary {
   final User user;
   final List<UserMembershipItem> memberships;
 
-  const UserProfileSummary({
-    required this.user,
-    required this.memberships,
-  });
+  const UserProfileSummary({required this.user, required this.memberships});
 }
-
-

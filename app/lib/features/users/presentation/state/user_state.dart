@@ -5,11 +5,7 @@ class UserState {
   final UserProfileSummary? profile;
   final String? error;
 
-  const UserState({
-    this.isLoading = false,
-    this.profile,
-    this.error,
-  });
+  const UserState({this.isLoading = false, this.profile, this.error});
 
   UserState copyWith({
     bool? isLoading,
@@ -23,5 +19,3 @@ class UserState {
     );
   }
 }
-
-

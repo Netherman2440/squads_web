@@ -9,10 +9,7 @@ import 'package:app/features/players/presentation/widgets/empty_players_state.da
 import 'package:app/features/players/presentation/widgets/players_list_widget.dart';
 
 class PlayersPage extends ConsumerStatefulWidget {
-  const PlayersPage({
-    super.key,
-    required this.squadId,
-  });
+  const PlayersPage({super.key, required this.squadId});
 
   final String squadId;
 
@@ -35,9 +32,7 @@ class _PlayersPageState extends ConsumerState<PlayersPage> {
   Future<void> _showCreatePlayerDialog() async {
     await showDialog<void>(
       context: context,
-      builder: (context) => CreatePlayerDialog(
-        squadId: widget.squadId,
-      ),
+      builder: (context) => CreatePlayerDialog(squadId: widget.squadId),
     );
   }
 
@@ -58,40 +53,36 @@ class _PlayersPageState extends ConsumerState<PlayersPage> {
           onRefresh: () => ref
               .read(playersNotifierProvider.notifier)
               .refreshPlayers(squadId: widget.squadId),
-          child: PlayersListWidget(
-            players: players,
-            squadId: widget.squadId,
-          ),
+          child: PlayersListWidget(players: players, squadId: widget.squadId),
         );
       },
-      error: (error, stackTrace) => 
-      //show snackbar
-       RefreshIndicator(
-          onRefresh: () => ref
-              .read(playersNotifierProvider.notifier)
-              .refreshPlayers(squadId: widget.squadId),
-          child: PlayersListWidget(
-            players: players ?? [],
-            squadId: widget.squadId,
+      error: (error, stackTrace) =>
+          //show snackbar
+          RefreshIndicator(
+            onRefresh: () => ref
+                .read(playersNotifierProvider.notifier)
+                .refreshPlayers(squadId: widget.squadId),
+            child: PlayersListWidget(
+              players: players ?? [],
+              squadId: widget.squadId,
+            ),
           ),
-        ),
-      loading: () => const Center(
-        child: CircularProgressIndicator(),
-      ),
+      loading: () => const Center(child: CircularProgressIndicator()),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(playersNotifierProvider);
-    ref.listen<AsyncValue<List<Player>>>(playersNotifierProvider, (previous, next) {
+    ref.listen<AsyncValue<List<Player>>>(playersNotifierProvider, (
+      previous,
+      next,
+    ) {
       next.whenOrNull(error: (error, _) => _showFailureSnackBar(error));
     });
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Players'),
-      ),
+      appBar: AppBar(title: const Text('Players')),
       body: _buildBody(state),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showCreatePlayerDialog,
@@ -108,13 +99,8 @@ class _PlayersPageState extends ConsumerState<PlayersPage> {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
-          SnackBar(
-            content: Text(message),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text(message), backgroundColor: Colors.red),
         );
     });
   }
 }
-
-

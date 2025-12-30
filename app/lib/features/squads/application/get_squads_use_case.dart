@@ -11,10 +11,7 @@ class GetSquadsUseCase {
   final SquadRepository _squadRepository;
   final MembershipRepository _membershipRepository;
 
-  GetSquadsUseCase(
-    this._squadRepository,
-    this._membershipRepository,
-  );
+  GetSquadsUseCase(this._squadRepository, this._membershipRepository);
 
   Future<List<Squad>> execute({
     SquadVisibility? visibility,
@@ -33,19 +30,17 @@ class GetSquadsUseCase {
       return squads;
     }
 
-    final memberships =
-        await _membershipRepository.getMembershipsForUser(userId);
+    final memberships = await _membershipRepository.getMembershipsForUser(
+      userId,
+    );
 
     final roleMap = {
-      for (final membership in memberships)
-        membership.squadId: membership.role,
+      for (final membership in memberships) membership.squadId: membership.role,
     };
 
     return squads
         .map(
-          (squad) => squad.copyWith(
-            role: roleMap[squad.squadId] ?? squad.role,
-          ),
+          (squad) => squad.copyWith(role: roleMap[squad.squadId] ?? squad.role),
         )
         .toList();
   }

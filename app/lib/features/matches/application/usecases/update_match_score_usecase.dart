@@ -1,3 +1,4 @@
+import 'package:app/core/app_config.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/core/error/failure.dart';
 import 'package:app/features/matches/domain/entities/match.dart';
@@ -37,7 +38,7 @@ class UpdateMatchScoreUseCase {
     final squad = await _getSquadUseCase.execute(
       squadId: squadId,
       userId: null,
-      isGuest: true,
+      isGuest: false,
     );
 
     // 2. Update Match Score
@@ -49,8 +50,13 @@ class UpdateMatchScoreUseCase {
 
     // 3. Update Rankings if enabled
     if (squad.rankingUpdate) {
+      final experienceFactor = squad.useExperienceFactor
+          ? AppConfig.experienceFactor
+          : 1.0;
       final delta =
-          (homeScore - awayScore).toDouble() * squad.rankingMultiplier;
+          (homeScore - awayScore).toDouble() *
+          squad.rankingMultiplier /
+          experienceFactor;
 
       final teams = await _teamRepository.getMatchTeams(matchId);
       final homeTeam = teams.firstWhere(

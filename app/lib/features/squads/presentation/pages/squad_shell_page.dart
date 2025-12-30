@@ -11,10 +11,7 @@ import 'package:app/features/squads/presentation/pages/squad_home_page.dart';
 import 'package:app/features/squads/presentation/state/squad_detail_notifier.dart';
 
 class SquadShellPage extends ConsumerWidget {
-  const SquadShellPage({
-    super.key,
-    required this.squadId,
-  });
+  const SquadShellPage({super.key, required this.squadId});
 
   final String squadId;
 
@@ -29,11 +26,11 @@ class SquadShellPage extends ConsumerWidget {
       ),
       body: SafeArea(
         child: state.when(
-          loading: () => const Center(
-            child: CircularProgressIndicator(),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, stackTrace) => _SquadShellErrorView(
+            error: error,
+            onBack: () => context.go('/home'),
           ),
-          error: (error, stackTrace) =>
-              _SquadShellErrorView(error: error, onBack: () => context.go('/home')),
           data: (squad) => SquadHomePage(squad: squad),
         ),
       ),
@@ -42,10 +39,7 @@ class SquadShellPage extends ConsumerWidget {
 }
 
 class _SquadShellErrorView extends StatelessWidget {
-  const _SquadShellErrorView({
-    required this.error,
-    required this.onBack,
-  });
+  const _SquadShellErrorView({required this.error, required this.onBack});
 
   final Object error;
   final VoidCallback onBack;
@@ -77,11 +71,7 @@ class _SquadShellErrorView extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Icon(
-              icon,
-              size: 48,
-              color: Theme.of(context).colorScheme.error,
-            ),
+            Icon(icon, size: 48, color: Theme.of(context).colorScheme.error),
             const SizedBox(height: 16),
             SelectableText.rich(
               TextSpan(
@@ -119,9 +109,7 @@ class _SquadShellErrorView extends StatelessWidget {
 }
 
 class _QuickActionsFab extends StatelessWidget {
-  const _QuickActionsFab({
-    required this.squad,
-  });
+  const _QuickActionsFab({required this.squad});
 
   final Squad squad;
 
@@ -149,9 +137,7 @@ class _QuickActionsFab extends StatelessWidget {
 }
 
 class _QuickActionsSheet extends StatelessWidget {
-  const _QuickActionsSheet({
-    required this.squad,
-  });
+  const _QuickActionsSheet({required this.squad});
 
   final Squad squad;
 
@@ -182,9 +168,8 @@ class _QuickActionsSheet extends StatelessWidget {
                 Navigator.of(context).pop();
                 showDialog<void>(
                   context: context,
-                  builder: (context) => CreatePlayerDialog(
-                    squadId: squad.squadId,
-                  ),
+                  builder: (context) =>
+                      CreatePlayerDialog(squadId: squad.squadId),
                 );
               },
             ),
@@ -206,10 +191,7 @@ class _QuickActionsSheet extends StatelessWidget {
               subtitle: const Text('Create a new tournament for this squad.'),
               onTap: () {
                 Navigator.of(context).pop();
-                _showPlaceholderDialog(
-                  context,
-                  title: 'Add tournament',
-                );
+                _showPlaceholderDialog(context, title: 'Add tournament');
               },
             ),
           ],
@@ -218,10 +200,7 @@ class _QuickActionsSheet extends StatelessWidget {
     );
   }
 
-  void _showPlaceholderDialog(
-    BuildContext context, {
-    required String title,
-  }) {
+  void _showPlaceholderDialog(BuildContext context, {required String title}) {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(

@@ -10,17 +10,12 @@ class GetSquadPlayersUseCase {
 
   const GetSquadPlayersUseCase(this._playerRepository);
 
-  Future<List<Player>> execute({
-    required String squadId,
-  }) async {
+  Future<List<Player>> execute({required String squadId}) async {
     return await _playerRepository.getSquadPlayers(squadId: squadId);
   }
 }
 
-final getSquadPlayersUseCaseProvider =
-    Provider<GetSquadPlayersUseCase>((ref) {
+final getSquadPlayersUseCaseProvider = Provider<GetSquadPlayersUseCase>((ref) {
   final repository = ref.read(playerRepositoryProvider);
   return GetSquadPlayersUseCase(repository);
 });
-
-

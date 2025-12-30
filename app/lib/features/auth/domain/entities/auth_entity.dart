@@ -28,20 +28,18 @@ class AuthEntity {
   );
 
   Map<String, dynamic> toJson() => {
-        'accessToken': accessToken,
-        'refreshToken': refreshToken,
-        'userId': userId,
-        'isAnonymous': isAnonymous,
-        'email': email,
-      };
+    'accessToken': accessToken,
+    'refreshToken': refreshToken,
+    'userId': userId,
+    'isAnonymous': isAnonymous,
+    'email': email,
+  };
 
   factory AuthEntity.fromJson(Map<String, dynamic> json) => AuthEntity(
-        accessToken: json['accessToken'] as String,
-        refreshToken: json['refreshToken'] as String,
-        userId: json['userId'] as String,
-        isAnonymous: json['isAnonymous'] as bool,
-        email: json['email'] as String,
-      );
-
+    accessToken: json['accessToken'] as String,
+    refreshToken: json['refreshToken'] as String,
+    userId: json['userId'] as String,
+    isAnonymous: json['isAnonymous'] as bool,
+    email: json['email'] as String,
+  );
 }
-

@@ -7,7 +7,6 @@ import 'package:logging/logging.dart';
 import '../../domain/entities/auth_entity.dart';
 import '../../domain/repositories/token_repository.dart';
 
-
 class TokenSecureStorage implements TokenRepository {
   final FlutterSecureStorage _storage;
   final Logger _logger = Logger('TokenSecureStorage');
@@ -40,6 +39,7 @@ class TokenSecureStorage implements TokenRepository {
       rethrow;
     }
   }
+
   @override
   Future<void> setTokensFromEntity(AuthEntity entity) async {
     await setTokens(

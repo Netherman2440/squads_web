@@ -9,9 +9,7 @@ class DeletePlayerUseCase {
 
   const DeletePlayerUseCase(this._playerRepository);
 
-  Future<void> execute({
-    required String playerId,
-  }) async {
+  Future<void> execute({required String playerId}) async {
     await _playerRepository.deletePlayer(playerId: playerId);
   }
 }
@@ -20,5 +18,3 @@ final deletePlayerUseCaseProvider = Provider<DeletePlayerUseCase>((ref) {
   final repository = ref.read(playerRepositoryProvider);
   return DeletePlayerUseCase(repository);
 });
-
-

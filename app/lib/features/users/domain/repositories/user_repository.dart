@@ -11,4 +11,3 @@ abstract class UserRepository {
   /// Create or update a public.users entry for the given user.
   Future<void> upsertUser(User user);
 }
-

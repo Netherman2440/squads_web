@@ -6,10 +6,7 @@ import 'package:app/features/draft/presentation/state/draft_session_state.dart';
 import 'package:app/features/players/application/usecases/get_squad_players_usecase.dart';
 import 'package:app/features/players/domain/entities/player.dart';
 
-enum DraftAlgorithm {
-  combinatory,
-  greedy,
-}
+enum DraftAlgorithm { combinatory, greedy }
 
 class DraftAlgorithmNotifier extends Notifier<DraftAlgorithm> {
   @override
@@ -24,8 +21,8 @@ class DraftAlgorithmNotifier extends Notifier<DraftAlgorithm> {
 
 final draftAlgorithmProvider =
     NotifierProvider<DraftAlgorithmNotifier, DraftAlgorithm>(
-  DraftAlgorithmNotifier.new,
-);
+      DraftAlgorithmNotifier.new,
+    );
 
 class DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>> {
   @override
@@ -43,9 +40,7 @@ class DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>> {
 
     state = await AsyncValue.guard(() async {
       if (selectedPlayerIds.length < 2) {
-        throw const ValidationFailure(
-          'Draft requires at least 2 players.',
-        );
+        throw const ValidationFailure('Draft requires at least 2 players.');
       }
 
       final allPlayers = await ref
@@ -58,8 +53,9 @@ class DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>> {
       );
 
       final useCase = switch (algorithm) {
-        DraftAlgorithm.combinatory =>
-          ref.read(combinatoryCreateDraftUseCaseProvider),
+        DraftAlgorithm.combinatory => ref.read(
+          combinatoryCreateDraftUseCaseProvider,
+        ),
         DraftAlgorithm.greedy => ref.read(greedyCreateDraftUseCaseProvider),
       };
 
@@ -109,10 +105,7 @@ class DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>> {
     );
   }
 
-  void movePlayer({
-    required String playerId,
-    required bool toHome,
-  }) {
+  void movePlayer({required String playerId, required bool toHome}) {
     final current = state.value;
     if (current == null) {
       return;
@@ -151,30 +144,20 @@ class DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>> {
       away.add(player);
     }
 
-    state = AsyncValue.data(
-      current.copyWith(
-        home: home,
-        away: away,
-      ),
-    );
+    state = AsyncValue.data(current.copyWith(home: home, away: away));
   }
 }
 
 final draftSessionNotifierProvider =
     NotifierProvider<DraftSessionNotifier, AsyncValue<DraftSessionState>>(
-  DraftSessionNotifier.new,
-);
+      DraftSessionNotifier.new,
+    );
 
 List<Player> _filterByIds({
   required List<Player> players,
   required List<String> ids,
 }) {
-  final byId = {
-    for (final p in players) p.playerId: p,
-  };
+  final byId = {for (final p in players) p.playerId: p};
 
-  return ids
-      .map(byId.remove)
-      .whereType<Player>()
-      .toList(growable: false);
+  return ids.map(byId.remove).whereType<Player>().toList(growable: false);
 }

@@ -18,9 +18,7 @@ class CombinatoryDraftRepository implements DraftRepository {
     }
 
     if (players.length < 2) {
-      throw const ValidationFailure(
-        'Draft requires at least 2 players.',
-      );
+      throw const ValidationFailure('Draft requires at least 2 players.');
     }
 
     if (players.length > 16) {
@@ -28,15 +26,15 @@ class CombinatoryDraftRepository implements DraftRepository {
     }
 
     final sorted = [...players]
-      ..sort(
-        (a, b) => a.playerId.compareTo(b.playerId),
-      );
+      ..sort((a, b) => a.playerId.compareTo(b.playerId));
 
     final n = sorted.length;
     final isOdd = n.isOdd;
     final k = n ~/ 2;
 
-    final indexedRankings = sorted.map((p) => p.ranking).toList(growable: false);
+    final indexedRankings = sorted
+        .map((p) => p.ranking)
+        .toList(growable: false);
 
     final proposals = <_DraftProposal>[];
 
@@ -89,7 +87,10 @@ class CombinatoryDraftRepository implements DraftRepository {
       );
 
       // Calculate external balance - how well top players are distributed between teams
-      final externalBalance = _calculateExternalBalance(homePlayers, awayPlayers);
+      final externalBalance = _calculateExternalBalance(
+        homePlayers,
+        awayPlayers,
+      );
 
       proposals.add(
         _DraftProposal(
@@ -123,7 +124,8 @@ class CombinatoryDraftRepository implements DraftRepository {
 class _DraftProposal {
   final Draft draft;
   final double teamDifference; // absolute difference between team rankings
-  final double externalBalance; // sum of differences between corresponding player positions
+  final double
+  externalBalance; // sum of differences between corresponding player positions
 
   const _DraftProposal({
     required this.draft,
@@ -145,17 +147,24 @@ int _popcount(int value) {
 /// Calculates external balance between two teams.
 /// Compares corresponding player positions after sorting both teams.
 /// Lower external balance = better distribution of top talent between teams.
-double _calculateExternalBalance(List<Player> homePlayers, List<Player> awayPlayers) {
+double _calculateExternalBalance(
+  List<Player> homePlayers,
+  List<Player> awayPlayers,
+) {
   if (homePlayers.isEmpty && awayPlayers.isEmpty) return 0.0;
   if (homePlayers.isEmpty || awayPlayers.isEmpty) return double.infinity;
 
   // Sort both teams by ranking (best players first)
-  final homeRankings = homePlayers.map((p) => p.ranking).toList()..sort((a, b) => b.compareTo(a));
-  final awayRankings = awayPlayers.map((p) => p.ranking).toList()..sort((a, b) => b.compareTo(a));
+  final homeRankings = homePlayers.map((p) => p.ranking).toList()
+    ..sort((a, b) => b.compareTo(a));
+  final awayRankings = awayPlayers.map((p) => p.ranking).toList()
+    ..sort((a, b) => b.compareTo(a));
 
   // Compare corresponding positions
   var totalDifference = 0.0;
-  final minLength = homeRankings.length < awayRankings.length ? homeRankings.length : awayRankings.length;
+  final minLength = homeRankings.length < awayRankings.length
+      ? homeRankings.length
+      : awayRankings.length;
 
   for (var i = 0; i < minLength; i++) {
     totalDifference += (homeRankings[i] - awayRankings[i]).abs();

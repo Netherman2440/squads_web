@@ -25,8 +25,9 @@ class GetCurrentUserUseCase {
       return null;
     }
 
-    final memberships =
-        await _membershipRepository.getMembershipsForUser(user.id);
+    final memberships = await _membershipRepository.getMembershipsForUser(
+      user.id,
+    );
 
     if (memberships.isEmpty) {
       return UserProfileSummary(user: user, memberships: const []);
@@ -34,9 +35,7 @@ class GetCurrentUserUseCase {
 
     final squadIds = memberships.map((m) => m.squadId).toSet().toList();
     final squads = await _squadRepository.getSquadsByIds(squadIds);
-    final squadMap = {
-      for (final squad in squads) squad.squadId: squad,
-    };
+    final squadMap = {for (final squad in squads) squad.squadId: squad};
 
     final items = memberships
         .map((membership) {
@@ -54,10 +53,7 @@ class GetCurrentUserUseCase {
         .whereType<UserMembershipItem>()
         .toList();
 
-    return UserProfileSummary(
-      user: user,
-      memberships: items,
-    );
+    return UserProfileSummary(user: user, memberships: items);
   }
 }
 
@@ -71,4 +67,3 @@ final getCurrentUserUseCaseProvider = Provider<GetCurrentUserUseCase>((ref) {
     squadRepository,
   );
 });
-

@@ -44,31 +44,29 @@ class _AuthPageState extends ConsumerState<AuthPage> {
       next.whenOrNull(
         data: (data) {
           if (data != null && mounted) {
-             if (data.isAnonymous) {
-               context.go('/squads');
-             } else {
-               context.go('/me');
-             }
+            if (data.isAnonymous) {
+              context.go('/squads');
+            } else {
+              context.go('/me');
+            }
           }
         },
         error: (error, stackTrace) {
           String message = 'Login failed. Please try again.';
-          
+
           if (error is InvalidCredentialsFailure) {
             message = 'Invalid email or password.';
           } else if (error is UserNotConfirmedFailure) {
             message = 'Email not confirmed. Please check your inbox.';
           } else if (error is NetworkFailure) {
-            message = 'Failed to connect to the server. Please try again later.';
+            message =
+                'Failed to connect to the server. Please try again later.';
           } else if (error is Failure) {
             message = error.message;
           }
 
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(message),
-              backgroundColor: Colors.red,
-            ),
+            SnackBar(content: Text(message), backgroundColor: Colors.red),
           );
         },
       );
@@ -81,7 +79,9 @@ class _AuthPageState extends ConsumerState<AuthPage> {
         return;
       }
       // Trigger login. State listener will handle success/error.
-      await ref.read(authStateProvider.notifier).login(
+      await ref
+          .read(authStateProvider.notifier)
+          .login(
             email: emailController.text.trim(),
             password: passwordController.text,
           );
@@ -104,16 +104,13 @@ class _AuthPageState extends ConsumerState<AuthPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(
-                  Icons.sports_soccer,
-                  size: 100,
-                ),
+                const Icon(Icons.sports_soccer, size: 100),
                 const SizedBox(height: 20),
                 Text(
                   'Squads App',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 24),
                 TextFormField(
@@ -131,9 +128,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                     if (text.isEmpty) {
                       return 'Please enter email';
                     }
-                    final emailRegex = RegExp(
-                      r'^[^@]+@[^@]+\.[^@]+$',
-                    );
+                    final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
                     if (!emailRegex.hasMatch(text)) {
                       return 'Please enter valid email';
                     }
@@ -149,7 +144,9 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                     prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
                       onPressed: () {
-                        setState(() => isPasswordObscured = !isPasswordObscured);
+                        setState(
+                          () => isPasswordObscured = !isPasswordObscured,
+                        );
                       },
                       icon: Icon(
                         isPasswordObscured
@@ -196,8 +193,8 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                       height: 40,
                       child: TextButton(
                         style: TextButton.styleFrom(
-                          backgroundColor: Theme.of(context).brightness ==
-                                  Brightness.dark
+                          backgroundColor:
+                              Theme.of(context).brightness == Brightness.dark
                               ? AppColors.bgLight
                               : AppColors.lightSurface,
                           foregroundColor: AppColors.primary,
@@ -219,8 +216,8 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                       height: 40,
                       child: TextButton(
                         style: TextButton.styleFrom(
-                          backgroundColor: Theme.of(context).brightness ==
-                                  Brightness.dark
+                          backgroundColor:
+                              Theme.of(context).brightness == Brightness.dark
                               ? AppColors.bgLight
                               : AppColors.lightSurface,
                           foregroundColor: AppColors.primary,

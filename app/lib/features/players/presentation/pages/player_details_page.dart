@@ -24,9 +24,7 @@ class PlayerDetailsPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Player Details'),
-        leading: BackButton(
-          onPressed: () => context.pop(),
-        ),
+        leading: BackButton(onPressed: () => context.pop()),
       ),
       body: stateAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -54,7 +52,9 @@ class PlayerDetailsPage extends ConsumerWidget {
                     CircleAvatar(
                       radius: 40,
                       child: Text(
-                        player.name.isNotEmpty ? player.name[0].toUpperCase() : '?',
+                        player.name.isNotEmpty
+                            ? player.name[0].toUpperCase()
+                            : '?',
                         style: const TextStyle(fontSize: 32),
                       ),
                     ),
@@ -187,10 +187,7 @@ class _PlayerTabs extends StatelessWidget {
   final String squadId;
   final String playerId;
 
-  const _PlayerTabs({
-    required this.squadId,
-    required this.playerId,
-  });
+  const _PlayerTabs({required this.squadId, required this.playerId});
 
   @override
   Widget build(BuildContext context) {
@@ -223,9 +220,9 @@ class _PlayerTabs extends StatelessWidget {
   }
 
   void _showTodo(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Coming soon!')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Coming soon!')));
   }
 }
 
@@ -255,4 +252,3 @@ class _TabButton extends StatelessWidget {
     );
   }
 }
-

@@ -7,7 +7,6 @@ class Player {
   final double ranking;
   final DateTime createdAt;
 
-
   const Player({
     required this.playerId,
     required this.squadId,
@@ -64,5 +63,3 @@ class Player {
     };
   }
 }
-
-

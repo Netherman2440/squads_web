@@ -10,19 +10,16 @@ class GetPlayerDetailsUseCase {
 
   const GetPlayerDetailsUseCase(this._playerRepository);
 
-  Future<Player> execute({
-    required String playerId,
-  }) async {
+  Future<Player> execute({required String playerId}) async {
     // TODO: Extend this with additional aggregation logic
     // (e.g. match stats) when PlayerDetailsPage is implemented.
     return await _playerRepository.getPlayer(playerId: playerId);
   }
 }
 
-final getPlayerDetailsUseCaseProvider =
-    Provider<GetPlayerDetailsUseCase>((ref) {
+final getPlayerDetailsUseCaseProvider = Provider<GetPlayerDetailsUseCase>((
+  ref,
+) {
   final repository = ref.read(playerRepositoryProvider);
   return GetPlayerDetailsUseCase(repository);
 });
-
-

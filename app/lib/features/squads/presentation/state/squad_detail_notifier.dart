@@ -7,36 +7,35 @@ import 'package:app/features/squads/domain/entities/squad.dart';
 
 final _logger = Logger('SquadDetailProvider');
 
-final squadDetailProvider = FutureProvider.family<Squad, String>(
-  (ref, squadId) async {
-    final authState = ref.watch(authStateProvider);
-    final authEntity = authState.value;
+final squadDetailProvider = FutureProvider.family<Squad, String>((
+  ref,
+  squadId,
+) async {
+  final authState = ref.watch(authStateProvider);
+  final authEntity = authState.value;
 
-    final userId = authEntity?.userId;
-    final isGuest = authEntity == null || authEntity.isAnonymous;
+  final userId = authEntity?.userId;
+  final isGuest = authEntity == null || authEntity.isAnonymous;
 
+  _logger.fine(
+    'Loading squad details for squadId=$squadId, userId=$userId, '
+    'isGuest=$isGuest',
+  );
+
+  try {
+    final squad = await ref
+        .read(getSquadUseCaseProvider)
+        .execute(squadId: squadId, userId: userId, isGuest: isGuest);
     _logger.fine(
-      'Loading squad details for squadId=$squadId, userId=$userId, '
-      'isGuest=$isGuest',
+      'Loaded squad $squadId with role=${squad.role} for userId=$userId',
     );
-
-    try {
-      final squad = await ref.read(getSquadUseCaseProvider).execute(
-            squadId: squadId,
-            userId: userId,
-            isGuest: isGuest,
-          );
-      _logger.fine(
-        'Loaded squad $squadId with role=${squad.role} for userId=$userId',
-      );
-      return squad;
-    } catch (e, stack) {
-      _logger.severe(
-        'Failed to load squad $squadId for userId=$userId, isGuest=$isGuest',
-        e,
-        stack,
-      );
-      rethrow;
-    }
-  },
-);
+    return squad;
+  } catch (e, stack) {
+    _logger.severe(
+      'Failed to load squad $squadId for userId=$userId, isGuest=$isGuest',
+      e,
+      stack,
+    );
+    rethrow;
+  }
+});

@@ -8,11 +8,7 @@ class MatchTile extends StatelessWidget {
   final Match match;
   final String squadId;
 
-  const MatchTile({
-    super.key,
-    required this.match,
-    required this.squadId,
-  });
+  const MatchTile({super.key, required this.match, required this.squadId});
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +18,7 @@ class MatchTile extends StatelessWidget {
     // Determine result display
     // If no score, show "Pending" or similar?
     // MD says "wynik: dwa boxy jak w legacy (puste gdy brak wyniku)"
-    
+
     final hasScore = match.homeScore != null && match.awayScore != null;
     final homeScore = hasScore ? match.homeScore.toString() : '-';
     final awayScore = hasScore ? match.awayScore.toString() : '-';
@@ -32,10 +28,7 @@ class MatchTile extends StatelessWidget {
         onTap: () {
           context.pushNamed(
             AppRoute.matchDetails.name,
-            pathParameters: {
-              'squadId': squadId,
-              'matchId': match.matchId,
-            },
+            pathParameters: {'squadId': squadId, 'matchId': match.matchId},
           );
         },
         child: Padding(
@@ -51,19 +44,19 @@ class MatchTile extends StatelessWidget {
                     style: theme.textTheme.bodyMedium,
                   ),
                   if (match.tournamentId != null)
-                     Text(
+                    Text(
                       'Tournament Match', // Ideally fetch tournament name
                       style: theme.textTheme.bodySmall,
-                     ),
+                    ),
                 ],
               ),
               Row(
                 children: [
-                   _ScoreBox(score: homeScore),
-                   const SizedBox(width: 8),
-                   const Text(':'),
-                   const SizedBox(width: 8),
-                   _ScoreBox(score: awayScore),
+                  _ScoreBox(score: homeScore),
+                  const SizedBox(width: 8),
+                  const Text(':'),
+                  const SizedBox(width: 8),
+                  _ScoreBox(score: awayScore),
                 ],
               ),
             ],
@@ -96,4 +89,3 @@ class _ScoreBox extends StatelessWidget {
     );
   }
 }
-

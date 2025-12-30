@@ -41,7 +41,9 @@ final createDraftUseCaseProvider = Provider<CreateDraftUseCase>((ref) {
   return CreateDraftUseCase(repository);
 });
 
-final combinatoryCreateDraftUseCaseProvider = Provider<CreateDraftUseCase>((ref) {
+final combinatoryCreateDraftUseCaseProvider = Provider<CreateDraftUseCase>((
+  ref,
+) {
   final repository = ref.read(combinatoryDraftRepositoryProvider);
   return CreateDraftUseCase(repository);
 });

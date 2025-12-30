@@ -22,10 +22,7 @@ class SupabaseUserRepository implements UserRepository {
 
       final email = authUser.email ?? '';
 
-      return domain.User(
-        id: authUser.id,
-        email: email,
-      );
+      return domain.User(id: authUser.id, email: email);
     } catch (e, stack) {
       _logger.severe('Failed to fetch current user', e, stack);
       rethrow;
@@ -59,11 +56,7 @@ class SupabaseUserRepository implements UserRepository {
         );
       }).toList();
     } catch (e, stack) {
-      _logger.severe(
-        'Failed to fetch users by ids $userIds',
-        e,
-        stack,
-      );
+      _logger.severe('Failed to fetch users by ids $userIds', e, stack);
       rethrow;
     }
   }
@@ -71,13 +64,10 @@ class SupabaseUserRepository implements UserRepository {
   @override
   Future<void> upsertUser(domain.User user) async {
     try {
-      await _supabase.from('users').upsert(
-        {
-          'user_id': user.id,
-          'email': user.email,
-        },
-        onConflict: 'user_id',
-      );
+      await _supabase.from('users').upsert({
+        'user_id': user.id,
+        'email': user.email,
+      }, onConflict: 'user_id');
     } catch (e, stack) {
       _logger.severe(
         'Failed to upsert public.users for id=${user.id}',
@@ -93,5 +83,3 @@ final userRepositoryProvider = Provider<UserRepository>((ref) {
   final supabase = ref.read(supabaseProvider);
   return SupabaseUserRepository(supabase);
 });
-
-

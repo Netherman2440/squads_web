@@ -4,6 +4,8 @@ class AppConfig {
     'SUPABASE_ANON_KEY',
   );
 
+  static const double experienceFactor = 0.2;
+
   static void validate() {
     final missing = <String>[];
     if (supabaseUrl.isEmpty) {

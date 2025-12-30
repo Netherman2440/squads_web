@@ -14,12 +14,10 @@ class Membership {
   });
 
   Membership.empty()
-      : userId = '',
-        squadId = '',
-        role = SquadRole.none,
-        createdAt = DateTime.fromMillisecondsSinceEpoch(0);
+    : userId = '',
+      squadId = '',
+      role = SquadRole.none,
+      createdAt = DateTime.fromMillisecondsSinceEpoch(0);
 
   bool get isEmpty => userId.isEmpty || squadId.isEmpty;
 }
-
-

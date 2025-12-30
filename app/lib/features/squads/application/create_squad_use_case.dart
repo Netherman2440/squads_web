@@ -13,10 +13,7 @@ class CreateSquadUseCase {
   final SquadRepository _squadRepository;
   final MembershipRepository _membershipRepository;
 
-  CreateSquadUseCase(
-    this._squadRepository,
-    this._membershipRepository,
-  );
+  CreateSquadUseCase(this._squadRepository, this._membershipRepository);
 
   Future<void> execute({
     required String name,
@@ -28,8 +25,9 @@ class CreateSquadUseCase {
       throw const ValidationFailure('Squad name cannot be empty');
     }
 
-    final memberships =
-        await _membershipRepository.getMembershipsForUser(ownerId);
+    final memberships = await _membershipRepository.getMembershipsForUser(
+      ownerId,
+    );
 
     final ownsSquad = memberships.any(
       (membership) => membership.role == SquadRole.owner,

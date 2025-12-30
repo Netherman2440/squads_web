@@ -41,5 +41,3 @@ class EmptyPlayersState extends StatelessWidget {
     );
   }
 }
-
-

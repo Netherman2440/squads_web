@@ -20,8 +20,9 @@ class ModifyMemberRoleUseCase {
   }
 }
 
-final modifyMemberRoleUseCaseProvider = Provider<ModifyMemberRoleUseCase>((ref) {
+final modifyMemberRoleUseCaseProvider = Provider<ModifyMemberRoleUseCase>((
+  ref,
+) {
   final membershipRepository = ref.read(membershipRepositoryProvider);
   return ModifyMemberRoleUseCase(membershipRepository);
 });
-

@@ -26,14 +26,16 @@ extension SupabaseErrorExtension on Object {
       if (error.message.contains('Invalid login credentials')) {
         return const InvalidCredentialsFailure();
       }
-      
+
       if (error.message.contains('Email not confirmed')) {
         return const UserNotConfirmedFailure();
       }
 
       // 400 often covers multiple cases, relying on message check above is safer for Auth
       // 422 or 409 usually means user already exists in sign-up context
-      if (error.statusCode == '422' || error.statusCode == '409' || error.message.contains('User already registered')) {
+      if (error.statusCode == '422' ||
+          error.statusCode == '409' ||
+          error.message.contains('User already registered')) {
         return const UserAlreadyExistsFailure();
       }
 
@@ -47,7 +49,7 @@ extension SupabaseErrorExtension on Object {
       if (error.code == 'PGRST116') {
         return const ServerFailure('Resource not found.', 'PGRST116');
       }
-      
+
       // 42501: RLS Violation
       if (error.code == '42501') {
         return const UnauthorizedFailure();
@@ -64,4 +66,3 @@ extension SupabaseErrorExtension on Object {
     return const UnknownFailure();
   }
 }
-

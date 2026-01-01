@@ -20,8 +20,9 @@ class UpdatePlayerRankingUseCase {
   }
 }
 
-final updatePlayerRankingUseCaseProvider = Provider<UpdatePlayerRankingUseCase>((ref) {
-  final repository = ref.read(rankingRepositoryProvider);
-  return UpdatePlayerRankingUseCase(repository);
-});
-
+final updatePlayerRankingUseCaseProvider = Provider<UpdatePlayerRankingUseCase>(
+  (ref) {
+    final repository = ref.read(rankingRepositoryProvider);
+    return UpdatePlayerRankingUseCase(repository);
+  },
+);

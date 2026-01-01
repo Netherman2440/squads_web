@@ -32,7 +32,8 @@ class DraftDraggablePlayerTile extends StatelessWidget {
         title: Text(player.name),
         subtitle: Row(
           children: [
-            if (player.position != null && player.position!.trim().isNotEmpty) ...[
+            if (player.position != null &&
+                player.position!.trim().isNotEmpty) ...[
               Icon(
                 Icons.sports_soccer,
                 size: 16,
@@ -50,11 +51,7 @@ class DraftDraggablePlayerTile extends StatelessWidget {
             const SizedBox(width: 4),
             Text('Base: ${player.baseRanking}'),
             const SizedBox(width: 12),
-            Icon(
-              Icons.insights,
-              size: 16,
-              color: theme.colorScheme.tertiary,
-            ),
+            Icon(Icons.insights, size: 16, color: theme.colorScheme.tertiary),
             const SizedBox(width: 4),
             Text('Ranking: ${player.ranking.toStringAsFixed(2)}'),
             if (difference.abs() > 0) ...[
@@ -77,17 +74,11 @@ class DraftDraggablePlayerTile extends StatelessWidget {
       constraints: const BoxConstraints(maxWidth: 520),
       child: Material(
         color: Colors.transparent,
-        child: Opacity(
-          opacity: 0.9,
-          child: tile,
-        ),
+        child: Opacity(opacity: 0.9, child: tile),
       ),
     );
 
-    final childWhenDragging = Opacity(
-      opacity: 0.4,
-      child: tile,
-    );
+    final childWhenDragging = Opacity(opacity: 0.4, child: tile);
 
     if (_shouldUseImmediateDrag) {
       return Draggable<Object>(
@@ -133,7 +124,8 @@ class _RankingDifference extends StatelessWidget {
   Widget build(BuildContext context) {
     final isPositiveOrFlat = difference >= 0;
     final color = isPositiveOrFlat ? Colors.green : Colors.red;
-    final formattedDifference = '${difference >= 0 ? '+' : ''}'
+    final formattedDifference =
+        '${difference >= 0 ? '+' : ''}'
         '${difference.toStringAsFixed(2)}';
 
     return Row(
@@ -146,10 +138,7 @@ class _RankingDifference extends StatelessWidget {
         const SizedBox(width: 2),
         Text(
           formattedDifference,
-          style: TextStyle(
-            color: color,
-            fontWeight: FontWeight.w600,
-          ),
+          style: TextStyle(color: color, fontWeight: FontWeight.w600),
         ),
       ],
     );

@@ -4,6 +4,8 @@ class AppConfig {
     'SUPABASE_ANON_KEY',
   );
 
+  static const int maxMatchesPlayed = 10;
+
   static void validate() {
     final missing = <String>[];
     if (supabaseUrl.isEmpty) {

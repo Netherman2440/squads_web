@@ -10,23 +10,19 @@ import 'package:app/features/squads/domain/entities/user_squad_role.dart';
 class SquadMatchesPage extends ConsumerWidget {
   final String squadId;
 
-  const SquadMatchesPage({
-    super.key,
-    required this.squadId,
-  });
+  const SquadMatchesPage({super.key, required this.squadId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final matchesAsync = ref.watch(squadMatchesProvider(squadId));
     final squadAsync = ref.watch(squadDetailProvider(squadId));
 
-    final bool canManage = squadAsync.asData?.value.role == SquadRole.owner ||
+    final bool canManage =
+        squadAsync.asData?.value.role == SquadRole.owner ||
         squadAsync.asData?.value.role == SquadRole.admin;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Matches'),
-      ),
+      appBar: AppBar(title: const Text('Matches')),
       floatingActionButton: canManage
           ? FloatingActionButton(
               onPressed: () {
@@ -45,9 +41,7 @@ class SquadMatchesPage extends ConsumerWidget {
         child: matchesAsync.when(
           data: (matches) {
             if (matches.isEmpty) {
-              return const Center(
-                child: Text('No matches found.'),
-              );
+              return const Center(child: Text('No matches found.'));
             }
             return ListView.builder(
               padding: const EdgeInsets.all(8),
@@ -72,4 +66,3 @@ class SquadMatchesPage extends ConsumerWidget {
     );
   }
 }
-

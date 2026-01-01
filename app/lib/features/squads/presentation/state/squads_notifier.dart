@@ -15,18 +15,18 @@ class SquadsNotifier extends Notifier<AsyncValue<List<Squad>>> {
     // We can't call async directly in build(), so we return loading and fire off the load.
     // Or better, we keep it simple and let the UI trigger load if it's not an auto-dispose provider that fetches on mount.
     // But standard Riverpod pattern is to return the future.
-    
-    // Ideally we should use future to load data. 
-    // For now, returning loading state and expecting the UI to trigger loadSquads 
+
+    // Ideally we should use future to load data.
+    // For now, returning loading state and expecting the UI to trigger loadSquads
     // or calling it immediately.
     // Let's try to fetch immediately.
-    
-    // Note: We cannot use ref.read/watch inside the body of build if it's async 
+
+    // Note: We cannot use ref.read/watch inside the body of build if it's async
     // to set state, but we can return a Future to make it an AsyncNotifier.
     // However, the class is defined as Notifier, not AsyncNotifier.
-    // Given the existing code was manual loading, I'll switch to AsyncNotifier 
+    // Given the existing code was manual loading, I'll switch to AsyncNotifier
     // for better async handling.
-    
+
     return const AsyncValue.loading();
   }
 
@@ -36,7 +36,9 @@ class SquadsNotifier extends Notifier<AsyncValue<List<Squad>>> {
       final authState = ref.read(authStateProvider);
       final authEntity = authState.value;
 
-      return ref.read(getSquadsUseCaseProvider).execute(
+      return ref
+          .read(getSquadsUseCaseProvider)
+          .execute(
             searchQuery: searchQuery,
             userId: authEntity?.userId,
             isGuest: authEntity == null || authEntity.isAnonymous,
@@ -47,10 +49,7 @@ class SquadsNotifier extends Notifier<AsyncValue<List<Squad>>> {
   Future<void> createSquad(String name, SquadVisibility visibility) async {
     final authEntity = ref.read(authStateProvider).value;
     if (authEntity == null || authEntity.isAnonymous) {
-      state = AsyncValue.error(
-        const UnauthorizedFailure(), 
-        StackTrace.current
-      );
+      state = AsyncValue.error(const UnauthorizedFailure(), StackTrace.current);
       return;
     }
 
@@ -61,30 +60,28 @@ class SquadsNotifier extends Notifier<AsyncValue<List<Squad>>> {
     state = const AsyncValue.loading();
 
     final result = await AsyncValue.guard(() async {
-      await ref.read(createSquadUseCaseProvider).execute(
+      await ref
+          .read(createSquadUseCaseProvider)
+          .execute(
             name: name,
             visibility: visibility,
             ownerId: authEntity.userId,
             sportType: SportType.football,
           );
-      
+
       // Reload squads after creation
-      return ref.read(getSquadsUseCaseProvider).execute(
-            userId: authEntity.userId,
-            isGuest: false,
-          );
+      return ref
+          .read(getSquadsUseCaseProvider)
+          .execute(userId: authEntity.userId, isGuest: false);
     });
-    
+
     state = result;
   }
 
   Future<void> applyToSquad(String squadId) async {
     final authEntity = ref.read(authStateProvider).value;
     if (authEntity == null || authEntity.isAnonymous) {
-       state = AsyncValue.error(
-        const UnauthorizedFailure(), 
-        StackTrace.current
-      );
+      state = AsyncValue.error(const UnauthorizedFailure(), StackTrace.current);
       return;
     }
 
@@ -93,14 +90,12 @@ class SquadsNotifier extends Notifier<AsyncValue<List<Squad>>> {
     state = const AsyncValue.loading();
 
     final result = await AsyncValue.guard(() async {
-      await ref.read(applyToSquadUseCaseProvider).execute(
-            squadId,
-            authEntity.userId,
-          );
-       return ref.read(getSquadsUseCaseProvider).execute(
-            userId: authEntity.userId,
-            isGuest: false,
-          );
+      await ref
+          .read(applyToSquadUseCaseProvider)
+          .execute(squadId, authEntity.userId);
+      return ref
+          .read(getSquadsUseCaseProvider)
+          .execute(userId: authEntity.userId, isGuest: false);
     });
 
     state = result;
@@ -109,30 +104,26 @@ class SquadsNotifier extends Notifier<AsyncValue<List<Squad>>> {
   Future<void> acceptInvite(String squadId) async {
     final authEntity = ref.read(authStateProvider).value;
     if (authEntity == null || authEntity.isAnonymous) {
-       state = AsyncValue.error(
-        const UnauthorizedFailure(), 
-        StackTrace.current
-      );
+      state = AsyncValue.error(const UnauthorizedFailure(), StackTrace.current);
       return;
     }
 
     state = const AsyncValue.loading();
 
     final result = await AsyncValue.guard(() async {
-      await ref.read(squadRepositoryProvider).addUserToSquad(
-            squadId,
-            authEntity.userId,
-          );
-      return ref.read(getSquadsUseCaseProvider).execute(
-            userId: authEntity.userId,
-            isGuest: false,
-          );
+      await ref
+          .read(squadRepositoryProvider)
+          .addUserToSquad(squadId, authEntity.userId);
+      return ref
+          .read(getSquadsUseCaseProvider)
+          .execute(userId: authEntity.userId, isGuest: false);
     });
 
     state = result;
   }
 }
 
-final squadsNotifierProvider = NotifierProvider<SquadsNotifier, AsyncValue<List<Squad>>>(
-  SquadsNotifier.new,
-);
+final squadsNotifierProvider =
+    NotifierProvider<SquadsNotifier, AsyncValue<List<Squad>>>(
+      SquadsNotifier.new,
+    );

@@ -6,16 +6,12 @@ import 'package:app/features/players/domain/entities/player.dart';
 import 'package:app/features/players/presentation/controllers/players_notifier.dart';
 
 class CreatePlayerDialog extends ConsumerStatefulWidget {
-  const CreatePlayerDialog({
-    super.key,
-    required this.squadId,
-  });
+  const CreatePlayerDialog({super.key, required this.squadId});
 
   final String squadId;
 
   @override
-  ConsumerState<CreatePlayerDialog> createState() =>
-      _CreatePlayerDialogState();
+  ConsumerState<CreatePlayerDialog> createState() => _CreatePlayerDialogState();
 }
 
 class _CreatePlayerDialogState extends ConsumerState<CreatePlayerDialog> {
@@ -82,7 +78,9 @@ class _CreatePlayerDialogState extends ConsumerState<CreatePlayerDialog> {
         return;
       }
 
-      await ref.read(playersNotifierProvider.notifier).addPlayer(
+      await ref
+          .read(playersNotifierProvider.notifier)
+          .addPlayer(
             squadId: widget.squadId,
             name: name,
             position: position.isEmpty ? null : position,
@@ -123,14 +121,12 @@ class _CreatePlayerDialogState extends ConsumerState<CreatePlayerDialog> {
   }
 
   _NearestPlayers _findNearestPlayers(List<Player> players, int target) {
-    final lowerCandidates = players
-        .where((player) => player.ranking < target)
-        .toList()
-      ..sort((a, b) => b.ranking.compareTo(a.ranking));
-    final higherCandidates = players
-        .where((player) => player.ranking > target)
-        .toList()
-      ..sort((a, b) => a.ranking.compareTo(b.ranking));
+    final lowerCandidates =
+        players.where((player) => player.ranking < target).toList()
+          ..sort((a, b) => b.ranking.compareTo(a.ranking));
+    final higherCandidates =
+        players.where((player) => player.ranking > target).toList()
+          ..sort((a, b) => a.ranking.compareTo(b.ranking));
 
     return _NearestPlayers(
       lower: lowerCandidates.isEmpty ? null : lowerCandidates.first,
@@ -180,68 +176,62 @@ class _CreatePlayerDialogState extends ConsumerState<CreatePlayerDialog> {
               ),
               keyboardType: TextInputType.number,
               textInputAction: TextInputAction.done,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-              ],
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               onChanged: _handleBaseRankingTextChanged,
             ),
-          const SizedBox(height: 8),
-          Text(
-            'Selected ranking: $_sliderValue',
-            style: theme.textTheme.bodyMedium,
-          ),
-          Slider(
-            value: _sliderValue.toDouble(),
-            min: 1,
-            max: 100,
-            divisions: 99,
-            label: '$_sliderValue',
-            onChanged: (value) {
-              final rounded = value.round();
-              setState(() {
-                _sliderValue = rounded;
-                _isUpdatingFromSlider = true;
-                _baseRankingController.text = rounded.toString();
-                _isUpdatingFromSlider = false;
-              });
-            },
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 250),
-                  transitionBuilder: (child, animation) => FadeTransition(
-                    opacity: animation,
-                    child: child,
-                  ),
-                  child: _NearestPlayerProfile(
-                    key: ValueKey(lowerPlayer?.playerId ?? 'lower-null'),
-                    label: 'Weaker player',
-                    player: lowerPlayer,
-                    placeholderText: 'No weaker player',
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 250),
-                  transitionBuilder: (child, animation) => FadeTransition(
-                    opacity: animation,
-                    child: child,
-                  ),
-                  child: _NearestPlayerProfile(
-                    key: ValueKey(higherPlayer?.playerId ?? 'higher-null'),
-                    label: 'Stronger player',
-                    player: higherPlayer,
-                    placeholderText: 'No stronger player',
+            const SizedBox(height: 8),
+            Text(
+              'Selected ranking: $_sliderValue',
+              style: theme.textTheme.bodyMedium,
+            ),
+            Slider(
+              value: _sliderValue.toDouble(),
+              min: 1,
+              max: 100,
+              divisions: 99,
+              label: '$_sliderValue',
+              onChanged: (value) {
+                final rounded = value.round();
+                setState(() {
+                  _sliderValue = rounded;
+                  _isUpdatingFromSlider = true;
+                  _baseRankingController.text = rounded.toString();
+                  _isUpdatingFromSlider = false;
+                });
+              },
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 250),
+                    transitionBuilder: (child, animation) =>
+                        FadeTransition(opacity: animation, child: child),
+                    child: _NearestPlayerProfile(
+                      key: ValueKey(lowerPlayer?.playerId ?? 'lower-null'),
+                      label: 'Weaker player',
+                      player: lowerPlayer,
+                      placeholderText: 'No weaker player',
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 250),
+                    transitionBuilder: (child, animation) =>
+                        FadeTransition(opacity: animation, child: child),
+                    child: _NearestPlayerProfile(
+                      key: ValueKey(higherPlayer?.playerId ?? 'higher-null'),
+                      label: 'Stronger player',
+                      player: higherPlayer,
+                      placeholderText: 'No stronger player',
+                    ),
+                  ),
+                ),
+              ],
+            ),
             if (_errorText != null) ...[
               const SizedBox(height: 12),
               SelectableText.rich(
@@ -284,10 +274,7 @@ class _NearestPlayers {
   final Player? lower;
   final Player? higher;
 
-  const _NearestPlayers({
-    this.lower,
-    this.higher,
-  });
+  const _NearestPlayers({this.lower, this.higher});
 }
 
 class _NearestPlayerProfile extends StatelessWidget {
@@ -309,10 +296,7 @@ class _NearestPlayerProfile extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: theme.textTheme.labelSmall,
-        ),
+        Text(label, style: theme.textTheme.labelSmall),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.all(12),
@@ -330,19 +314,13 @@ class _NearestPlayerProfile extends StatelessWidget {
                       color: theme.colorScheme.outline,
                     ),
                     const SizedBox(height: 6),
-                    Text(
-                      placeholderText,
-                      style: theme.textTheme.bodySmall,
-                    ),
+                    Text(placeholderText, style: theme.textTheme.bodySmall),
                   ],
                 )
               : Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      Icons.person,
-                      color: theme.colorScheme.primary,
-                    ),
+                    Icon(Icons.person, color: theme.colorScheme.primary),
                     const SizedBox(height: 6),
                     Text(
                       player!.name,
@@ -364,5 +342,3 @@ class _NearestPlayerProfile extends StatelessWidget {
     );
   }
 }
-
-

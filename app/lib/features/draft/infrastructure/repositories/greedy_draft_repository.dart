@@ -24,9 +24,7 @@ class GreedyDraftRepository implements DraftRepository {
     }
 
     if (players.length < 2) {
-      throw const ValidationFailure(
-        'Draft requires at least 2 players.',
-      );
+      throw const ValidationFailure('Draft requires at least 2 players.');
     }
 
     // Greedy draft supports larger groups than the combinatory version, but we
@@ -36,9 +34,7 @@ class GreedyDraftRepository implements DraftRepository {
     }
 
     final sortedById = [...players]
-      ..sort(
-        (a, b) => a.playerId.compareTo(b.playerId),
-      );
+      ..sort((a, b) => a.playerId.compareTo(b.playerId));
 
     final n = sortedById.length;
     final isOdd = n.isOdd;
@@ -57,10 +53,7 @@ class GreedyDraftRepository implements DraftRepository {
         break;
       }
 
-      final seed = _stableSeed(
-        sortedPlayers: sortedById,
-        attempt: attempt,
-      );
+      final seed = _stableSeed(sortedPlayers: sortedById, attempt: attempt);
 
       var draft = _buildGreedyDraft(
         sortedById: sortedById,
@@ -78,10 +71,7 @@ class GreedyDraftRepository implements DraftRepository {
         seed: seed,
       );
 
-      draft = _canonicalizeDraft(
-        sortedById: sortedById,
-        draft: draft,
-      );
+      draft = _canonicalizeDraft(sortedById: sortedById, draft: draft);
 
       final signature = _draftSignature(draft);
       if (!seen.add(signature)) {
@@ -232,8 +222,10 @@ Draft _buildGreedyDraft({
 
     // Tie: pick deterministically based on seed/player id and current sizes to
     // produce diverse but stable results across attempts.
-    final tieBreaker =
-        _stableHash32(player.playerId, seed ^ home.length ^ away.length);
+    final tieBreaker = _stableHash32(
+      player.playerId,
+      seed ^ home.length ^ away.length,
+    );
     final toHome = (tieBreaker & 1) == 0;
 
     if (toHome) {
@@ -340,10 +332,8 @@ Draft _improveBySwaps({
     var bestAwayIdx = -1;
 
     // Randomize probe order a bit for variety between attempts.
-    final homeIndices = List<int>.generate(probeHome, (i) => i)
-      ..shuffle(rng);
-    final awayIndices = List<int>.generate(probeAway, (i) => i)
-      ..shuffle(rng);
+    final homeIndices = List<int>.generate(probeHome, (i) => i)..shuffle(rng);
+    final awayIndices = List<int>.generate(probeAway, (i) => i)..shuffle(rng);
 
     for (final i in homeIndices) {
       final hp = home[i];
@@ -441,8 +431,9 @@ Draft _canonicalizeDraft({
   }
 
   final smallestId = sortedById.first.playerId;
-  final hasSmallestInHome =
-      draft.homePlayers.any((p) => p.playerId == smallestId);
+  final hasSmallestInHome = draft.homePlayers.any(
+    (p) => p.playerId == smallestId,
+  );
 
   if (hasSmallestInHome) {
     return draft;
@@ -462,10 +453,7 @@ String _draftSignature(Draft draft) {
   return '$homeIds|$awayIds';
 }
 
-int _stableSeed({
-  required List<Player> sortedPlayers,
-  required int attempt,
-}) {
+int _stableSeed({required List<Player> sortedPlayers, required int attempt}) {
   var hash = 0x811C9DC5; // FNV-1a 32-bit offset basis
   hash = _fnv1a32Int(hash, attempt);
   for (final p in sortedPlayers) {
@@ -506,7 +494,10 @@ int _fnv1a32Int(int hash, int input) {
 /// Calculates external balance between two teams.
 /// Compares corresponding player positions after sorting both teams.
 /// Lower external balance = better distribution of top talent between teams.
-double _calculateExternalBalance(List<Player> homePlayers, List<Player> awayPlayers) {
+double _calculateExternalBalance(
+  List<Player> homePlayers,
+  List<Player> awayPlayers,
+) {
   if (homePlayers.isEmpty && awayPlayers.isEmpty) return 0.0;
   if (homePlayers.isEmpty || awayPlayers.isEmpty) return double.infinity;
 
@@ -516,8 +507,9 @@ double _calculateExternalBalance(List<Player> homePlayers, List<Player> awayPlay
     ..sort((a, b) => b.compareTo(a));
 
   var totalDifference = 0.0;
-  final minLength =
-      homeRankings.length < awayRankings.length ? homeRankings.length : awayRankings.length;
+  final minLength = homeRankings.length < awayRankings.length
+      ? homeRankings.length
+      : awayRankings.length;
 
   for (var i = 0; i < minLength; i++) {
     totalDifference += (homeRankings[i] - awayRankings[i]).abs();

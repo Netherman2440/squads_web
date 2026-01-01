@@ -27,7 +27,7 @@ class SupabaseLoginClient implements LoginRepository {
       }
 
       _logger.info('Login successful for user: ${response.user!.id}');
-      
+
       return AuthEntity(
         accessToken: response.session!.accessToken,
         refreshToken: response.session!.refreshToken!,
@@ -54,9 +54,9 @@ class SupabaseLoginClient implements LoginRepository {
       if (user == null) {
         throw const ServerFailure('Registration failed: No user returned');
       }
-      
+
       _logger.info('Registration successful for user: ${response.user!.id}');
-      
+
       return AuthEntity(
         accessToken: session?.accessToken ?? '',
         refreshToken: session?.refreshToken ?? '',
@@ -80,7 +80,7 @@ class SupabaseLoginClient implements LoginRepository {
       }
 
       _logger.info('Guest login successful for user: ${response.user!.id}');
-      
+
       return AuthEntity(
         accessToken: response.session!.accessToken,
         refreshToken: response.session!.refreshToken!,
@@ -103,9 +103,11 @@ class SupabaseLoginClient implements LoginRepository {
 
       final response = await _supabase.auth.refreshSession(refreshToken);
       if (response.session == null) {
-        throw const ServerFailure('Session refresh failed: No session returned');
+        throw const ServerFailure(
+          'Session refresh failed: No session returned',
+        );
       }
-      
+
       return AuthEntity(
         accessToken: response.session!.accessToken,
         refreshToken: response.session!.refreshToken!,

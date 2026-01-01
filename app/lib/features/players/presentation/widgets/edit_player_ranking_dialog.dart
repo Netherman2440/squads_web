@@ -14,10 +14,12 @@ class EditPlayerRankingDialog extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<EditPlayerRankingDialog> createState() => _EditPlayerRankingDialogState();
+  ConsumerState<EditPlayerRankingDialog> createState() =>
+      _EditPlayerRankingDialogState();
 }
 
-class _EditPlayerRankingDialogState extends ConsumerState<EditPlayerRankingDialog> {
+class _EditPlayerRankingDialogState
+    extends ConsumerState<EditPlayerRankingDialog> {
   late final TextEditingController _controller;
   bool _isLoading = false;
   String? _error;
@@ -25,7 +27,9 @@ class _EditPlayerRankingDialogState extends ConsumerState<EditPlayerRankingDialo
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(text: widget.currentRanking.toStringAsFixed(2));
+    _controller = TextEditingController(
+      text: widget.currentRanking.toStringAsFixed(2),
+    );
   }
 
   @override
@@ -47,10 +51,9 @@ class _EditPlayerRankingDialogState extends ConsumerState<EditPlayerRankingDialo
     });
 
     try {
-      await ref.read(updatePlayerRankingUseCaseProvider).execute(
-        playerId: widget.playerId,
-        newRanking: value,
-      );
+      await ref
+          .read(updatePlayerRankingUseCaseProvider)
+          .execute(playerId: widget.playerId, newRanking: value);
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       if (mounted) {
@@ -92,11 +95,14 @@ class _EditPlayerRankingDialogState extends ConsumerState<EditPlayerRankingDialo
         FilledButton(
           onPressed: _isLoading ? null : _submit,
           child: _isLoading
-              ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2))
+              ? const SizedBox(
+                  height: 16,
+                  width: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
               : const Text('Save'),
         ),
       ],
     );
   }
 }
-

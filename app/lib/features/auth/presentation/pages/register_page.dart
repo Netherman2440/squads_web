@@ -48,9 +48,11 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
             // Registration success, redirect to home/squads
             // Or maybe show a dialog "Please confirm email" if access token is empty
             if (data.accessToken.isEmpty) {
-               ScaffoldMessenger.of(context).showSnackBar(
+              ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Account created! Please check your email to confirm.'),
+                  content: Text(
+                    'Account created! Please check your email to confirm.',
+                  ),
                   backgroundColor: Colors.green,
                   duration: Duration(seconds: 5),
                 ),
@@ -62,22 +64,19 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
           }
         },
         error: (error, stack) {
-           String message = 'Registration failed. Please try again.';
-           if (error is UserAlreadyExistsFailure) {
-             message = 'An account with this email already exists.';
-           } else if (error is NetworkFailure) {
-             message = 'No internet connection.';
-           } else if (error is Failure) {
-             message = error.message;
-           }
-           
-           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(message),
-              backgroundColor: Colors.red,
-            ),
+          String message = 'Registration failed. Please try again.';
+          if (error is UserAlreadyExistsFailure) {
+            message = 'An account with this email already exists.';
+          } else if (error is NetworkFailure) {
+            message = 'No internet connection.';
+          } else if (error is Failure) {
+            message = error.message;
+          }
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(message), backgroundColor: Colors.red),
           );
-        }
+        },
       );
     });
 
@@ -110,9 +109,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
               children: [
                 Text(
                   'Create account',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 24),
                 // Removed inline error widget
@@ -131,9 +130,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     if (text.isEmpty) {
                       return 'Please enter email';
                     }
-                    final emailRegex = RegExp(
-                      r'^[^@]+@[^@]+\.[^@]+$',
-                    );
+                    final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
                     if (!emailRegex.hasMatch(text)) {
                       return 'Please enter valid email';
                     }
@@ -199,11 +196,11 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                 ),
                 const SizedBox(height: 16),
                 TextButton(
-                  onPressed: isLoading 
+                  onPressed: isLoading
                       ? null
                       : () {
-                         if (context.mounted) context.go('/auth');
-                      },
+                          if (context.mounted) context.go('/auth');
+                        },
                   child: const Text('Back to login'),
                 ),
               ],

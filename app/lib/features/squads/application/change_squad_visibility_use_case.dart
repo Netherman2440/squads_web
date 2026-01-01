@@ -19,7 +19,6 @@ class ChangeSquadVisibilityUseCase {
 
 final changeSquadVisibilityUseCaseProvider =
     Provider<ChangeSquadVisibilityUseCase>((ref) {
-  final squadRepository = ref.read(squadRepositoryProvider);
-  return ChangeSquadVisibilityUseCase(squadRepository);
-});
-
+      final squadRepository = ref.read(squadRepositoryProvider);
+      return ChangeSquadVisibilityUseCase(squadRepository);
+    });

@@ -15,10 +15,7 @@ class GetSquadUseCase {
   final MembershipRepository _membershipRepository;
   final Logger _logger = Logger('GetSquadUseCase');
 
-  GetSquadUseCase(
-    this._squadRepository,
-    this._membershipRepository,
-  );
+  GetSquadUseCase(this._squadRepository, this._membershipRepository);
 
   Future<Squad> execute({
     required String squadId,
@@ -45,9 +42,7 @@ class GetSquadUseCase {
       if (isGuest || userId == null) {
         _logger.fine('Treating as guest for squad $squadId');
         if (squad.visibility == SquadVisibility.private) {
-          _logger.warning(
-            'Guest access denied to private squad $squadId',
-          );
+          _logger.warning('Guest access denied to private squad $squadId');
           throw const UnauthorizedFailure(
             'You do not have access to this squad.',
           );
@@ -71,8 +66,9 @@ class GetSquadUseCase {
         return withPending;
       }
 
-      final memberships =
-          await _membershipRepository.getMembershipsForUser(userId);
+      final memberships = await _membershipRepository.getMembershipsForUser(
+        userId,
+      );
 
       _logger.fine(
         'User $userId has ${memberships.length} memberships; '
@@ -87,9 +83,7 @@ class GetSquadUseCase {
             );
 
       if (membership.isEmpty) {
-        _logger.fine(
-          'No membership found for user $userId in squad $squadId',
-        );
+        _logger.fine('No membership found for user $userId in squad $squadId');
         if (squad.visibility == SquadVisibility.private) {
           _logger.warning(
             'Access denied to private squad $squadId for user $userId '
@@ -129,14 +123,12 @@ class GetSquadUseCase {
     }
 
     try {
-      final memberships =
-          await _membershipRepository.getMembershipsForSquad(squad.squadId);
-      final hasPending =
-          memberships.any((m) => m.role == SquadRole.pending);
-
-      _logger.fine(
-        'Squad ${squad.squadId} hasPendingMembers=$hasPending',
+      final memberships = await _membershipRepository.getMembershipsForSquad(
+        squad.squadId,
       );
+      final hasPending = memberships.any((m) => m.role == SquadRole.pending);
+
+      _logger.fine('Squad ${squad.squadId} hasPendingMembers=$hasPending');
       return squad.copyWith(hasPendingMembers: hasPending);
     } catch (e, stack) {
       _logger.warning(
@@ -153,8 +145,5 @@ final getSquadUseCaseProvider = Provider<GetSquadUseCase>((ref) {
   final squadRepository = ref.read(squadRepositoryProvider);
   final membershipRepository = ref.read(membershipRepositoryProvider);
 
-  return GetSquadUseCase(
-    squadRepository,
-    membershipRepository,
-  );
+  return GetSquadUseCase(squadRepository, membershipRepository);
 });

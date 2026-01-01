@@ -12,83 +12,83 @@ void main() {
   });
 
   group('AuthPage Widget Tests', () {
-    testWidgets('shows "Please enter email" when email is empty and login is pressed',
-        (WidgetTester tester) async {
+    testWidgets(
+      'shows "Please enter email" when email is empty and login is pressed',
+      (WidgetTester tester) async {
+        // Build the AuthPage widget with theme
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              authStateProvider.overrideWith(() => MockAuthNotifier()),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.darkTheme,
+              home: const AuthPage(),
+            ),
+          ),
+        );
+
+        // Wait for the widget to fully build
+        await tester.pumpAndSettle();
+
+        // Find the login button
+        final loginButton = find.text('Login');
+        expect(loginButton, findsOneWidget);
+
+        // Tap the login button without entering any email
+        await tester.tap(loginButton);
+        await tester.pump();
+
+        // Check if the validation message appears
+        expect(find.text('Please enter email'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'shows "Please enter password" when password is empty and login is pressed',
+      (WidgetTester tester) async {
+        // Build the AuthPage widget with theme
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              authStateProvider.overrideWith(() => MockAuthNotifier()),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.darkTheme,
+              home: const AuthPage(),
+            ),
+          ),
+        );
+
+        // Wait for the widget to fully build
+        await tester.pumpAndSettle();
+
+        // Enter a valid email to pass email validation
+        final emailField = find.byType(TextFormField).first;
+        await tester.enterText(emailField, 'test@example.com');
+        await tester.pump();
+
+        // Find the login button
+        final loginButton = find.text('Login');
+        expect(loginButton, findsOneWidget);
+
+        // Tap the login button without entering password
+        await tester.tap(loginButton);
+        await tester.pump();
+
+        // Check if the validation message appears
+        expect(find.text('Please enter password'), findsOneWidget);
+      },
+    );
+
+    testWidgets('Create Account button exists and is tappable', (
+      WidgetTester tester,
+    ) async {
       // Build the AuthPage widget with theme
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            authStateProvider.overrideWith(() => MockAuthNotifier()),
-          ],
-          child: MaterialApp(
-            theme: AppTheme.darkTheme,
-            home: const AuthPage(),
-          ),
-        ),
-      );
-
-      // Wait for the widget to fully build
-      await tester.pumpAndSettle();
-
-      // Find the login button
-      final loginButton = find.text('Login');
-      expect(loginButton, findsOneWidget);
-
-      // Tap the login button without entering any email
-      await tester.tap(loginButton);
-      await tester.pump();
-
-      // Check if the validation message appears
-      expect(find.text('Please enter email'), findsOneWidget);
-    });
-
-    testWidgets('shows "Please enter password" when password is empty and login is pressed',
-        (WidgetTester tester) async {
-      // Build the AuthPage widget with theme
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            authStateProvider.overrideWith(() => MockAuthNotifier()),
-          ],
-          child: MaterialApp(
-            theme: AppTheme.darkTheme,
-            home: const AuthPage(),
-          ),
-        ),
-      );
-
-      // Wait for the widget to fully build
-      await tester.pumpAndSettle();
-
-      // Enter a valid email to pass email validation
-      final emailField = find.byType(TextFormField).first;
-      await tester.enterText(emailField, 'test@example.com');
-      await tester.pump();
-
-      // Find the login button
-      final loginButton = find.text('Login');
-      expect(loginButton, findsOneWidget);
-
-      // Tap the login button without entering password
-      await tester.tap(loginButton);
-      await tester.pump();
-
-      // Check if the validation message appears
-      expect(find.text('Please enter password'), findsOneWidget);
-    });
-
-    testWidgets('Create Account button exists and is tappable',
-        (WidgetTester tester) async {
-      // Build the AuthPage widget with theme
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            authStateProvider.overrideWith(() => MockAuthNotifier()),
-          ],
-          child: MaterialApp(
-            theme: AppTheme.darkTheme,
-            home: const AuthPage(),
-          ),
+          overrides: [authStateProvider.overrideWith(() => MockAuthNotifier())],
+          child: MaterialApp(theme: AppTheme.darkTheme, home: const AuthPage()),
         ),
       );
 
@@ -100,10 +100,12 @@ void main() {
       expect(createAccountButton, findsOneWidget);
 
       // Verify the button is enabled (not disabled due to loading)
-      final buttonWidget = tester.widget<TextButton>(find.ancestor(
-        of: createAccountButton,
-        matching: find.byType(TextButton),
-      ));
+      final buttonWidget = tester.widget<TextButton>(
+        find.ancestor(
+          of: createAccountButton,
+          matching: find.byType(TextButton),
+        ),
+      );
       expect(buttonWidget.onPressed, isNotNull);
     });
   });

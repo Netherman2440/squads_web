@@ -14,14 +14,9 @@ class UserNotifier extends Notifier<UserState> {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      final profile =
-          await ref.read(getCurrentUserUseCaseProvider).execute();
+      final profile = await ref.read(getCurrentUserUseCaseProvider).execute();
 
-      state = state.copyWith(
-        isLoading: false,
-        profile: profile,
-        error: null,
-      );
+      state = state.copyWith(isLoading: false, profile: profile, error: null);
     } catch (_) {
       state = state.copyWith(
         isLoading: false,
@@ -38,5 +33,3 @@ class UserNotifier extends Notifier<UserState> {
 final userNotifierProvider = NotifierProvider<UserNotifier, UserState>(
   UserNotifier.new,
 );
-
-

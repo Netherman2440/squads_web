@@ -24,4 +24,3 @@ final changeSquadNameUseCaseProvider = Provider<ChangeSquadNameUseCase>((ref) {
   final squadRepository = ref.read(squadRepositoryProvider);
   return ChangeSquadNameUseCase(squadRepository);
 });
-

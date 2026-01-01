@@ -17,24 +17,23 @@ class RankingHistoryGraphWidget extends StatelessWidget {
     if (history.isEmpty) {
       return const SizedBox(
         height: 200,
-        child: Center(
-          child: Text('No ranking changes'),
-        ),
+        child: Center(child: Text('No ranking changes')),
       );
     }
 
     // Sort by created_at ASC for display on graph
-    final sortedHistory = [...history]..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    final sortedHistory = [...history]
+      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
     final spots = <FlSpot>[];
-    
+
     // Initial spot at base ranking
     // Wait, the plan says: "Each point on graph = entry.currentRanking"
     // and "First point starts at player.baseRanking"
-    
+
     // We'll treat baseRanking as point 0 if it's the very first point.
     // Actually, each history entry represents a point in time.
-    
+
     double currentRanking = baseRanking;
     spots.add(FlSpot(0, currentRanking));
 
@@ -49,7 +48,7 @@ class RankingHistoryGraphWidget extends StatelessWidget {
 
     final minY = spots.map((s) => s.y).reduce((a, b) => a < b ? a : b);
     final maxY = spots.map((s) => s.y).reduce((a, b) => a > b ? a : b);
-    
+
     final padding = (maxY - minY) * 0.1;
     final chartMinY = (minY - padding).floorToDouble();
     final chartMaxY = (maxY + padding).ceilToDouble();
@@ -63,9 +62,15 @@ class RankingHistoryGraphWidget extends StatelessWidget {
           maxY: chartMaxY,
           gridData: const FlGridData(show: true, drawVerticalLine: false),
           titlesData: FlTitlesData(
-            bottomTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            bottomTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            rightTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            topTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
             leftTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
@@ -90,7 +95,9 @@ class RankingHistoryGraphWidget extends StatelessWidget {
               dotData: const FlDotData(show: true),
               belowBarData: BarAreaData(
                 show: true,
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                color: Theme.of(
+                  context,
+                ).colorScheme.primary.withValues(alpha: 0.1),
               ),
             ),
           ],
@@ -99,4 +106,3 @@ class RankingHistoryGraphWidget extends StatelessWidget {
     );
   }
 }
-

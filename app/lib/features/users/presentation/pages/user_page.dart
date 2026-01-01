@@ -76,9 +76,7 @@ class _UserPageState extends ConsumerState<UserPage> {
             if (squadsState.isLoading && mySquads.isEmpty)
               const Padding(
                 padding: EdgeInsets.all(16),
-                child: Center(
-                  child: CircularProgressIndicator(),
-                ),
+                child: Center(child: CircularProgressIndicator()),
               )
             else if (mySquads.isEmpty)
               Padding(
@@ -103,7 +101,8 @@ class _UserPageState extends ConsumerState<UserPage> {
                     sportType: SportType.football,
                     createdAt: DateTime.now(),
                   );
-                  final squad = squadsState.value?.firstWhere(
+                  final squad =
+                      squadsState.value?.firstWhere(
                         (s) => s.squadId == item.squadId,
                         orElse: () => fallback,
                       ) ??
@@ -124,5 +123,3 @@ class _UserPageState extends ConsumerState<UserPage> {
     );
   }
 }
-
-

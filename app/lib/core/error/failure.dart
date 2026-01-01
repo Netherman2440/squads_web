@@ -42,11 +42,13 @@ class InvalidCredentialsFailure extends AuthFailure {
 }
 
 class UserNotConfirmedFailure extends AuthFailure {
-  const UserNotConfirmedFailure() : super('Email not confirmed. Please check your inbox.');
+  const UserNotConfirmedFailure()
+    : super('Email not confirmed. Please check your inbox.');
 }
 
 class UserAlreadyExistsFailure extends AuthFailure {
-  const UserAlreadyExistsFailure() : super('User with this email already exists.');
+  const UserAlreadyExistsFailure()
+    : super('User with this email already exists.');
 }
 
 class GuestLoginFailure extends AuthFailure {
@@ -54,5 +56,7 @@ class GuestLoginFailure extends AuthFailure {
 }
 
 class UnauthorizedFailure extends AuthFailure {
-  const UnauthorizedFailure([super.message = 'You do not have permission to access this resource.']);
+  const UnauthorizedFailure([
+    super.message = 'You do not have permission to access this resource.',
+  ]);
 }

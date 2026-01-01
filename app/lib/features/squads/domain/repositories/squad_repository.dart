@@ -24,6 +24,9 @@ abstract class SquadRepository {
     String squadId, {
     String? name,
     SquadVisibility? visibility,
+    bool? rankingUpdate,
+    int? rankingMultiplier,
+    bool? useExperienceFactor,
   });
 
   Future<void> applyToSquad(String squadId, String userId);

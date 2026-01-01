@@ -17,9 +17,7 @@ class UserProfileCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (error != null && error!.isNotEmpty) {
@@ -29,16 +27,16 @@ class UserProfileCard extends StatelessWidget {
           TextSpan(
             text: 'Error: ',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.red,
-                  fontWeight: FontWeight.bold,
-                ),
+              color: Colors.red,
+              fontWeight: FontWeight.bold,
+            ),
             children: [
               TextSpan(
                 text: error,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.red,
-                      fontWeight: FontWeight.normal,
-                    ),
+                  color: Colors.red,
+                  fontWeight: FontWeight.normal,
+                ),
               ),
             ],
           ),
@@ -62,9 +60,7 @@ class UserProfileCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            const CircleAvatar(
-              child: Icon(Icons.person),
-            ),
+            const CircleAvatar(child: Icon(Icons.person)),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -88,5 +84,3 @@ class UserProfileCard extends StatelessWidget {
     );
   }
 }
-
-

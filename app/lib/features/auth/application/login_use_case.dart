@@ -13,7 +13,7 @@ class LoginUseCase {
 
   Future<AuthEntity> execute(String email, String password) async {
     final entity = await _loginRepository.login(email, password);
-    
+
     // Store tokens securely
     await _tokenRepository.setTokensFromEntity(entity);
 
@@ -21,7 +21,9 @@ class LoginUseCase {
     // We wrap it to ensure login doesn't fail if immediate refresh fails
     if (entity.refreshToken.isNotEmpty) {
       try {
-        final refreshed = await _loginRepository.refreshSession(entity.refreshToken);
+        final refreshed = await _loginRepository.refreshSession(
+          entity.refreshToken,
+        );
         await _tokenRepository.setTokensFromEntity(refreshed);
         return refreshed;
       } catch (_) {

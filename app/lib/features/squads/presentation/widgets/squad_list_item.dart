@@ -43,9 +43,7 @@ class SquadListItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: ListTile(
-        leading: CircleAvatar(
-          child: Icon(_visibilityIcon),
-        ),
+        leading: CircleAvatar(child: Icon(_visibilityIcon)),
         title: Text(squad.name),
         subtitle: Row(
           children: [
@@ -60,12 +58,12 @@ class SquadListItem extends StatelessWidget {
         ),
         trailing: squad.role == SquadRole.none
             ? (squad.visibility == SquadVisibility.private
-                ? Icon(
-                    Icons.lock,
-                    color: Theme.of(context).colorScheme.outline,
-                    size: 20,
-                  )
-                : null)
+                  ? Icon(
+                      Icons.lock,
+                      color: Theme.of(context).colorScheme.outline,
+                      size: 20,
+                    )
+                  : null)
             : Chip(
                 label: Text(
                   isGuest && squad.role == SquadRole.none
@@ -73,10 +71,9 @@ class SquadListItem extends StatelessWidget {
                       : squad.role.label,
                 ),
                 backgroundColor: _roleColor(context).withValues(alpha: 0.15),
-                labelStyle: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(color: _roleColor(context)),
+                labelStyle: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: _roleColor(context)),
               ),
         onTap: onTap,
       ),

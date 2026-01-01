@@ -57,13 +57,10 @@ class UserSquadRole {
   final String squadId;
   final SquadRole role;
 
-  const UserSquadRole({
-    required this.squadId,
-    required this.role,
-  });
+  const UserSquadRole({required this.squadId, required this.role});
 
   factory UserSquadRole.fromMap(Map<String, dynamic> map) => UserSquadRole(
-        squadId: map['squad_id'] as String,
-        role: SquadRoleParser.fromString(map['role'] as String?),
-      );
+    squadId: map['squad_id'] as String,
+    role: SquadRoleParser.fromString(map['role'] as String?),
+  );
 }

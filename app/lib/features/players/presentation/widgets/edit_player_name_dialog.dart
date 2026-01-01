@@ -13,7 +13,8 @@ class EditPlayerNameDialog extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<EditPlayerNameDialog> createState() => _EditPlayerNameDialogState();
+  ConsumerState<EditPlayerNameDialog> createState() =>
+      _EditPlayerNameDialogState();
 }
 
 class _EditPlayerNameDialogState extends ConsumerState<EditPlayerNameDialog> {
@@ -46,10 +47,9 @@ class _EditPlayerNameDialogState extends ConsumerState<EditPlayerNameDialog> {
     });
 
     try {
-      await ref.read(updatePlayerNameUseCaseProvider).execute(
-        playerId: widget.playerId,
-        newName: name,
-      );
+      await ref
+          .read(updatePlayerNameUseCaseProvider)
+          .execute(playerId: widget.playerId, newName: name);
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       if (mounted) {
@@ -70,10 +70,7 @@ class _EditPlayerNameDialogState extends ConsumerState<EditPlayerNameDialog> {
         children: [
           TextField(
             controller: _controller,
-            decoration: InputDecoration(
-              labelText: 'Name',
-              errorText: _error,
-            ),
+            decoration: InputDecoration(labelText: 'Name', errorText: _error),
             autofocus: true,
             onSubmitted: (_) => _submit(),
           ),
@@ -87,11 +84,14 @@ class _EditPlayerNameDialogState extends ConsumerState<EditPlayerNameDialog> {
         FilledButton(
           onPressed: _isLoading ? null : _submit,
           child: _isLoading
-              ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2))
+              ? const SizedBox(
+                  height: 16,
+                  width: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
               : const Text('Save'),
         ),
       ],
     );
   }
 }
-

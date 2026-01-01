@@ -32,10 +32,7 @@ class MemberTile extends StatelessWidget {
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: colorScheme.primary.withValues(alpha: 0.16),
-          child: Icon(
-            Icons.person,
-            color: colorScheme.onPrimary,
-          ),
+          child: Icon(Icons.person, color: colorScheme.onPrimary),
         ),
         title: Text(
           member.email,
@@ -99,7 +96,8 @@ class MemberTile extends StatelessWidget {
     }
 
     // Logic for Admin/Member management based on current user role
-    final canManage = currentUserRole == SquadRole.owner ||
+    final canManage =
+        currentUserRole == SquadRole.owner ||
         (currentUserRole == SquadRole.admin && member.role == SquadRole.member);
 
     if (!canManage) {
@@ -129,16 +127,9 @@ class MemberTile extends StatelessWidget {
           ),
         if (member.role == SquadRole.admin &&
             currentUserRole == SquadRole.owner)
-          const PopupMenuItem(
-            value: 'demote',
-            child: Text('Demote to Member'),
-          ),
-        const PopupMenuItem(
-          value: 'remove',
-          child: Text('Remove from Squad'),
-        ),
+          const PopupMenuItem(value: 'demote', child: Text('Demote to Member')),
+        const PopupMenuItem(value: 'remove', child: Text('Remove from Squad')),
       ],
     );
   }
 }
-

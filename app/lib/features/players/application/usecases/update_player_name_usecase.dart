@@ -11,15 +11,13 @@ class UpdatePlayerNameUseCase {
     required String playerId,
     required String newName,
   }) async {
-    await _playerRepository.updatePlayer(
-      playerId: playerId,
-      name: newName,
-    );
+    await _playerRepository.updatePlayer(playerId: playerId, name: newName);
   }
 }
 
-final updatePlayerNameUseCaseProvider = Provider<UpdatePlayerNameUseCase>((ref) {
+final updatePlayerNameUseCaseProvider = Provider<UpdatePlayerNameUseCase>((
+  ref,
+) {
   final repository = ref.read(playerRepositoryProvider);
   return UpdatePlayerNameUseCase(repository);
 });
-

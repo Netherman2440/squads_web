@@ -18,8 +18,8 @@ class UpdatePlayerPositionUseCase {
   }
 }
 
-final updatePlayerPositionUseCaseProvider = Provider<UpdatePlayerPositionUseCase>((ref) {
-  final repository = ref.read(playerRepositoryProvider);
-  return UpdatePlayerPositionUseCase(repository);
-});
-
+final updatePlayerPositionUseCaseProvider =
+    Provider<UpdatePlayerPositionUseCase>((ref) {
+      final repository = ref.read(playerRepositoryProvider);
+      return UpdatePlayerPositionUseCase(repository);
+    });

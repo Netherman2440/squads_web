@@ -24,8 +24,12 @@ class SupabaseSquadRepository implements SquadRepository {
     String? sportType,
   }) async {
     try {
-      var query = _supabase.from('squads').select(
-            'squad_id, owner_id, name, visibility, sport_type, created_at, user_squads(count)',
+      var query = _supabase
+          .from('squads')
+          .select(
+            'squad_id, owner_id, name, visibility, sport_type, created_at, '
+            'ranking_update, ranking_multiplier, use_experience_factor, '
+            'user_squads(count)',
           );
 
       if (visibility != null) {
@@ -40,14 +44,11 @@ class SupabaseSquadRepository implements SquadRepository {
         query = query.eq('sport_type', sportType);
       }
 
-      final response =
-          await query.order('created_at', ascending: false);
+      final response = await query.order('created_at', ascending: false);
       final List<dynamic> data = response as List<dynamic>;
 
       return data
-          .map(
-            (row) => Squad.fromMap(Map<String, dynamic>.from(row as Map)),
-          )
+          .map((row) => Squad.fromMap(Map<String, dynamic>.from(row as Map)))
           .toList();
     } catch (e, stack) {
       _logger.severe('Failed to fetch squads', e, stack);
@@ -62,10 +63,13 @@ class SupabaseSquadRepository implements SquadRepository {
     }
 
     try {
-      final query = _supabase.from('squads').select(
-            'squad_id, owner_id, name, visibility, sport_type, created_at, user_squads(count)',
+      final query = _supabase
+          .from('squads')
+          .select(
+            'squad_id, owner_id, name, visibility, sport_type, created_at, '
+            'ranking_update, ranking_multiplier, use_experience_factor, '
+            'user_squads(count)',
           );
-
 
       query.inFilter('squad_id', squadIds);
 
@@ -73,9 +77,7 @@ class SupabaseSquadRepository implements SquadRepository {
       final List<dynamic> data = response as List<dynamic>;
 
       return data
-          .map(
-            (row) => Squad.fromMap(Map<String, dynamic>.from(row as Map)),
-          )
+          .map((row) => Squad.fromMap(Map<String, dynamic>.from(row as Map)))
           .toList();
     } catch (e, stack) {
       _logger.severe('Failed to fetch squads by ids', e, stack);
@@ -89,7 +91,9 @@ class SupabaseSquadRepository implements SquadRepository {
       final response = await _supabase
           .from('squads')
           .select(
-            'squad_id, owner_id, name, visibility, sport_type, created_at, user_squads(count)',
+            'squad_id, owner_id, name, visibility, sport_type, created_at, '
+            'ranking_update, ranking_multiplier, use_experience_factor, '
+            'user_squads(count)',
           )
           .eq('squad_id', squadId)
           .maybeSingle();
@@ -124,14 +128,11 @@ class SupabaseSquadRepository implements SquadRepository {
       });
 
       // Add owner as a member with 'owner' role
-      await _supabase.from('user_squads').upsert(
-            {
-              'squad_id': squadId,
-              'user_id': ownerId,
-              'role': SquadRole.owner.name,
-            },
-            onConflict: 'squad_id,user_id',
-          );
+      await _supabase.from('user_squads').upsert({
+        'squad_id': squadId,
+        'user_id': ownerId,
+        'role': SquadRole.owner.name,
+      }, onConflict: 'squad_id,user_id');
     } catch (e, stack) {
       _logger.severe('Failed to create squad', e, stack);
       throw e.toFailure();
@@ -143,11 +144,21 @@ class SupabaseSquadRepository implements SquadRepository {
     String squadId, {
     String? name,
     SquadVisibility? visibility,
+    bool? rankingUpdate,
+    int? rankingMultiplier,
+    bool? useExperienceFactor,
   }) async {
     try {
       final updates = <String, dynamic>{};
       if (name != null) updates['name'] = name;
       if (visibility != null) updates['visibility'] = visibility.name;
+      if (rankingUpdate != null) updates['ranking_update'] = rankingUpdate;
+      if (rankingMultiplier != null) {
+        updates['ranking_multiplier'] = rankingMultiplier;
+      }
+      if (useExperienceFactor != null) {
+        updates['use_experience_factor'] = useExperienceFactor;
+      }
 
       if (updates.isEmpty) return;
 
@@ -161,14 +172,11 @@ class SupabaseSquadRepository implements SquadRepository {
   @override
   Future<void> applyToSquad(String squadId, String userId) async {
     try {
-      await _supabase.from('user_squads').upsert(
-            {
-              'squad_id': squadId,
-              'user_id': userId,
-              'role': SquadRole.pending.name,
-            },
-            onConflict: 'squad_id,user_id',
-          );
+      await _supabase.from('user_squads').upsert({
+        'squad_id': squadId,
+        'user_id': userId,
+        'role': SquadRole.pending.name,
+      }, onConflict: 'squad_id,user_id');
     } catch (e, stack) {
       _logger.severe('Failed to apply to squad $squadId', e, stack);
       throw e.toFailure();
@@ -178,14 +186,11 @@ class SupabaseSquadRepository implements SquadRepository {
   @override
   Future<void> addUserToSquad(String squadId, String userId) async {
     try {
-      await _supabase.from('user_squads').upsert(
-            {
-              'squad_id': squadId,
-              'user_id': userId,
-              'role': SquadRole.member.name,
-            },
-            onConflict: 'squad_id,user_id',
-          );
+      await _supabase.from('user_squads').upsert({
+        'squad_id': squadId,
+        'user_id': userId,
+        'role': SquadRole.member.name,
+      }, onConflict: 'squad_id,user_id');
     } catch (e, stack) {
       _logger.severe('Failed to add user $userId to squad $squadId', e, stack);
       throw e.toFailure();

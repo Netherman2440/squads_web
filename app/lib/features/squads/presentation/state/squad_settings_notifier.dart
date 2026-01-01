@@ -7,6 +7,7 @@ import 'package:app/features/squads/application/change_squad_visibility_use_case
 import 'package:app/features/squads/application/get_squad_settings_members_use_case.dart';
 import 'package:app/features/squads/application/modify_member_role_use_case.dart';
 import 'package:app/features/squads/application/remove_member_use_case.dart';
+import 'package:app/features/squads/application/update_squad_ranking_settings_use_case.dart';
 import 'package:app/features/squads/domain/entities/squad.dart';
 
 class SquadSettingsNotifier extends AsyncNotifier<List<SquadMember>> {
@@ -18,51 +19,67 @@ class SquadSettingsNotifier extends AsyncNotifier<List<SquadMember>> {
   }
 
   Future<void> promoteToAdmin(String userId) async {
-    await _performAction(() => ref.read(modifyMemberRoleUseCaseProvider).execute(
-          squadId: _ensureSquadId(),
-          userId: userId,
-          newRole: SquadRole.admin,
-        ));
+    await _performAction(
+      () => ref
+          .read(modifyMemberRoleUseCaseProvider)
+          .execute(
+            squadId: _ensureSquadId(),
+            userId: userId,
+            newRole: SquadRole.admin,
+          ),
+    );
   }
 
   Future<void> demoteToMember(String userId) async {
-    await _performAction(() => ref.read(modifyMemberRoleUseCaseProvider).execute(
-          squadId: _ensureSquadId(),
-          userId: userId,
-          newRole: SquadRole.member,
-        ));
+    await _performAction(
+      () => ref
+          .read(modifyMemberRoleUseCaseProvider)
+          .execute(
+            squadId: _ensureSquadId(),
+            userId: userId,
+            newRole: SquadRole.member,
+          ),
+    );
   }
 
   Future<void> removeFromSquad(String userId) async {
-    await _performAction(() => ref.read(removeMemberUseCaseProvider).execute(
-          squadId: _ensureSquadId(),
-          userId: userId,
-        ));
+    await _performAction(
+      () => ref
+          .read(removeMemberUseCaseProvider)
+          .execute(squadId: _ensureSquadId(), userId: userId),
+    );
   }
 
   Future<void> acceptRequest(String userId) async {
-    await _performAction(() => ref.read(modifyMemberRoleUseCaseProvider).execute(
-          squadId: _ensureSquadId(),
-          userId: userId,
-          newRole: SquadRole.member,
-        ));
+    await _performAction(
+      () => ref
+          .read(modifyMemberRoleUseCaseProvider)
+          .execute(
+            squadId: _ensureSquadId(),
+            userId: userId,
+            newRole: SquadRole.member,
+          ),
+    );
   }
 
   Future<void> declineRequest(String userId) async {
-    await _performAction(() => ref.read(modifyMemberRoleUseCaseProvider).execute(
-          squadId: _ensureSquadId(),
-          userId: userId,
-          newRole: SquadRole.declined,
-        ));
+    await _performAction(
+      () => ref
+          .read(modifyMemberRoleUseCaseProvider)
+          .execute(
+            squadId: _ensureSquadId(),
+            userId: userId,
+            newRole: SquadRole.declined,
+          ),
+    );
   }
 
   Future<void> updateName(String newName) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      await ref.read(changeSquadNameUseCaseProvider).execute(
-            squadId: _ensureSquadId(),
-            newName: newName,
-          );
+      await ref
+          .read(changeSquadNameUseCaseProvider)
+          .execute(squadId: _ensureSquadId(), newName: newName);
       return _fetchMembers();
     });
   }
@@ -70,9 +87,27 @@ class SquadSettingsNotifier extends AsyncNotifier<List<SquadMember>> {
   Future<void> updateVisibility(SquadVisibility newVisibility) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      await ref.read(changeSquadVisibilityUseCaseProvider).execute(
+      await ref
+          .read(changeSquadVisibilityUseCaseProvider)
+          .execute(squadId: _ensureSquadId(), newVisibility: newVisibility);
+      return _fetchMembers();
+    });
+  }
+
+  Future<void> updateRankingSettings({
+    required bool rankingUpdate,
+    required int rankingMultiplier,
+    required bool useExperienceFactor,
+  }) async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      await ref
+          .read(updateSquadRankingSettingsUseCaseProvider)
+          .execute(
             squadId: _ensureSquadId(),
-            newVisibility: newVisibility,
+            rankingUpdate: rankingUpdate,
+            rankingMultiplier: rankingMultiplier,
+            useExperienceFactor: useExperienceFactor,
           );
       return _fetchMembers();
     });
@@ -88,9 +123,7 @@ class SquadSettingsNotifier extends AsyncNotifier<List<SquadMember>> {
 
   Future<List<SquadMember>> _fetchMembers() {
     final squadId = _ensureSquadId();
-    return ref
-        .read(getSquadSettingsMembersUseCaseProvider)
-        .execute(squadId);
+    return ref.read(getSquadSettingsMembersUseCaseProvider).execute(squadId);
   }
 
   Future<void> load(String squadId) async {
@@ -110,6 +143,5 @@ class SquadSettingsNotifier extends AsyncNotifier<List<SquadMember>> {
 
 final squadSettingsProvider =
     AsyncNotifierProvider.autoDispose<SquadSettingsNotifier, List<SquadMember>>(
-  SquadSettingsNotifier.new,
-);
-
+      SquadSettingsNotifier.new,
+    );

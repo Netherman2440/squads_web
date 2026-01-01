@@ -72,9 +72,7 @@ class PlayersListWidget extends StatelessWidget {
                 Text('Ranking: ${player.ranking.toStringAsFixed(2)}'),
                 if (difference.abs() > 0) ...[
                   const SizedBox(width: 12),
-                  _RankingDifference(
-                    difference: difference,
-                  ),
+                  _RankingDifference(difference: difference),
                 ],
               ],
             ),
@@ -86,9 +84,7 @@ class PlayersListWidget extends StatelessWidget {
 }
 
 class _RankingDifference extends StatelessWidget {
-  const _RankingDifference({
-    required this.difference,
-  });
+  const _RankingDifference({required this.difference});
 
   final double difference;
 
@@ -96,7 +92,8 @@ class _RankingDifference extends StatelessWidget {
   Widget build(BuildContext context) {
     final isPositiveOrFlat = difference >= 0;
     final color = isPositiveOrFlat ? Colors.green : Colors.red;
-    final formattedDifference = '${difference >= 0 ? '+' : ''}'
+    final formattedDifference =
+        '${difference >= 0 ? '+' : ''}'
         '${difference.toStringAsFixed(2)}';
 
     return Row(
@@ -109,14 +106,9 @@ class _RankingDifference extends StatelessWidget {
         const SizedBox(width: 2),
         Text(
           formattedDifference,
-          style: TextStyle(
-            color: color,
-            fontWeight: FontWeight.w600,
-          ),
+          style: TextStyle(color: color, fontWeight: FontWeight.w600),
         ),
       ],
     );
   }
 }
-
-

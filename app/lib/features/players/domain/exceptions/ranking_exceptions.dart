@@ -13,4 +13,3 @@ class RankingUpdateConflictException implements Exception {
   @override
   String toString() => 'RankingUpdateConflictException: $message';
 }
-

@@ -33,8 +33,9 @@ class RegisterUseCase {
 
       if (entity.refreshToken.isNotEmpty) {
         try {
-          final refreshed =
-              await _loginRepository.refreshSession(entity.refreshToken);
+          final refreshed = await _loginRepository.refreshSession(
+            entity.refreshToken,
+          );
           await _tokenRepository.setTokensFromEntity(refreshed);
           result = refreshed;
         } catch (_) {
@@ -45,10 +46,7 @@ class RegisterUseCase {
 
     // Sync minimal user profile into public.users for easier joins.
     await _userRepository.upsertUser(
-      domain_user.User(
-        id: result.userId,
-        email: result.email,
-      ),
+      domain_user.User(id: result.userId, email: result.email),
     );
 
     // If accessToken is empty, it means email confirmation is required.
@@ -61,9 +59,5 @@ final registerUseCaseProvider = Provider<RegisterUseCase>((ref) {
   final loginRepository = ref.read(supabaseLoginClientProvider);
   final tokenRepository = ref.read(tokenSecureStorageProvider);
   final userRepository = ref.read(userRepositoryProvider);
-  return RegisterUseCase(
-    loginRepository,
-    tokenRepository,
-    userRepository,
-  );
+  return RegisterUseCase(loginRepository, tokenRepository, userRepository);
 });

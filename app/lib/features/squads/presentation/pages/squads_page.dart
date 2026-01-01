@@ -22,8 +22,9 @@ class _SquadsPageState extends ConsumerState<SquadsPage> {
   void initState() {
     super.initState();
     _searchController = TextEditingController();
-    Future.microtask(() =>
-        ref.read(squadsNotifierProvider.notifier).loadSquads());
+    Future.microtask(
+      () => ref.read(squadsNotifierProvider.notifier).loadSquads(),
+    );
   }
 
   @override
@@ -68,21 +69,15 @@ class _SquadsPageState extends ConsumerState<SquadsPage> {
       case SquadRole.declined:
       case SquadRole.removed:
         messenger.showSnackBar(
-          const SnackBar(
-            content: Text('You cannot access this squad'),
-          ),
+          const SnackBar(content: Text('You cannot access this squad')),
         );
         return;
       default:
-      throw Exception('Invalid squad role: ${squad.role}');
+        throw Exception('Invalid squad role: ${squad.role}');
     }
   }
 
-
-  Future<void> _showApplyDialog(
-    Squad squad,
-    SquadsNotifier notifier,
-  ) async {
+  Future<void> _showApplyDialog(Squad squad, SquadsNotifier notifier) async {
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
@@ -173,10 +168,9 @@ class _SquadsPageState extends ConsumerState<SquadsPage> {
         }
 
         return RefreshIndicator(
-          onRefresh: () =>
-              ref.read(squadsNotifierProvider.notifier).loadSquads(
-                    searchQuery: _searchController.text,
-                  ),
+          onRefresh: () => ref
+              .read(squadsNotifierProvider.notifier)
+              .loadSquads(searchQuery: _searchController.text),
           child: ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             itemCount: squads.length,
@@ -197,7 +191,7 @@ class _SquadsPageState extends ConsumerState<SquadsPage> {
           children: [
             const Icon(Icons.error_outline, size: 48, color: Colors.red),
             const SizedBox(height: 16),
-             SelectableText.rich(
+            SelectableText.rich(
               TextSpan(
                 text: 'Error: $error',
                 style: const TextStyle(color: Colors.red),

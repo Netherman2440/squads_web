@@ -1,9 +1,11 @@
 import 'dart:math' as math;
 
 import 'package:app/core/app_config.dart';
+import 'package:app/core/widgets/danger_action_button.dart';
 import 'package:app/features/squads/application/update_squad_ranking_settings_use_case.dart';
 import 'package:app/features/squads/presentation/state/squad_detail_notifier.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/entities/squad.dart';
@@ -23,14 +25,15 @@ class _SquadRankingSettingsPageState
     extends ConsumerState<SquadRankingSettingsPage> {
   bool? _rankingUpdateDraft;
   bool? _useExperienceFactorDraft;
-  double? _rankingMultiplierDraft;
+  int? _rankingMultiplierDraft;
 
   bool? _initialRankingUpdate;
   bool? _initialUseExperienceFactor;
-  double? _initialRankingMultiplier;
+  int? _initialRankingMultiplier;
 
   bool _isRankingUpdatesExpanded = false;
   bool _isExperienceFactorExpanded = false;
+  bool _keepTestPreviewVisibleUntilSave = false;
 
   static const double _maxContentWidth = 860;
   static const double _maxSliderWidth = 520;
@@ -41,18 +44,7 @@ class _SquadRankingSettingsPageState
     final squadState = ref.watch(squadDetailProvider(widget.squadId));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Ranking settings'),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: TextButton(
-              onPressed: _isDirty ? _onSavePressed : null,
-              child: const Text('Save'),
-            ),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Ranking settings')),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -69,8 +61,6 @@ class _SquadRankingSettingsPageState
 
               final rankingUpdateDraft = _rankingUpdateDraft!;
               final useExperienceFactorDraft = _useExperienceFactorDraft!;
-              final rankingMultiplierDraft = _rankingMultiplierDraft!;
-
               return Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: _maxContentWidth),
@@ -104,7 +94,7 @@ class _SquadRankingSettingsPageState
                         optionLabel: rankingUpdateDraft
                             ? 'Disable ranking updates'
                             : 'Enable ranking updates',
-                        onOptionPressed: () {
+                        onOptionPressed: () async {
                           setState(() {
                             _rankingUpdateDraft = !rankingUpdateDraft;
                             _isRankingUpdatesExpanded = false;
@@ -113,6 +103,10 @@ class _SquadRankingSettingsPageState
                               // Keep draft value, but hide controls when disabled.
                             }
                           });
+                          await _saveToggles(
+                            rankingUpdate: _rankingUpdateDraft!,
+                            useExperienceFactor: _initialUseExperienceFactor!,
+                          );
                         },
                       ),
                       const SizedBox(height: 12),
@@ -133,18 +127,17 @@ class _SquadRankingSettingsPageState
                           optionLabel: useExperienceFactorDraft
                               ? 'Disable experience factor'
                               : 'Enable experience factor',
-                          onOptionPressed: () {
+                          onOptionPressed: () async {
                             setState(() {
                               _useExperienceFactorDraft =
                                   !useExperienceFactorDraft;
                               _isExperienceFactorExpanded = false;
                             });
+                            await _saveToggles(
+                              rankingUpdate: _initialRankingUpdate!,
+                              useExperienceFactor: _useExperienceFactorDraft!,
+                            );
                           },
-                        ),
-                        const SizedBox(height: 12),
-                        _RankingPreview(
-                          useExperienceFactorDraft: useExperienceFactorDraft,
-                          rankingMultiplierDraft: rankingMultiplierDraft,
                         ),
                         const SizedBox(height: 8),
                         LayoutBuilder(
@@ -153,50 +146,91 @@ class _SquadRankingSettingsPageState
                               constraints.maxWidth,
                               _maxSliderWidth,
                             );
+                            final rankingMultiplierDraft =
+                                _rankingMultiplierDraft ?? 5;
                             return Align(
                               alignment: Alignment.centerLeft,
-                              child: SizedBox(
-                                width: sliderWidth,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Slider(
-                                      value: _multiplierToSliderValue(
-                                        rankingMultiplierDraft,
-                                      ),
-                                      min: 0,
-                                      max: 2,
-                                      divisions: 2,
-                                      label: _multiplierLabel(
-                                        rankingMultiplierDraft,
-                                      ),
-                                      onChanged: (value) {
-                                        setState(() {
-                                          _rankingMultiplierDraft =
-                                              _sliderValueToMultiplier(value);
-                                        });
-                                      },
-                                    ),
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          'Small',
-                                          style: theme.textTheme.bodySmall,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Factor value',
+                                    style: theme.textTheme.bodySmall,
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Row(
+                                    children: [
+                                      Flexible(
+                                        child: ConstrainedBox(
+                                          constraints: BoxConstraints(
+                                            maxWidth: sliderWidth,
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Text(
+                                                '1',
+                                                style:
+                                                    theme.textTheme.bodySmall,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Slider(
+                                                  value:
+                                                      rankingMultiplierDraft
+                                                          .toDouble(),
+                                                  min: 1,
+                                                  max: 10,
+                                                  divisions: 9,
+                                                  label:
+                                                      rankingMultiplierDraft
+                                                          .toString(),
+                                                  onChanged: (value) {
+                                                    setState(() {
+                                                      _rankingMultiplierDraft =
+                                                          value
+                                                              .round()
+                                                              .clamp(1, 10);
+                                                      if (_isMultiplierDirty) {
+                                                        _keepTestPreviewVisibleUntilSave =
+                                                            true;
+                                                      }
+                                                    });
+                                                  },
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                         ),
-                                        Text(
-                                          'Default',
-                                          style: theme.textTheme.bodySmall,
-                                        ),
-                                        Text(
-                                          'Big',
-                                          style: theme.textTheme.bodySmall,
+                                      ),
+                                      if (_keepTestPreviewVisibleUntilSave) ...[
+                                        const SizedBox(width: 12),
+                                        FilledButton(
+                                          onPressed:
+                                              _onSaveMultiplierPressed,
+                                          child: const Text('Save'),
                                         ),
                                       ],
+                                    ],
+                                  ),
+
+                                  if (_keepTestPreviewVisibleUntilSave) ...[
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      'Test new settings out',
+                                      style: theme.textTheme.titleMedium,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    SizedBox(
+                                      width: sliderWidth,
+                                      child: _TestMatchPreview(
+                                        useExperienceFactor:
+                                            useExperienceFactorDraft,
+                                        rankingMultiplier:
+                                            rankingMultiplierDraft,
+                                      ),
                                     ),
                                   ],
-                                ),
+                                ],
                               ),
                             );
                           },
@@ -207,14 +241,6 @@ class _SquadRankingSettingsPageState
                           style: theme.textTheme.bodySmall,
                         ),
                       ],
-                      const Spacer(),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: FilledButton(
-                          onPressed: _isDirty ? _onSavePressed : null,
-                          child: const Text('Save changes'),
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -236,22 +262,16 @@ class _SquadRankingSettingsPageState
     _initialRankingMultiplier ??= squad.rankingMultiplier;
   }
 
-  bool get _isDirty =>
-      _rankingUpdateDraft != _initialRankingUpdate ||
-      _useExperienceFactorDraft != _initialUseExperienceFactor ||
+  bool get _isMultiplierDirty =>
+      _rankingMultiplierDraft != null &&
+      _initialRankingMultiplier != null &&
       _rankingMultiplierDraft != _initialRankingMultiplier;
 
-  Future<void> _onSavePressed() async {
-    final rankingUpdate = _rankingUpdateDraft;
-    final useExperienceFactor = _useExperienceFactorDraft;
-    final rankingMultiplier = _rankingMultiplierDraft;
-
-    if (rankingUpdate == null ||
-        useExperienceFactor == null ||
-        rankingMultiplier == null) {
-      return;
-    }
-
+  Future<void> _saveRankingSettings({
+    required bool rankingUpdate,
+    required bool useExperienceFactor,
+    required int rankingMultiplier,
+  }) async {
     await ref
         .read(updateSquadRankingSettingsUseCaseProvider)
         .execute(
@@ -263,78 +283,356 @@ class _SquadRankingSettingsPageState
 
     ref.invalidate(squadDetailProvider(widget.squadId));
 
+    _initialRankingUpdate = rankingUpdate;
+    _initialUseExperienceFactor = useExperienceFactor;
+    _initialRankingMultiplier = rankingMultiplier;
+    _keepTestPreviewVisibleUntilSave = false;
+
     if (!mounted) return;
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('Saved')));
   }
 
-  static double _multiplierToSliderValue(double multiplier) {
-    if (multiplier <= 0.75) return 0;
-    if (multiplier <= 1.5) return 1;
-    return 2;
+  Future<void> _saveToggles({
+    required bool rankingUpdate,
+    required bool useExperienceFactor,
+  }) async {
+    final rankingMultiplier = _initialRankingMultiplier;
+    if (rankingMultiplier == null) return;
+
+    await _saveRankingSettings(
+      rankingUpdate: rankingUpdate,
+      useExperienceFactor: useExperienceFactor,
+      rankingMultiplier: rankingMultiplier,
+    );
   }
 
-  static double _sliderValueToMultiplier(double value) {
-    final rounded = value.round().clamp(0, 2);
-    switch (rounded) {
-      case 0:
-        return 0.5;
-      case 2:
-        return 2.0;
-      case 1:
-      default:
-        return 1.0;
+  Future<void> _onSaveMultiplierPressed() async {
+    final rankingUpdate = _initialRankingUpdate;
+    final useExperienceFactor = _initialUseExperienceFactor;
+    final rankingMultiplier = _rankingMultiplierDraft;
+
+    if (rankingUpdate == null ||
+        useExperienceFactor == null ||
+        rankingMultiplier == null) {
+      return;
     }
-  }
 
-  static String _multiplierLabel(double multiplier) {
-    if (multiplier <= 0.75) return 'Small (0.5)';
-    if (multiplier <= 1.5) return 'Default (1.0)';
-    return 'Big (2.0)';
+    await _saveRankingSettings(
+      rankingUpdate: rankingUpdate,
+      useExperienceFactor: useExperienceFactor,
+      rankingMultiplier: rankingMultiplier,
+    );
   }
 }
 
-class _RankingPreview extends StatelessWidget {
-  const _RankingPreview({
-    required this.useExperienceFactorDraft,
-    required this.rankingMultiplierDraft,
+class _TestMatchPreview extends StatefulWidget {
+  const _TestMatchPreview({
+    required this.useExperienceFactor,
+    required this.rankingMultiplier,
   });
 
-  final bool useExperienceFactorDraft;
-  final double rankingMultiplierDraft;
+  final bool useExperienceFactor;
+  final int rankingMultiplier;
+
+  @override
+  State<_TestMatchPreview> createState() => _TestMatchPreviewState();
+}
+
+class _TestMatchPreviewState extends State<_TestMatchPreview> {
+  late final TextEditingController _homeScoreController;
+  late final TextEditingController _awayScoreController;
+
+  @override
+  void initState() {
+    super.initState();
+    _homeScoreController = TextEditingController(text: '1');
+    _awayScoreController = TextEditingController(text: '0');
+  }
+
+  @override
+  void dispose() {
+    _homeScoreController.dispose();
+    _awayScoreController.dispose();
+    super.dispose();
+  }
+
+  int? _tryParseInt(String input) {
+    final trimmed = input.trim();
+    if (trimmed.isEmpty) return null;
+    return int.tryParse(trimmed);
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
-    if (!useExperienceFactorDraft) {
-      final changePerGoal = rankingMultiplierDraft;
-      return Text(
-        'Change per goal difference: ${changePerGoal.toStringAsFixed(2)}',
-        style: theme.textTheme.bodySmall,
+    final homeScore = _tryParseInt(_homeScoreController.text);
+    final awayScore = _tryParseInt(_awayScoreController.text);
+
+    final homeMatchesPlayed = 1;
+    final awayMatchesPlayed = AppConfig.maxMatchesPlayed;
+
+    final hasValidScore = homeScore != null && awayScore != null;
+    final goalDiff = hasValidScore ? (homeScore - awayScore) : null;
+
+    final baseDelta = goalDiff == null
+        ? null
+        : goalDiff.toDouble() * widget.rankingMultiplier;
+
+    final homeDelta = baseDelta == null
+        ? null
+        : widget.useExperienceFactor
+        ? baseDelta / homeMatchesPlayed
+        : baseDelta;
+
+    final awayDelta = baseDelta == null
+        ? null
+        : widget.useExperienceFactor
+        ? (-baseDelta) / awayMatchesPlayed
+        : -baseDelta;
+
+    return Card(
+      elevation: 0,
+      color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.6),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: _MatchScoreInputRow(
+                homeController: _homeScoreController,
+                awayController: _awayScoreController,
+                onChanged: () => setState(() {}),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _TestPlayerCard(
+                    title: widget.useExperienceFactor
+                        ? 'New player (1 match)'
+                        : 'Equal player',
+                    sideLabel: 'Home',
+                    delta: homeDelta,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _TestPlayerCard(
+                    title: widget.useExperienceFactor
+                        ? 'Experienced player (${AppConfig.maxMatchesPlayed} matches)'
+                        : 'Equal player',
+                    sideLabel: 'Away',
+                    delta: awayDelta,
+                  ),
+                ),
+              ],
+            ),
+            if (!hasValidScore) ...[
+              const SizedBox(height: 8),
+              SelectableText.rich(
+                TextSpan(
+                  text: 'Enter valid scores to preview ranking changes.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.error,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MatchScoreInputRow extends StatelessWidget {
+  const _MatchScoreInputRow({
+    required this.homeController,
+    required this.awayController,
+    required this.onChanged,
+  });
+
+  final TextEditingController homeController;
+  final TextEditingController awayController;
+  final VoidCallback onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    InputDecoration decoration(String label) {
+      return InputDecoration(
+        isDense: true,
+        labelText: label,
+        labelStyle: theme.textTheme.bodySmall,
+        border: const OutlineInputBorder(),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 10,
+          vertical: 10,
+        ),
       );
     }
 
-    final factor = AppConfig.experienceFactor;
-    final newPlayer = rankingMultiplierDraft / (1 * factor);
-    final experiencedPlayer = rankingMultiplierDraft / (10 * factor);
-    final avg = (newPlayer + experiencedPlayer) / 2;
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: colorScheme.surface.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colorScheme.outlineVariant),
+        boxShadow: [
+          BoxShadow(
+            blurRadius: 14,
+            color: Colors.black.withValues(alpha: 0.08),
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 64,
+            child: TextField(
+              controller: homeController,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              textAlign: TextAlign.center,
+              onChanged: (_) => onChanged(),
+              decoration: decoration('Home'),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Text(':', style: theme.textTheme.titleLarge),
+          ),
+          SizedBox(
+            width: 64,
+            child: TextField(
+              controller: awayController,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              textAlign: TextAlign.center,
+              onChanged: (_) => onChanged(),
+              decoration: decoration('Away'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Avg change per goal difference: ${avg.toStringAsFixed(2)}',
-          style: theme.textTheme.bodySmall,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Examples: new player (1 match) ${newPlayer.toStringAsFixed(2)}, '
-          'experienced (10 matches) ${experiencedPlayer.toStringAsFixed(2)}',
-          style: theme.textTheme.bodySmall,
-        ),
-      ],
+class _TestPlayerCard extends StatelessWidget {
+  const _TestPlayerCard({
+    required this.title,
+    required this.sideLabel,
+    required this.delta,
+  });
+
+  final String title;
+  final String sideLabel;
+  final double? delta;
+
+  String _formatDelta(double value) {
+    final sign = value > 0 ? '+' : '';
+    return '$sign${value.toStringAsFixed(2)}';
+  }
+
+  Color _deltaColor(ThemeData theme, double value) {
+    if (value > 0) {
+      return theme.brightness == Brightness.dark
+          ? Colors.greenAccent.shade200
+          : Colors.green.shade700;
+    }
+    if (value < 0) return theme.colorScheme.error;
+    return theme.colorScheme.onSurfaceVariant;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final deltaText = delta == null ? '—' : _formatDelta(delta!);
+    final deltaColor = delta == null
+        ? colorScheme.onSurfaceVariant
+        : _deltaColor(theme, delta!);
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colorScheme.surface.withValues(alpha: 0.65),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colorScheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: sideLabel == 'Home'
+                      ? colorScheme.primary
+                      : colorScheme.tertiary,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: theme.textTheme.titleMedium,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Text(
+            sideLabel,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Δ ranking',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              Text(
+                deltaText,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: deltaColor,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -425,6 +723,8 @@ class _ActionDropdownRow extends StatelessWidget {
   final String optionLabel;
   final VoidCallback onOptionPressed;
 
+  static const double _actionButtonMinWidth = 200;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -447,12 +747,10 @@ class _ActionDropdownRow extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 16),
-              OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: theme.colorScheme.error,
-                ),
+              DangerActionButton(
+                label: dropdownLabel,
+                minWidth: _actionButtonMinWidth,
                 onPressed: onToggleExpanded,
-                child: Text(dropdownLabel),
               ),
             ],
           ),
@@ -462,9 +760,10 @@ class _ActionDropdownRow extends StatelessWidget {
             alignment: Alignment.centerRight,
             child: Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: FilledButton.tonal(
+              child: DangerActionButton(
+                label: optionLabel,
+                minWidth: _actionButtonMinWidth,
                 onPressed: onOptionPressed,
-                child: Text(optionLabel),
               ),
             ),
           ),

@@ -4,7 +4,7 @@ class AppConfig {
     'SUPABASE_ANON_KEY',
   );
 
-  static const double experienceFactor = 0.2;
+  static const int maxMatchesPlayed = 10;
 
   static void validate() {
     final missing = <String>[];

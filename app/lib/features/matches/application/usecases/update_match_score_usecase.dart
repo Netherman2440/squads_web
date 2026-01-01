@@ -50,13 +50,7 @@ class UpdateMatchScoreUseCase {
 
     // 3. Update Rankings if enabled
     if (squad.rankingUpdate) {
-      final experienceFactor = squad.useExperienceFactor
-          ? AppConfig.experienceFactor
-          : 1.0;
-      final delta =
-          (homeScore - awayScore).toDouble() *
-          squad.rankingMultiplier /
-          experienceFactor;
+      final delta = (homeScore - awayScore) * squad.rankingMultiplier;
 
       final teams = await _teamRepository.getMatchTeams(matchId);
       final homeTeam = teams.firstWhere(
@@ -75,7 +69,8 @@ class UpdateMatchScoreUseCase {
           _updatePlayerRanking(
             playerId: player.playerId,
             matchId: matchId,
-            newDelta: delta,
+            useExperienceFactor: squad.useExperienceFactor,
+            newDelta: delta.toDouble(),
           ),
         );
       }
@@ -85,7 +80,8 @@ class UpdateMatchScoreUseCase {
           _updatePlayerRanking(
             playerId: player.playerId,
             matchId: matchId,
-            newDelta: -delta,
+            useExperienceFactor: squad.useExperienceFactor,
+            newDelta: -delta.toDouble(),
           ),
         );
       }
@@ -99,8 +95,21 @@ class UpdateMatchScoreUseCase {
   Future<void> _updatePlayerRanking({
     required String playerId,
     required String matchId,
+    required bool useExperienceFactor,
     required double newDelta,
   }) async {
+    if (useExperienceFactor) {
+      final history = await _rankingRepository.getPlayerRankingHistory(
+        playerId,
+      );
+      final matchesPlayed = history
+          .where((entry) => entry.matchId != null)
+          .length
+          .clamp(1, AppConfig.maxMatchesPlayed);
+
+      newDelta /= matchesPlayed;
+    }
+
     // 1. Update ranking history and get the difference
     final diff = await _rankingRepository.updateMatchRankingChange(
       playerId: playerId,

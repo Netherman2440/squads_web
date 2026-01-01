@@ -96,7 +96,7 @@ class SquadSettingsNotifier extends AsyncNotifier<List<SquadMember>> {
 
   Future<void> updateRankingSettings({
     required bool rankingUpdate,
-    required double rankingMultiplier,
+    required int rankingMultiplier,
     required bool useExperienceFactor,
   }) async {
     state = const AsyncValue.loading();

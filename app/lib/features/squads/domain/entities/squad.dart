@@ -45,7 +45,7 @@ class Squad {
   final bool hasPendingMembers;
 
   final bool rankingUpdate;
-  final double rankingMultiplier;
+  final int rankingMultiplier;
   final bool useExperienceFactor;
 
   const Squad({
@@ -58,7 +58,7 @@ class Squad {
     this.role = SquadRole.none,
     this.hasPendingMembers = false,
     this.rankingUpdate = true,
-    this.rankingMultiplier = 1.0,
+    this.rankingMultiplier = 5,
     this.useExperienceFactor = true,
   });
 
@@ -72,7 +72,7 @@ class Squad {
     SquadRole? role,
     bool? hasPendingMembers,
     bool? rankingUpdate,
-    double? rankingMultiplier,
+    int? rankingMultiplier,
     bool? useExperienceFactor,
   }) {
     return Squad(
@@ -103,7 +103,7 @@ class Squad {
       role: SquadRoleParser.fromString(map['role'] as String?),
       hasPendingMembers: false,
       rankingUpdate: map['ranking_update'] as bool? ?? true,
-      rankingMultiplier: (map['ranking_multiplier'] as num?)?.toDouble() ?? 1.0,
+      rankingMultiplier: map['ranking_multiplier'] as int? ?? 5,
       useExperienceFactor: map['use_experience_factor'] as bool? ?? true,
     );
   }

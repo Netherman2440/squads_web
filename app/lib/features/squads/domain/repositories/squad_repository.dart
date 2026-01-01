@@ -25,7 +25,7 @@ abstract class SquadRepository {
     String? name,
     SquadVisibility? visibility,
     bool? rankingUpdate,
-    double? rankingMultiplier,
+    int? rankingMultiplier,
     bool? useExperienceFactor,
   });
 

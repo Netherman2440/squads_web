@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:app/core/widgets/danger_action_button.dart';
+
 import '../../domain/entities/squad.dart';
 
 class DangerZoneSection extends StatefulWidget {
@@ -20,6 +22,7 @@ class DangerZoneSection extends StatefulWidget {
   final Future<void> Function(SquadVisibility visibility) onChangeVisibility;
 
   static const double _maxContentWidth = 860;
+  static const double _actionButtonMinWidth = 200;
 
   @override
   State<DangerZoneSection> createState() => _DangerZoneSectionState();
@@ -199,12 +202,10 @@ class _DangerRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 16),
-          OutlinedButton(
-            style: OutlinedButton.styleFrom(
-              foregroundColor: theme.colorScheme.error,
-            ),
+          DangerActionButton(
+            label: actionLabel,
+            minWidth: DangerZoneSection._actionButtonMinWidth,
             onPressed: onPressed,
-            child: Text(actionLabel),
           ),
         ],
       ),
@@ -235,25 +236,18 @@ class _VisibilityOptions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     final next = current == SquadVisibility.private
         ? SquadVisibility.public
         : SquadVisibility.private;
 
     final nextLabel = next == SquadVisibility.private ? 'Private' : 'Public';
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: theme.colorScheme.outlineVariant),
-      ),
-      child: FilledButton.tonal(
+    return Align(
+      alignment: Alignment.centerRight,
+      child: DangerActionButton(
+        label: 'Change visibility to $nextLabel',
+        minWidth: DangerZoneSection._actionButtonMinWidth,
         onPressed: () => onSelect(next),
-        child: Text('Change visibility to $nextLabel'),
       ),
     );
   }

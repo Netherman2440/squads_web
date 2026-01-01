@@ -12,7 +12,7 @@ class UpdateSquadRankingSettingsUseCase {
   Future<void> execute({
     required String squadId,
     required bool rankingUpdate,
-    required double rankingMultiplier,
+    required int rankingMultiplier,
     required bool useExperienceFactor,
   }) async {
     await _squadRepository.updateSquad(

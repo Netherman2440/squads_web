@@ -145,7 +145,7 @@ class SupabaseSquadRepository implements SquadRepository {
     String? name,
     SquadVisibility? visibility,
     bool? rankingUpdate,
-    double? rankingMultiplier,
+    int? rankingMultiplier,
     bool? useExperienceFactor,
   }) async {
     try {

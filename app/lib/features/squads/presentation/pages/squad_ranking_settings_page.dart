@@ -175,21 +175,20 @@ class _SquadRankingSettingsPageState
                                               const SizedBox(width: 8),
                                               Expanded(
                                                 child: Slider(
-                                                  value:
-                                                      rankingMultiplierDraft
-                                                          .toDouble(),
+                                                  value: rankingMultiplierDraft
+                                                      .toDouble(),
                                                   min: 1,
                                                   max: 10,
                                                   divisions: 9,
-                                                  label:
-                                                      rankingMultiplierDraft
-                                                          .toString(),
+                                                  label: rankingMultiplierDraft
+                                                      .toString(),
                                                   onChanged: (value) {
                                                     setState(() {
                                                       _rankingMultiplierDraft =
-                                                          value
-                                                              .round()
-                                                              .clamp(1, 10);
+                                                          value.round().clamp(
+                                                            1,
+                                                            10,
+                                                          );
                                                       if (_isMultiplierDirty) {
                                                         _keepTestPreviewVisibleUntilSave =
                                                             true;
@@ -198,6 +197,11 @@ class _SquadRankingSettingsPageState
                                                   },
                                                 ),
                                               ),
+                                              Text(
+                                                '10',
+                                                style:
+                                                    theme.textTheme.bodySmall,
+                                              ),
                                             ],
                                           ),
                                         ),
@@ -205,8 +209,7 @@ class _SquadRankingSettingsPageState
                                       if (_keepTestPreviewVisibleUntilSave) ...[
                                         const SizedBox(width: 12),
                                         FilledButton(
-                                          onPressed:
-                                              _onSaveMultiplierPressed,
+                                          onPressed: _onSaveMultiplierPressed,
                                           child: const Text('Save'),
                                         ),
                                       ],

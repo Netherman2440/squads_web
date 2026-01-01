@@ -11,19 +11,18 @@ class PlayerDetailsState {
   PlayerDetailsState({required this.player, required this.rankingHistory});
 }
 
-final playerDetailsProvider = FutureProvider.family<PlayerDetailsState, String>(
-  (ref, playerId) async {
-    final getDetails = ref.read(getPlayerDetailsUseCaseProvider);
-    final getHistory = ref.read(getPlayerRankingHistoryUseCaseProvider);
+final playerDetailsProvider = FutureProvider.family
+    .autoDispose<PlayerDetailsState, String>((ref, playerId) async {
+      final getDetails = ref.read(getPlayerDetailsUseCaseProvider);
+      final getHistory = ref.read(getPlayerRankingHistoryUseCaseProvider);
 
-    final results = await Future.wait([
-      getDetails.execute(playerId: playerId),
-      getHistory.execute(playerId),
-    ]);
+      final results = await Future.wait([
+        getDetails.execute(playerId: playerId),
+        getHistory.execute(playerId),
+      ]);
 
-    return PlayerDetailsState(
-      player: results[0] as Player,
-      rankingHistory: results[1] as List<RankingHistoryEntry>,
-    );
-  },
-);
+      return PlayerDetailsState(
+        player: results[0] as Player,
+        rankingHistory: results[1] as List<RankingHistoryEntry>,
+      );
+    });

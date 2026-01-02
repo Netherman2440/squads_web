@@ -5,4 +5,6 @@ abstract class LoginRepository {
   Future<AuthEntity> register(String email, String password);
   Future<AuthEntity> guestLogin();
   Future<AuthEntity> refreshSession(String? refreshToken);
+  Future<void> requestPasswordReset(String email, {String? redirectTo});
+  Future<void> updatePassword(String newPassword);
 }

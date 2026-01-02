@@ -120,6 +120,29 @@ class SupabaseLoginClient implements LoginRepository {
       throw e.toFailure();
     }
   }
+
+  @override
+  Future<void> requestPasswordReset(String email, {String? redirectTo}) async {
+    try {
+      await _supabase.auth.resetPasswordForEmail(email, redirectTo: redirectTo);
+    } catch (e, stackTrace) {
+      _logger.severe('Password reset request failed', e, stackTrace);
+      throw e.toFailure();
+    }
+  }
+
+  @override
+  Future<void> updatePassword(String newPassword) async {
+    try {
+      if (_supabase.auth.currentSession == null) {
+        throw const UnauthorizedFailure('Missing recovery session');
+      }
+      await _supabase.auth.updateUser(UserAttributes(password: newPassword));
+    } catch (e, stackTrace) {
+      _logger.severe('Password update failed', e, stackTrace);
+      throw e.toFailure();
+    }
+  }
 }
 
 final supabaseLoginClientProvider = Provider<SupabaseLoginClient>((ref) {

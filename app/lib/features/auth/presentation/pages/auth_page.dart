@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:app/core/app_theme.dart';
 import 'package:app/core/error/failure.dart';
 import 'package:app/features/auth/domain/entities/auth_entity.dart';
+import 'package:app/features/auth/application/request_password_reset_use_case.dart';
 import 'package:app/features/squads/application/join_squad_from_invite_use_case.dart';
 import 'package:app/features/squads/infrastructure/storage/invite_code_storage.dart';
 
@@ -144,6 +145,90 @@ class _AuthPageState extends ConsumerState<AuthPage> {
       await ref.read(authStateProvider.notifier).guestLogin();
     }
 
+    Future<void> handlePasswordReset() async {
+      final controller = TextEditingController();
+      final formKey = GlobalKey<FormState>();
+
+      final result = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Reset password'),
+          content: Form(
+            key: formKey,
+            child: TextFormField(
+              controller: controller,
+              decoration: const InputDecoration(
+                labelText: 'Email',
+                border: OutlineInputBorder(),
+              ),
+              textCapitalization: TextCapitalization.none,
+              keyboardType: TextInputType.emailAddress,
+              validator: (value) {
+                final text = value?.trim() ?? '';
+                if (text.isEmpty) {
+                  return 'Please enter email';
+                }
+                final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
+                if (!emailRegex.hasMatch(text)) {
+                  return 'Please enter valid email';
+                }
+                return null;
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (formKey.currentState?.validate() ?? false) {
+                  Navigator.of(context).pop(true);
+                }
+              },
+              child: const Text('Send link'),
+            ),
+          ],
+        ),
+      );
+
+      if (result != true) {
+        controller.dispose();
+        return;
+      }
+
+      final email = controller.text.trim();
+      controller.dispose();
+
+      try {
+        final redirectTo = '${Uri.base.origin}/#/auth/reset';
+        await ref
+            .read(requestPasswordResetUseCaseProvider)
+            .execute(email, redirectTo: redirectTo);
+        if (!mounted) {
+          return;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Password reset link sent. Check your email.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } catch (error) {
+        if (!mounted) {
+          return;
+        }
+        var message = 'Failed to send reset link.';
+        if (error is Failure) {
+          message = error.message;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), backgroundColor: Colors.red),
+        );
+      }
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Authentication'),
@@ -236,6 +321,11 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                           )
                         : const Text('Login'),
                   ),
+                ),
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: isLoading ? null : handlePasswordReset,
+                  child: const Text('Forgot password?'),
                 ),
                 const SizedBox(height: 16),
                 Row(

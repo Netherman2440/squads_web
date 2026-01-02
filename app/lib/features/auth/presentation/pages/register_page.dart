@@ -43,24 +43,19 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     // Listen for authentication state changes
     ref.listen(authStateProvider, (previous, next) {
       next.whenOrNull(
-        data: (data) {
+        data: (data) async {
           if (data != null) {
-            // Registration success, redirect to home/squads
-            // Or maybe show a dialog "Please confirm email" if access token is empty
-            if (data.accessToken.isEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'Account created! Please check your email to confirm.',
-                  ),
-                  backgroundColor: Colors.green,
-                  duration: Duration(seconds: 5),
-                ),
-              );
-              context.go('/auth'); // Back to login
-            } else {
-              context.go('/squads');
+            if (data.accessToken.isNotEmpty) {
+              await ref.read(authStateProvider.notifier).logout();
             }
+            if (!context.mounted) {
+              return;
+            }
+            final email = emailController.text.trim();
+            final encoded = Uri.encodeComponent(
+              email.isEmpty ? data.email : email,
+            );
+            context.go('/auth/confirm?email=$encoded');
           }
         },
         error: (error, stack) {

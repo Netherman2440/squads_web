@@ -5,6 +5,7 @@ class AppConfig {
   );
 
   static const int maxMatchesPlayed = 10;
+  static const Duration inviteLinkValidity = Duration(hours: 24);
 
   static void validate() {
     final missing = <String>[];

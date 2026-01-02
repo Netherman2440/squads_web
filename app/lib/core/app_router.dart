@@ -6,6 +6,7 @@ import 'package:app/features/auth/presentation/pages/auth_page.dart';
 import 'package:app/features/auth/presentation/pages/register_page.dart';
 import 'package:app/features/draft/presentation/pages/draft_results_page.dart';
 import 'package:app/features/draft/presentation/pages/draft_selection_page.dart';
+import 'package:app/features/squads/presentation/pages/invite_page.dart';
 import 'package:app/features/matches/presentation/pages/match_details_page.dart';
 import 'package:app/features/matches/presentation/pages/squad_matches_page.dart';
 import 'package:app/features/squads/presentation/pages/squad_ranking_settings_page.dart';
@@ -30,6 +31,7 @@ enum AppRoute {
   playerDetails,
   matches,
   matchDetails,
+  invite,
 }
 
 final appRouter = GoRouter(
@@ -40,6 +42,14 @@ final appRouter = GoRouter(
       name: AppRoute.auth.name,
       pageBuilder: (context, state) =>
           const NoTransitionPage(child: AuthPage()),
+    ),
+    GoRoute(
+      path: '/invite',
+      name: AppRoute.invite.name,
+      pageBuilder: (context, state) {
+        final code = state.uri.queryParameters['code'];
+        return NoTransitionPage(child: InvitePage(code: code));
+      },
     ),
     GoRoute(
       path: '/auth/register',

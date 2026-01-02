@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import 'package:app/core/app_theme.dart';
 import 'package:app/core/error/failure.dart';
+import 'package:app/features/auth/domain/entities/auth_entity.dart';
+import 'package:app/features/squads/application/join_squad_from_invite_use_case.dart';
+import 'package:app/features/squads/infrastructure/storage/invite_code_storage.dart';
 
 import '../providers/auth_notifier.dart';
 
@@ -19,6 +22,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
   late final TextEditingController passwordController;
   late final GlobalKey<FormState> formKey;
   bool isPasswordObscured = true;
+  bool _processingInvite = false;
 
   @override
   void initState() {
@@ -35,21 +39,69 @@ class _AuthPageState extends ConsumerState<AuthPage> {
     super.dispose();
   }
 
+  Future<String?> _joinPendingInvite() async {
+    if (_processingInvite) {
+      return null;
+    }
+
+    _processingInvite = true;
+    try {
+      final squadId = await ref
+          .read(joinSquadFromInviteUseCaseProvider)
+          .execute();
+      return squadId;
+    } catch (error) {
+      await ref.read(inviteCodeStorageProvider).clear();
+      if (!mounted) {
+        return null;
+      }
+      var message = 'Invite code is invalid or expired.';
+      if (error is Failure && error.message.isNotEmpty) {
+        message = error.message;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: Colors.red),
+      );
+      return null;
+    } finally {
+      _processingInvite = false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
 
     // Handle side effects (Navigation, Errors)
-    ref.listen<AsyncValue>(authStateProvider, (previous, next) {
-      next.whenOrNull(
-        data: (data) {
-          if (data != null && mounted) {
-            if (data.isAnonymous) {
-              context.go('/squads');
-            } else {
-              context.go('/me');
-            }
+    ref.listen<AsyncValue<AuthEntity?>>(authStateProvider, (
+      previous,
+      next,
+    ) async {
+      await next.when(
+        data: (data) async {
+          if (data == null || !mounted) {
+            return;
           }
+
+          if (data.isAnonymous) {
+            context.go('/squads');
+            return;
+          }
+
+          final joinedSquadId = await _joinPendingInvite();
+          if (!mounted) {
+            return;
+          }
+
+          if (joinedSquadId != null) {
+            if (!mounted) {
+              return;
+            }
+            context.go('/squads/$joinedSquadId');
+            return;
+          }
+
+          context.go('/me');
         },
         error: (error, stackTrace) {
           String message = 'Login failed. Please try again.';
@@ -69,6 +121,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
             SnackBar(content: Text(message), backgroundColor: Colors.red),
           );
         },
+        loading: () {},
       );
     });
 

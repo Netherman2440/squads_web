@@ -9,7 +9,7 @@ class InviteCodeStorageImpl implements InviteCodeStorage {
 
   @override
   Future<void> saveCode(String code, Duration ttl) async {
-    final expiresAt = DateTime.now().add(ttl).toUtc().toIso8601String();
+    final expiresAt = DateTime.now().toUtc().add(ttl).toIso8601String();
     final payload = jsonEncode({'code': code, 'expiresAt': expiresAt});
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_storageKey, payload);

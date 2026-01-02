@@ -1,5 +1,6 @@
 import 'dart:convert';
-import 'dart:html' as html;
+
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../domain/repositories/invite_code_storage.dart';
 
@@ -10,12 +11,14 @@ class InviteCodeStorageImpl implements InviteCodeStorage {
   Future<void> saveCode(String code, Duration ttl) async {
     final expiresAt = DateTime.now().add(ttl).toUtc().toIso8601String();
     final payload = jsonEncode({'code': code, 'expiresAt': expiresAt});
-    html.window.sessionStorage[_storageKey] = payload;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_storageKey, payload);
   }
 
   @override
   Future<String?> readCode() async {
-    final raw = html.window.sessionStorage[_storageKey];
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_storageKey);
     if (raw == null) {
       return null;
     }
@@ -44,6 +47,7 @@ class InviteCodeStorageImpl implements InviteCodeStorage {
 
   @override
   Future<void> clear() async {
-    html.window.sessionStorage.remove(_storageKey);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_storageKey);
   }
 }

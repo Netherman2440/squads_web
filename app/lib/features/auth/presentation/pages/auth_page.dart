@@ -89,20 +89,18 @@ class _AuthPageState extends ConsumerState<AuthPage> {
             return;
           }
 
+          final router = GoRouter.of(context);
           final joinedSquadId = await _joinPendingInvite();
           if (!mounted) {
             return;
           }
 
           if (joinedSquadId != null) {
-            if (!mounted) {
-              return;
-            }
-            context.go('/squads/$joinedSquadId');
+            router.go('/squads/$joinedSquadId');
             return;
           }
 
-          context.go('/me');
+          router.go('/me');
         },
         error: (error, stackTrace) {
           String message = 'Login failed. Please try again.';
@@ -148,6 +146,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
     Future<void> handlePasswordReset() async {
       final controller = TextEditingController();
       final formKey = GlobalKey<FormState>();
+      final messenger = ScaffoldMessenger.of(context);
 
       final result = await showDialog<bool>(
         context: context,
@@ -200,7 +199,6 @@ class _AuthPageState extends ConsumerState<AuthPage> {
 
       final email = controller.text.trim();
       controller.dispose();
-
       try {
         final redirectTo = '${Uri.base.origin}/#/auth/reset';
         await ref
@@ -209,7 +207,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
         if (!mounted) {
           return;
         }
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           const SnackBar(
             content: Text('Password reset link sent. Check your email.'),
             backgroundColor: Colors.green,
@@ -223,7 +221,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
         if (error is Failure) {
           message = error.message;
         }
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(content: Text(message), backgroundColor: Colors.red),
         );
       }

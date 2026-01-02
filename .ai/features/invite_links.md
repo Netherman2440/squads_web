@@ -1,81 +1,90 @@
-#Wysokopoziomowa idea Invite links:
-w pliku @app/lib/features/squads/presentation/pages/squad_settings_page.dart  mamy sekcję zaproszeń 
-Chciałbym zaimplementować feature który będzie spełniał poniższe User stories:
+# Invite links (plan)
 
-Jako admin chce móc wygnerować działający link z zaproszeniem do składu 
+Docelowo: w `app/lib/features/squads/presentation/pages/squad_settings_page.dart`
+jest sekcja zaproszen. Dodajemy flow "link do dolaczenia do skladu".
 
+## User stories
+- Jako owner moge wygenerowac dzialajacy link z zaproszeniem do skladu.
+- Jako uzytkownik po kliknieciu linku zostaje dodany do skladu
+  (nowy wpis w tabeli `user_squads` z rola `member`).
+- Jako uzytkownik niezalogowany po kliknieciu linku jestem przenoszony
+  na auth page; po zalogowaniu/utworzeniu konta automatycznie dolaczam do skladu.
 
-Jako użytkownik gdy kliknę w ten link zostaje dodany do składu (nowy wpis w talibcy user squads z rolą member)
+## Zasady biznesowe
+- Link jest wielokrotnego uzytku, dziala do czasu wygasniecia.
+- Regeneracja linku uniewaznia poprzedni (jeden aktywny na squad).
+- Generowac i ogladac link moze tylko owner.
 
-Jako użytkownik jeśli nie jestem zalogowany w aplikacji a kliknąłem w link jestem przenoszony na auth page. Po zalogowaniu / utworzeniu konta automatycznie dodawany jest mi nowy skład.
+## Proponowany flow
+1. Owner generuje nowy `code`.
+2. Backend wykonuje upsert (uniewaznia poprzedni).
+3. Link ma postac: `https://adres-prod.com/invite?code=XYZ`.
+4. Po wejsciu na link kod trafia do `sessionStorage` (z TTL).
+5. Jesli user nie jest zalogowany, nastepuje redirect do auth.
+6. Po zalogowaniu, jesli kod jest w `sessionStorage`, wywolujemy dolaczenie.
+7. Po sukcesie kod jest usuwany z `sessionStorage`.
 
----
+Obsługa brzegowa:
+- Jesli user juz jest w skladzie, wyswietlamy info i nie dodajemy ponownie.
+- Brak dostepu -> redirect do login.
+- Niepoprawny/wygasly kod -> komunikat "Kod jest niepoprawny lub wygasl".
 
-Jak chciałbym to zrobić:
+## Implementacja
 
-W DB chce mieć nową tablicę `invite_links`:
-`code`: string
-`squad_id`: string
-`created_at`: datetime
-`valid_until`: datetime
+### DB (Supabase)
+Tabela `invite_links`:
+- `code` (text, unique)
+- `squad_id` (uuid, unique, FK -> squads.id)
+- `created_at` (timestamptz, default now())
+- `valid_until` (timestamptz)
+- `created_by` (uuid, FK -> auth.users.id)
 
-- limit jeden wpis per squad id 
+RLS:
+- `select` tylko dla ownera danego squadu.
+- `insert/update/delete` tylko dla ownera danego squadu.
+- Brak publicznego odczytu przez kod (nie udostepniamy `invite_links` anon).
 
-1. admin generuje nowy `code` 
-2. wykonuje się upsert na bazie , 
-3. tworzymy link z zaproszeniem:
-`adres-prod.com/code?={KOD Z DB}`
-4. przy wejściu na domenę ten link zapisuje się w pamięci tymczasowej 
+RPC / function:
+- `join_squad_by_invite(code text)` (SECURITY DEFINER)
+  - weryfikuje `valid_until` i czy kod istnieje
+  - pobiera `squad_id`
+  - tworzy wpis w `user_squads` jako `member`
+  - operacja idempotentna (jesli juz jest, zwraca sukces)
+  - zwraca `squad_id` lub kod bledu
 
-5. po zalogowaniu jeśli kod z pamięci != null
-5.1 wykonujemy flow dołączania do składu podając ten kod 
-6. usuwamy kod z pamięci podręcznej
-
---
-obsługa casu gdy już jesteśmy w danym skłądzie
-poprawna obsługa braku dostępu (przekierowanie na login)
-obsługa niepoprawnie wpisywanych kodów (komunikat - kod jest niepoprawny lub wygasł)
-
-----
-##implementacja:
-
-###DB:
-`invite_links`:
-`code`: string
-`squad_id`: string
-`created_at`: datetime
-`valid_until`: datetime
----
-###domain:
-entity:
-InviteLink (mapowanie db)
+### Domain
+Entity: `InviteLink`.
 
 InviteLinksRepository:
--createInviteLink(squadId, code, jak długo ma być valid) //created at ustawia repo, 
-- getInviteLink(squadId) => for seetings page to show result from db mem
+- `createInviteLink(squadId, code, validFor)` (server ustawia timestamps)
+- `getInviteLink(squadId)` (dla settings page)
 
 SquadRepository:
-now metoda:
-joinSquad(string code) (na podstawie auth weryfikujemy kod i user id), dodajemy rekord member (bez opcji wyboru admin czy inncyh ról) do tablicy user squads
--getSquadByCode(string code) => returns Sqaud, for checking if code is valid
+- `joinSquadByCode(code)` -> wywoluje RPC `join_squad_by_invite`.
 
-###Infrastructure:
-SupabaseInviteLinksRepostiory:
-z użyciem supabase jak wszędzie
+### Infrastructure
+`SupabaseInviteLinksRepository`:
+- standardowy CRUD dla `invite_links` (owner-only).
+`SupabaseSquadRepository`:
+- wywoluje `rpc('join_squad_by_invite', ...)`.
 
+### Application
+- `generateInviteLinkUseCase(linkRepo)`:
+  - generuje kod (UUID lub inny bezpieczny generator)
+  - `validFor` z app config (np. 1h)
+  - zwraca `InviteLink`
+- `getSquadInviteLinkUseCase(linkRepo)`:
+  - zwraca aktywny link lub `null` jesli wygasl
+- `joinSquadFromInviteUseCase(squadRepo, inviteCodeStorage)`:
+  - pobiera kod z `sessionStorage`
+  - wywoluje `joinSquadByCode`
+  - po sukcesie usuwa kod ze storage
 
+### Presentation
+- UI juz istnieje; gdy link niewazny, pokazujemy tylko "Generate invite link".
+- Nowy route: `/invite?code=XYZ`, ktory zapisuje kod i kieruje do auth/landing.
 
-###Application:
-generateInviteLink(linkRepo) : create uuid,, appconfig przechowuje info o tym jak długo link ma być valid - bazowo to godzina, przekazuje wszystkie parametry do repo, zwraca obiekt klasy InviteLink
-
-getSquadInviteLinkUsecase(linkRepo): dla settings page, jeśli instieje valid link to go zwraca, jeśli istnieje rekord w bazie ale jest nieaktualny to zwraca null
-
-joinSquadUseCase(sqaudRepo, linkRepo, tokenRepo?) - logika pobierania z local storage current code, sprawdzania czy istnieje, jeśli tak to dodawanie roli member do squadu ( jak to potem ogarnąć w rlsie, żeby taki gostek 'z ulicy' mial dostep do db tego składu)
-
-
-//skąd brać lokalnie zapisany token Może z token Repository? Może trzeba dodac pole squadCode do authEntity i od razu je aktualizować przy pojawieniu się go w linku albo przy poprawnym dołączeniu do składu to może chcemy go od razu potem usunąć? Jeśli tak to potrzebujemy w tokenRepostiory też metod do tego
-
-
-###Presentation
-
-Tu UI już jest stworzone, dodam tylko że jeśli link jest invalid to możeme od razu go nie pokazywać tylko samo 'Geneate invite link'
+### Notatki bezpieczenstwa
+- Weryfikacja i dolaczenie musza byc po stronie DB (RPC + RLS).
+- Klient nie odczytuje `invite_links` po kodzie.
+- Kod przechowujemy tylko tymczasowo w `sessionStorage` (nie w auth tokenach).

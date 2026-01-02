@@ -215,6 +215,26 @@ class SupabaseSquadRepository implements SquadRepository {
       throw e.toFailure();
     }
   }
+
+  @override
+  Future<String> joinSquadByCode(String code) async {
+    try {
+      final response = await _supabase.rpc(
+        'join_squad_by_invite',
+        params: {'invite_code': code},
+      );
+
+      final squadId = response as String?;
+      if (squadId == null) {
+        throw Exception('Join squad by invite returned null');
+      }
+
+      return squadId;
+    } catch (e, stack) {
+      _logger.severe('Failed to join squad via invite code', e, stack);
+      throw e.toFailure();
+    }
+  }
 }
 
 final squadRepositoryProvider = Provider<SquadRepository>((ref) {

@@ -34,4 +34,6 @@ abstract class SquadRepository {
   Future<void> addUserToSquad(String squadId, String userId);
 
   Future<List<SquadMember>> getSquadMembers(String squadId);
+
+  Future<String> joinSquadByCode(String code);
 }

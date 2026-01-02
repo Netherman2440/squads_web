@@ -3,9 +3,12 @@ import 'package:go_router/go_router.dart';
 import 'package:app/features/players/presentation/pages/player_details_page.dart';
 import 'package:app/core/root_shell.dart';
 import 'package:app/features/auth/presentation/pages/auth_page.dart';
+import 'package:app/features/auth/presentation/pages/auth_confirm_page.dart';
 import 'package:app/features/auth/presentation/pages/register_page.dart';
+import 'package:app/features/auth/presentation/pages/reset_password_page.dart';
 import 'package:app/features/draft/presentation/pages/draft_results_page.dart';
 import 'package:app/features/draft/presentation/pages/draft_selection_page.dart';
+import 'package:app/features/squads/presentation/pages/invite_page.dart';
 import 'package:app/features/matches/presentation/pages/match_details_page.dart';
 import 'package:app/features/matches/presentation/pages/squad_matches_page.dart';
 import 'package:app/features/squads/presentation/pages/squad_ranking_settings_page.dart';
@@ -18,6 +21,8 @@ import 'package:app/features/squads/presentation/pages/squad_shell_page.dart';
 enum AppRoute {
   auth,
   authRegister,
+  authConfirm,
+  authReset,
   squads,
   squadHome,
   settings,
@@ -30,6 +35,7 @@ enum AppRoute {
   playerDetails,
   matches,
   matchDetails,
+  invite,
 }
 
 final appRouter = GoRouter(
@@ -40,6 +46,28 @@ final appRouter = GoRouter(
       name: AppRoute.auth.name,
       pageBuilder: (context, state) =>
           const NoTransitionPage(child: AuthPage()),
+    ),
+    GoRoute(
+      path: '/auth/confirm',
+      name: AppRoute.authConfirm.name,
+      pageBuilder: (context, state) {
+        final email = state.uri.queryParameters['email'];
+        return NoTransitionPage(child: AuthConfirmPage(email: email));
+      },
+    ),
+    GoRoute(
+      path: '/auth/reset',
+      name: AppRoute.authReset.name,
+      pageBuilder: (context, state) =>
+          const NoTransitionPage(child: ResetPasswordPage()),
+    ),
+    GoRoute(
+      path: '/invite',
+      name: AppRoute.invite.name,
+      pageBuilder: (context, state) {
+        final code = state.uri.queryParameters['code'];
+        return NoTransitionPage(child: InvitePage(code: code));
+      },
     ),
     GoRoute(
       path: '/auth/register',

@@ -4,6 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import 'package:app/core/app_theme.dart';
 import 'package:app/core/error/failure.dart';
+import 'package:app/features/auth/domain/entities/auth_entity.dart';
+import 'package:app/features/auth/application/request_password_reset_use_case.dart';
+import 'package:app/features/squads/application/join_squad_from_invite_use_case.dart';
+import 'package:app/features/squads/infrastructure/storage/invite_code_storage.dart';
 
 import '../providers/auth_notifier.dart';
 
@@ -19,6 +23,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
   late final TextEditingController passwordController;
   late final GlobalKey<FormState> formKey;
   bool isPasswordObscured = true;
+  bool _processingInvite = false;
 
   @override
   void initState() {
@@ -35,21 +40,67 @@ class _AuthPageState extends ConsumerState<AuthPage> {
     super.dispose();
   }
 
+  Future<String?> _joinPendingInvite() async {
+    if (_processingInvite) {
+      return null;
+    }
+
+    _processingInvite = true;
+    try {
+      final squadId = await ref
+          .read(joinSquadFromInviteUseCaseProvider)
+          .execute();
+      return squadId;
+    } catch (error) {
+      await ref.read(inviteCodeStorageProvider).clear();
+      if (!mounted) {
+        return null;
+      }
+      var message = 'Invite code is invalid or expired.';
+      if (error is Failure && error.message.isNotEmpty) {
+        message = error.message;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: Colors.red),
+      );
+      return null;
+    } finally {
+      _processingInvite = false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
 
     // Handle side effects (Navigation, Errors)
-    ref.listen<AsyncValue>(authStateProvider, (previous, next) {
-      next.whenOrNull(
-        data: (data) {
-          if (data != null && mounted) {
-            if (data.isAnonymous) {
-              context.go('/squads');
-            } else {
-              context.go('/me');
-            }
+    ref.listen<AsyncValue<AuthEntity?>>(authStateProvider, (
+      previous,
+      next,
+    ) async {
+      await next.when(
+        data: (data) async {
+          if (data == null || !mounted) {
+            return;
           }
+
+          if (data.isAnonymous) {
+            context.go('/squads');
+            return;
+          }
+
+          final router = GoRouter.of(context);
+          final joinedSquadId = await _joinPendingInvite();
+          if (!mounted) {
+            return;
+          }
+
+          if (joinedSquadId != null) {
+            router.go('/squads/$joinedSquadId');
+            return;
+          }
+
+          router.go('/me');
         },
         error: (error, stackTrace) {
           String message = 'Login failed. Please try again.';
@@ -69,6 +120,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
             SnackBar(content: Text(message), backgroundColor: Colors.red),
           );
         },
+        loading: () {},
       );
     });
 
@@ -89,6 +141,90 @@ class _AuthPageState extends ConsumerState<AuthPage> {
 
     Future<void> handleGuest() async {
       await ref.read(authStateProvider.notifier).guestLogin();
+    }
+
+    Future<void> handlePasswordReset() async {
+      final controller = TextEditingController();
+      final formKey = GlobalKey<FormState>();
+      final messenger = ScaffoldMessenger.of(context);
+
+      final result = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Reset password'),
+          content: Form(
+            key: formKey,
+            child: TextFormField(
+              controller: controller,
+              decoration: const InputDecoration(
+                labelText: 'Email',
+                border: OutlineInputBorder(),
+              ),
+              textCapitalization: TextCapitalization.none,
+              keyboardType: TextInputType.emailAddress,
+              validator: (value) {
+                final text = value?.trim() ?? '';
+                if (text.isEmpty) {
+                  return 'Please enter email';
+                }
+                final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
+                if (!emailRegex.hasMatch(text)) {
+                  return 'Please enter valid email';
+                }
+                return null;
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (formKey.currentState?.validate() ?? false) {
+                  Navigator.of(context).pop(true);
+                }
+              },
+              child: const Text('Send link'),
+            ),
+          ],
+        ),
+      );
+
+      if (result != true) {
+        controller.dispose();
+        return;
+      }
+
+      final email = controller.text.trim();
+      controller.dispose();
+      try {
+        final redirectTo = '${Uri.base.origin}/#/auth/reset';
+        await ref
+            .read(requestPasswordResetUseCaseProvider)
+            .execute(email, redirectTo: redirectTo);
+        if (!mounted) {
+          return;
+        }
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Password reset link sent. Check your email.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } catch (error) {
+        if (!mounted) {
+          return;
+        }
+        var message = 'Failed to send reset link.';
+        if (error is Failure) {
+          message = error.message;
+        }
+        messenger.showSnackBar(
+          SnackBar(content: Text(message), backgroundColor: Colors.red),
+        );
+      }
     }
 
     return Scaffold(
@@ -183,6 +319,11 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                           )
                         : const Text('Login'),
                   ),
+                ),
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: isLoading ? null : handlePasswordReset,
+                  child: const Text('Forgot password?'),
                 ),
                 const SizedBox(height: 16),
                 Row(

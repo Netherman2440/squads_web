@@ -73,17 +73,36 @@ create table public.squads (
   sport_type public.sport_type not null
     default 'football',
 
+  ranking_update boolean not null
+    default true,
+
+  ranking_multiplier integer not null
+    default 5,
+
+  use_experience_factor boolean not null
+    default true,
+
   created_at timestamptz not null
     default now(),
 
   constraint squads_owner_fk
     foreign key (owner_id)
     references auth.users (id)
-    on delete restrict
+    on delete restrict,
+
+  constraint squads_ranking_multiplier_1_10
+    check (ranking_multiplier between 1 and 10)
 );
 
 create index squads_owner_idx
   on public.squads (owner_id);
+
+comment on column public.squads.ranking_update is
+  'If false, matches in this squad do not affect player ranking.';
+comment on column public.squads.ranking_multiplier is
+  'Ranking change factor (1..10). Used as: delta = goalDiff * ranking_multiplier.';
+comment on column public.squads.use_experience_factor is
+  'If true, reduces ranking change for experienced players vs new players.';
 
 -- 3.2 user_squads
 create table public.user_squads (
@@ -98,7 +117,6 @@ create table public.user_squads (
 
   constraint user_squads_pk
     primary key (user_id, squad_id),
-
   constraint user_squads_user_fk
     foreign key (user_id)
     references auth.users (id)
@@ -307,44 +325,54 @@ create index team_players_player_idx
 create index team_players_team_idx
   on public.team_players (team_id);
 
--- 3.8 score_history
-create table public.score_history (
-  score_history_id uuid primary key
+-- 3.8 ranking_history
+create table public.ranking_history (
+  ranking_history_id uuid primary key
     default gen_random_uuid(),
 
   player_id uuid not null,
 
   match_id uuid null,
 
-  delta numeric(6,3) not null,
+  ranking numeric(6,3) not null,
 
-  previous_rating numeric(6,3) not null,
+  change numeric(6,3) null,
 
-  new_rating numeric(6,3) not null,
+  match_score jsonb null,
 
   created_at timestamptz not null
     default now(),
 
-  constraint score_history_player_fk
+  updated_at timestamptz null,
+
+  constraint ranking_history_player_fk
     foreign key (player_id)
     references public.players (player_id)
     on delete cascade,
 
-  constraint score_history_match_fk
+  constraint ranking_history_match_fk
     foreign key (match_id)
     references public.matches (match_id)
-    on delete cascade
+    on delete set null
 );
 
-create unique index score_history_player_match_unique_idx
-  on public.score_history (player_id, match_id)
+create unique index ranking_history_player_match_unique_idx
+  on public.ranking_history (player_id, match_id)
   where match_id is not null;
 
-create index score_history_player_time_idx
-  on public.score_history (player_id, created_at desc);
+create index ranking_history_player_idx
+  on public.ranking_history (player_id);
 
-create index score_history_match_idx
-  on public.score_history (match_id)
+create index ranking_history_match_idx
+  on public.ranking_history (match_id)
   where match_id is not null;
 
+comment on table public.ranking_history is
+  'Stores the history of player ranking changes, both manual and from matches.';
+comment on column public.ranking_history.ranking is
+  'The snapshot of the player''s ranking BEFORE the change was applied.';
+comment on column public.ranking_history.change is
+  'The delta applied to the ranking. NULL if the match result is pending.';
+comment on column public.ranking_history.match_score is
+  'JSONB snapshot of the match score: {\"player\": int, \"opponent\": int}.';
 

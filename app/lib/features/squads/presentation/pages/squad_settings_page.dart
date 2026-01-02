@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
+import 'package:app/features/squads/application/generate_invite_link_use_case.dart';
 import 'package:app/features/squads/domain/entities/squad_member.dart';
 import 'package:app/features/squads/domain/entities/user_squad_role.dart';
 import 'package:app/features/squads/presentation/state/squad_detail_notifier.dart';
+import 'package:app/features/squads/presentation/state/squad_invite_link_provider.dart';
 import 'package:app/features/squads/presentation/state/squad_settings_notifier.dart';
 import 'package:app/features/squads/presentation/widgets/danger_zone_section.dart';
 import 'package:app/features/squads/presentation/widgets/member_tile.dart';
@@ -93,7 +97,7 @@ class _SquadSettingsPageState extends ConsumerState<SquadSettingsPage> {
                       },
                     ),
                     const SizedBox(height: 24),
-                    const _InviteSection(),
+                    _InviteSection(squadId: widget.squadId),
                     const SizedBox(height: 24),
                     DangerZoneSection(
                       squadId: widget.squadId,
@@ -191,13 +195,83 @@ class _MembersSection extends StatelessWidget {
   }
 }
 
-class _InviteSection extends StatelessWidget {
-  const _InviteSection();
+class _InviteSection extends ConsumerStatefulWidget {
+  const _InviteSection({required this.squadId});
+
+  final String squadId;
+
+  @override
+  ConsumerState<_InviteSection> createState() => _InviteSectionState();
+}
+
+class _InviteSectionState extends ConsumerState<_InviteSection> {
+  bool _isGenerating = false;
+
+  Future<void> _generateInviteLink() async {
+    setState(() {
+      _isGenerating = true;
+    });
+
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(generateInviteLinkUseCaseProvider).execute(widget.squadId);
+      if (!mounted) {
+        return;
+      }
+      ref.invalidate(squadInviteLinkProvider(widget.squadId));
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Invite link generated')),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Failed to generate invite link')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isGenerating = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _copyLink(String link) async {
+    await Clipboard.setData(ClipboardData(text: link));
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Link copied to clipboard')));
+  }
+
+  String _formatValidity(DateTime validUntil) {
+    final local = validUntil.toLocal();
+    final formatter = DateFormat('yMMMd HH:mm');
+    return formatter.format(local);
+  }
+
+  String _buildInviteUrl(String code) {
+    final path = Uri(
+      path: '/invite',
+      queryParameters: {'code': code},
+    ).toString();
+    return '${Uri.base.origin}/#$path';
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    const mockLink = 'https://squads.app/invite/mock-link';
+    final inviteState = ref.watch(squadInviteLinkProvider(widget.squadId));
+
+    final inviteLink = inviteState.value;
+    final inviteUrl = inviteLink != null
+        ? _buildInviteUrl(inviteLink.code)
+        : null;
+    final isBusy = inviteState.isLoading || _isGenerating;
 
     return Container(
       width: double.infinity,
@@ -211,27 +285,70 @@ class _InviteSection extends StatelessWidget {
         children: [
           Text('Invite link', style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),
-          SelectableText(mockLink, style: theme.textTheme.bodySmall),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              FilledButton.tonal(
-                onPressed: () {
-                  // TODO: integrate with Clipboard & real invite link
-                },
-                child: const Text('Copy link'),
-              ),
-              const SizedBox(width: 12),
-              OutlinedButton(
-                onPressed: () {
-                  // TODO: integrate with GenerateInviteLinkUseCase
-                },
-                child: const Text('Regenerate'),
-              ),
-              const Spacer(),
-              Text('Valid for 24h (mocked).', style: theme.textTheme.bodySmall),
-            ],
-          ),
+          if (inviteState.hasError)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SelectableText(
+                  'Failed to load invite link: ${inviteState.error}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.error,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton(
+                  onPressed: () =>
+                      ref.invalidate(squadInviteLinkProvider(widget.squadId)),
+                  child: const Text('Retry'),
+                ),
+              ],
+            )
+          else if (inviteState.isLoading && inviteLink == null)
+            const Padding(
+              padding: EdgeInsets.all(8),
+              child: CircularProgressIndicator(),
+            )
+          else if (inviteUrl == null)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'No active invite link. Generate one to invite members.',
+                  style: theme.textTheme.bodySmall,
+                ),
+                const SizedBox(height: 12),
+                FilledButton(
+                  onPressed: isBusy ? null : _generateInviteLink,
+                  child: const Text('Generate invite link'),
+                ),
+              ],
+            )
+          else
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SelectableText(inviteUrl, style: theme.textTheme.bodySmall),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    FilledButton.tonal(
+                      onPressed: isBusy ? null : () => _copyLink(inviteUrl),
+                      child: const Text('Copy link'),
+                    ),
+                    const SizedBox(width: 12),
+                    OutlinedButton(
+                      onPressed: isBusy ? null : _generateInviteLink,
+                      child: const Text('Regenerate'),
+                    ),
+                    const Spacer(),
+                    Text(
+                      'Valid until ${_formatValidity(inviteLink!.validUntil)}',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ],
+            ),
         ],
       ),
     );

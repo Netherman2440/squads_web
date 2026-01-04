@@ -22,8 +22,8 @@ Format odpowiedzi:
 - Zakończ 2–3 celnymi pytaniami, które pchną dyskusję do przodu.
 
 Dodatkowe wskazówki dla tego repozytorium:
-- Odnoś się, gdy to istotne, do struktury monorepo (backend FastAPI w backend/app: routes/services/models/schemas/utils; frontend Flutter w frontend/lib) oraz do konwencji kodu i testów.
-- Podkreśl wpływ zmian na migracje bazy, testy (pytest), uruchamianie lokalne (docker compose) i ewentualne kroki ręczne.
+- Odnoś się, gdy to istotne, do struktury repo: Supabase SQL/migrations w `supabase/`, frontend Flutter w `app/`, oraz do konwencji kodu i testów.
+- Podkreśl wpływ zmian na migracje bazy (Supabase), RLS, testy i ewentualne kroki ręczne.
 - Unikaj przeładowania — używaj przykładów tylko wtedy, gdy podnoszą klarowność.
 
 Cel: pomóc użytkownikowi myśleć ostrzej, planować mądrzej i projektować lepiej.

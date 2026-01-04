@@ -1,12 +1,11 @@
-# RLS - Plan polityk (wersja docelowa)
+# RLS - Plan polityk (aktualny)
 
-Ten dokument opisuje docelowe polityki RLS dla Supabase/Postgres, zgodne z
-aktualnymi ustaleniami. Ma byc na tyle precyzyjny, zeby AI moglo potem
-zaimplementowac je 1:1.
+Ten dokument opisuje aktualne polityki RLS dla Supabase/Postgres, zgodne z
+migracjami w `supabase/migrations`.
 
 ## Zalozenia
 - `auth.uid()` identyfikuje zalogowanego uzytkownika. Guest = brak `auth.uid()`.
-- Tabela profili to `public.users` (nazwa moze byc `profiles`, ale zasady te same).
+- Tabela profili to `public.users` (kopiowana z `auth.users`).
 - Role w `user_squads.role`: `none`, `owner`, `admin`, `member`, `pending`,
   `invited`, `declined`, `removed`.
   - `none` to stan aplikacyjny (brak relacji). W DB zwykle nie zapisujemy go w
@@ -16,6 +15,7 @@ zaimplementowac je 1:1.
 - Publiczny sklad (`squads.visibility = 'public'`) jest widoczny dla wszystkich,
   ale **nigdy nie udostepnia** listy `user_squads`.
 - `ranking_history` jest aktualnym nazewnictwem (nie uzywamy `score_history`).
+- Helpery RLS (`is_squad_owner`, `is_squad_admin`, `is_squad_member`) istnieja w DB jako funkcje SECURITY DEFINER.
 - Tabele `tournaments` pomijamy na razie.
 
 ## Definicje pomocnicze (pseudokod)
@@ -33,9 +33,8 @@ zaimplementowac je 1:1.
 ## Tabele i polityki
 
 ### `public.users` (profiles)
-- SELECT: tylko wlasny rekord (`auth.uid() = user_id`).
-- INSERT: tylko wlasny rekord (`auth.uid() = user_id`).
-- UPDATE/DELETE: tylko wlasny rekord (`auth.uid() = user_id`).
+- SELECT: wlasny rekord (`auth.uid() = user_id`) oraz profile czlonkow skladow, ktorych ownerem jest user.
+- INSERT/UPDATE/DELETE: tylko wlasny rekord (`auth.uid() = user_id`).
 
 ### `squads`
 - SELECT:
@@ -50,10 +49,7 @@ zaimplementowac je 1:1.
   - owner moze widziec wszystkie wiersze w swoim skladzie,
   - kazdy zalogowany moze widziec **tylko swoj** rekord.
 - INSERT:
-  - domyslnie tylko przez RPC `join_squad_by_invite` (SECURITY DEFINER),
-    bez bezposredniego INSERT z klienta.
-  - opcjonalnie: pozwolic na insert ownera przy tworzeniu skladu
-    (`auth.uid() = user_id`, `role = 'owner'`, `is_owner(squad_id)`).
+  - owner moze wstawic wlasny wpis `role = 'owner'` przy tworzeniu skladu.
 - UPDATE/DELETE: tylko owner (zarzadza rolami i usuwaniem czlonkow).
 - Dodatkowe ograniczenia:
   - nie pozwalac zmieniac `user_id` rekordu,
@@ -104,6 +100,6 @@ zaimplementowac je 1:1.
     `players.squad_id`.
 
 ## Uwagi koncowe
-- RLS ma byc wlaczone na wszystkich tabelach powyzej.
-- Polityki powinny byc pisane w stylu "USING ... WITH CHECK ..." i oparte o `EXISTS`.
+- RLS jest wlaczone na wszystkich tabelach powyzej.
+- Polityki sa pisane w stylu "USING ... WITH CHECK ..." i oparte o `EXISTS`.
 - Publiczne sklady nie odslaniaja danych z `user_squads`.

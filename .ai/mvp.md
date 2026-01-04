@@ -21,7 +21,7 @@ Aplikacja:
   Rejestracja, logowanie (w tym tryb gościa), role użytkowników oraz obsługa tokenów dostępu i odświeżania.
 
 * **Zarządzanie składami (Squads)**
-  Tworzenie, edycja i usuwanie składów; przeglądanie listy składów; zarządzanie członkami i rolami w składzie; dostęp tylko dla zalogowanych użytkowników.
+  Tworzenie, edycja i usuwanie składów; przeglądanie listy składów; zarządzanie członkami i rolami w składzie; tworzenie tylko dla zalogowanych (guest może przeglądać publiczne).
 
 * **Zawodnicy (Players)**
   Dodawanie, edycja i usuwanie graczy; wyświetlanie statystyk; automatyczna aktualizacja rankingu po meczach.
@@ -43,7 +43,7 @@ Aplikacja:
 ## **Co nie wchodzi w skład MVP**
 
 * **Płatne subskrypcje i ograniczenia dostępu**
-  Wersja MVP udostępnia wszystkie funkcje bez opłat — każdy użytkownik może tworzyć własne składy.
+  Wersja MVP udostępnia wszystkie funkcje bez opłat — limit to 1 skład na zalogowanego ownera; guest nie tworzy składów.
 
 * **Zaawansowane reguły draftu**
   Brak możliwości definiowania niestandardowych zasad doboru graczy (np. „Krzyś zawsze z Maćkiem”, „Marek przeciwko Andrzejowi”).

@@ -1,7 +1,7 @@
 # Squads – Plan bazy danych (PostgreSQL)
 
 > **Wersja:** MVP
-> **Zgodność:** PRD + decyzje z sesji planowania, zoptymalizowane pod FastAPI + SQLAlchemy + PostgreSQL
+> **Zgodność:** PRD + decyzje z sesji planowania, zgodne z aktualnymi migracjami Supabase (PostgreSQL)
 > **Uwaga dot. zmian:** Pozycje oznaczone **[Zmiana vs. aktualny plan]** odbiegają od `<current_db_plan>` i odzwierciedlają uzgodnienia z sesji.
 
 ---
@@ -12,35 +12,33 @@
 
 * **Rozszerzenia**
 
-  * `citext` – case‑insensitive tekst dla unikalności nazw. **[Zmiana vs. aktualny plan]**
-  * `pgcrypto` (lub alternatywnie `uuid-ossp`) – jeśli UUIDy mają być generowane po stronie DB (w MVP mogą być dostarczane przez aplikację).
+  * `pgcrypto` – UUID generowane po stronie DB (zgodnie z migracjami).
 
 * **ENUMy**
 
-  * `squad_visibility` = `('public','private')` – domyślnie `'public'`. **[Zmiana vs. aktualny plan]**
-  * `sport_type` = `('football')` – przygotowane pod rozszerzenia. **[Zmiana vs. aktualny plan]**
-  * `side_enum` = `('home','away')`. **[Zmiana vs. aktualny plan]**
-  * `match_score_type` = `('regular','penalties','walkover','cancelled')`. **[Zmiana vs. aktualny plan]**
-  * `user_squad_role` = `('owner','admin','member','invited','pending')` – jedna kolumna łącząca role i status zaproszeń. **[Zmiana vs. aktualny plan]**
+  * `squad_visibility` = `('public','private')` – domyślnie `'public'`.
+  * `sport_type` = `('football')` – przygotowane pod rozszerzenia.
+  * `side_enum` = `('home','away')`.
+  * `match_score_type` = `('regular','penalties','walkover','cancelled')`.
+  * `user_squad_role` = `('none','owner','admin','member','pending','invited','declined','removed')` – jedna kolumna łącząca role i status zaproszeń.
 
 
 * **Typ złożony**
 
-  * `score_pair` = `(home SMALLINT, away SMALLINT)` – wynik meczu jako krotka. **[Zmiana vs. aktualny plan]**
+  * `score_pair` = `(home SMALLINT, away SMALLINT)` – typ zdefiniowany, obecnie nieużywany w tabeli `matches`.
 
 ---
 
 ### 1.1. `users`
 
-Identyfikacja użytkowników; autoryzacja obsługiwana przez Supabase Auth. Poniższa tabela przechowuje dodatkowe dane/profil w aplikacji oraz powiązanie z kontem z autentykacji. **[Zmiana vs. aktualny plan]**
-Ta tabela jest tworzona przez Supabase Auth i nie jest tworzona przez nas.
+Identyfikacja użytkowników; autoryzacja obsługiwana przez Supabase Auth.
+Tabela `public.users` jest kopią profilu użytkownika do joinów (tworzona w migracjach).
 
-| Kolumna         | Typ         | Ograniczenia                                                     |
-| --------------- | ----------- | ---------------------------------------------------------------- |
-| `user_id`       | UUID        | PK; **domyślnie** brane z Supabase Auth  |
-| `email`         | CITEXT      | NOT NULL; UNIQUE **[Zmiana vs. aktualny plan]**                  |
-| `created_at`    | TIMESTAMPTZ | NOT NULL DEFAULT now()                                           |
-| `last_login_at` | TIMESTAMPTZ | NULLABLE                                                         |
+| Kolumna      | Typ         | Ograniczenia                                   |
+| ------------ | ----------- | ---------------------------------------------- |
+| `user_id`    | UUID        | PK; FK → `auth.users(id)` ON DELETE CASCADE    |
+| `email`      | TEXT        | NOT NULL; UNIQUE                               |
+| `created_at` | TIMESTAMPTZ | NOT NULL DEFAULT now()                         |
 
 ---
 
@@ -48,14 +46,17 @@ Ta tabela jest tworzona przez Supabase Auth i nie jest tworzona przez nas.
 
 Składy z widocznością i właścicielem.
 
-| Kolumna      | Typ                | Ograniczenia                                                                          |
-| ------------ | ------------------ | ------------------------------------------------------------------------------------- |
-| `squad_id`   | UUID               | PK                                                                                    |
-| `owner_id`   | UUID               | NOT NULL; FK → `users(user_id)` **ON DELETE RESTRICT** **[Zmiana vs. aktualny plan]** |
-| `name`       | TEXT               | NOT NULL                                                                              |
-| `visibility` | `squad_visibility` | NOT NULL DEFAULT `'public'` **[Zmiana vs. aktualny plan]**                            |
-| `sport_type` | `sport_type`       | NOT NULL DEFAULT `'football'` **[Zmiana vs. aktualny plan]**                          |
-| `created_at` | TIMESTAMPTZ        | NOT NULL DEFAULT now()                                                                |
+| Kolumna                 | Typ                | Ograniczenia                                                              |
+| ----------------------- | ------------------ | ------------------------------------------------------------------------- |
+| `squad_id`              | UUID               | PK                                                                        |
+| `owner_id`              | UUID               | NOT NULL; FK → `auth.users(id)` ON DELETE RESTRICT                        |
+| `name`                  | TEXT               | NOT NULL                                                                  |
+| `visibility`            | `squad_visibility` | NOT NULL DEFAULT `'public'`                                               |
+| `sport_type`            | `sport_type`       | NOT NULL DEFAULT `'football'`                                             |
+| `ranking_update`        | BOOLEAN            | NOT NULL DEFAULT true                                                     |
+| `ranking_multiplier`    | INTEGER            | NOT NULL DEFAULT 5; CHECK `ranking_multiplier BETWEEN 1 AND 10`           |
+| `use_experience_factor` | BOOLEAN            | NOT NULL DEFAULT true                                                     |
+| `created_at`            | TIMESTAMPTZ        | NOT NULL DEFAULT now()                                                    |
 
 > **Limit 1 skład na Ownera** – egzekwowany **w API** w MVP (brak DB‑constraint zgodnie z decyzją). **[Zmiana vs. aktualny plan]**
 
@@ -67,9 +68,9 @@ Członkostwa + zaproszenia (rola jako jeden ENUM).
 
 | Kolumna      | Typ               | Ograniczenia                                        |
 | ------------ | ----------------- | --------------------------------------------------- |
-| `user_id`    | UUID              | NOT NULL; FK → `users(user_id)` ON DELETE CASCADE   |
+| `user_id`    | UUID              | NOT NULL; FK → `auth.users(id)` ON DELETE CASCADE   |
 | `squad_id`   | UUID              | NOT NULL; FK → `squads(squad_id)` ON DELETE CASCADE |
-| `role`       | `user_squad_role` | NOT NULL **[Zmiana vs. aktualny plan]**             |
+| `role`       | `user_squad_role` | NOT NULL                                            |
 | `created_at` | TIMESTAMPTZ       | NOT NULL DEFAULT now()                              |
 
 **Klucze:**
@@ -83,18 +84,18 @@ PK `(user_id, squad_id)`
 
 Zawodnicy w obrębie składu z per‑squad rankingiem.
 
-| Kolumna          | Typ          | Ograniczenia                                                        |
-| ---------------- | ------------ | ------------------------------------------------------------------- |
-| `player_id`      | UUID         | PK                                                                  |
-| `squad_id`       | UUID         | NOT NULL; FK → `squads(squad_id)` ON DELETE CASCADE                 |
-| `name`           | CITEXT       | NOT NULL                                                            |
-| `position`       | TEXT         | NULLABLE (MVP: dowolny tekst)                                       |
-| `base_score`    | INTEGER | NOT NULL DEFAULT 0                 |
-| `score` | FLOAT  | NOT NULL  |
-| `created_at`     | TIMESTAMPTZ  | NOT NULL DEFAULT now()                                              |
+| Kolumna      | Typ          | Ograniczenia                                                       |
+| ------------ | ------------ | ------------------------------------------------------------------ |
+| `player_id`  | UUID         | PK                                                                 |
+| `squad_id`   | UUID         | NOT NULL; FK → `squads(squad_id)` ON DELETE CASCADE                |
+| `name`       | TEXT         | NOT NULL                                                           |
+| `position`   | TEXT         | NULLABLE (MVP: dowolny tekst)                                      |
+| `base_score` | INTEGER      | NOT NULL DEFAULT 0; CHECK `base_score BETWEEN 0 AND 100`           |
+| `score`      | NUMERIC(5,2) | NOT NULL; CHECK `score BETWEEN 0 AND 100`                          |
+| `created_at` | TIMESTAMPTZ  | NOT NULL DEFAULT now()                                             |
 
 **Klucze/ograniczenia:**
-UNIQUE `(squad_id, name)` – case‑insensitive dzięki `CITEXT`. **[OPCJONALNA Zmiana vs. aktualny plan]**
+UNIQUE `(squad_id, name)`
 
 ---
 
@@ -102,12 +103,13 @@ UNIQUE `(squad_id, name)` – case‑insensitive dzięki `CITEXT`. **[OPCJONALNA
 
 Turnieje i ich akceptowany zestaw draftu.
 
-| Kolumna                 | Typ                 | Ograniczenia                                                                          |
-| ----------------------- | ------------------- | ------------------------------------------------------------------------------------- |
-| `tournament_id`         | UUID                | PK                                                                                    |
-| `squad_id`              | UUID                | NOT NULL; FK → `squads(squad_id)` ON DELETE CASCADE                                   |
-| `name`                  | TEXT                | NOT NULL                                                                              |
-| `created_at`            | TIMESTAMPTZ         | NOT NULL DEFAULT now()                                                                |
+| Kolumna                | Typ         | Ograniczenia                                        |
+| ---------------------- | ----------- | --------------------------------------------------- |
+| `tournament_id`        | UUID        | PK                                                  |
+| `squad_id`             | UUID        | NOT NULL; FK → `squads(squad_id)` ON DELETE CASCADE |
+| `name`                 | TEXT        | NULLABLE                                            |
+| `teams_expected_count` | INTEGER     | NULLABLE                                            |
+| `created_at`           | TIMESTAMPTZ | NOT NULL DEFAULT now()                              |
 
 ---
 
@@ -147,7 +149,7 @@ Składy drużyn turniejowych.
 
 ### 1.9. `matches`
 
-Mecze, wynik i workflow zatwierdzania.
+Mecze i wynik (bez workflow zatwierdzania).
 
 | Kolumna               | Typ                     | Ograniczenia                                                               |
 | --------------------- | ----------------------- | -------------------------------------------------------------------------- |
@@ -158,6 +160,7 @@ Mecze, wynik i workflow zatwierdzania.
 | `home_score`               | SMALLINT            | NULLABLE **[Zmiana vs. aktualny plan]**  |
 | `away_score`               | SMALLINT            | NULLABLE **[Zmiana vs. aktualny plan]**  |
 | `score_meta`          | JSONB                   | NOT NULL DEFAULT '{}'::jsonb **[Zmiana vs. aktualny plan]**                |
+| `played_at`           | TIMESTAMPTZ             | NULLABLE                                                                  |
 | `created_at`          | TIMESTAMPTZ             | NOT NULL DEFAULT now()                                                     |
 
 ---
@@ -166,14 +169,15 @@ Mecze, wynik i workflow zatwierdzania.
 
 Drużyny per mecz (snapshot; bez wyniku; z atrybutem strony).
 
-| Kolumna              | Typ         | Ograniczenia                                                                                                   |
-| -------------------- | ----------- | -------------------------------------------------------------------------------------------------------------- |
-| `team_id`            | UUID        | PK                                                                                                             |
-| `match_id`           | UUID        | NOT NULL; FK → `matches(match_id)` ON DELETE CASCADE                                                           |
-| `side`               | `side_enum` | NOT NULL **[Zmiana vs. aktualny plan]**                                                                        |
-| `name`               | TEXT        | NULLABLE                                                                                                       |
-| `color`              | TEXT        | NULLABLE                                                                                                       |
-| `created_at`         | TIMESTAMPTZ | NOT NULL DEFAULT now()                                                                                         |
+| Kolumna         | Typ         | Ograniczenia                                                                                     |
+| --------------- | ----------- | ------------------------------------------------------------------------------------------------ |
+| `team_id`       | UUID        | PK                                                                                               |
+| `match_id`      | UUID        | NOT NULL; FK → `matches(match_id)` ON DELETE CASCADE                                             |
+| `tournament_id` | UUID        | NULLABLE; FK → `tournaments(tournament_id)` ON DELETE SET NULL                                   |
+| `side`          | `side_enum` | NOT NULL                                                                                         |
+| `name`          | TEXT        | NULLABLE                                                                                         |
+| `color`         | TEXT        | NULLABLE                                                                                         |
+| `created_at`    | TIMESTAMPTZ | NOT NULL DEFAULT now()                                                                           |
 
 **Unikalności:**
 
@@ -188,12 +192,13 @@ Drużyny per mecz (snapshot; bez wyniku; z atrybutem strony).
 
 Przypisanie graczy do drużyn w kontekście meczu (snapshoty).
 
-| Kolumna      | Typ         | Ograniczenia                                                                                  |
-| ------------ | ----------- | --------------------------------------------------------------------------------------------- |
-| `match_id`   | UUID        | NOT NULL; FK → `matches(match_id)` ON DELETE CASCADE                                          |
-| `team_id`    | UUID        | NOT NULL                                                                                      |
-| `player_id`  | UUID        | NOT NULL; FK → `players(player_id)` ON DELETE RESTRICT (gracz nie powinien znikać z historii) |
-| `created_at` | TIMESTAMPTZ | NOT NULL DEFAULT now()                                                                        |
+| Kolumna         | Typ         | Ograniczenia                                                                                  |
+| --------------- | ----------- | --------------------------------------------------------------------------------------------- |
+| `match_id`      | UUID        | NOT NULL; FK → `matches(match_id)` ON DELETE CASCADE                                          |
+| `team_id`       | UUID        | NOT NULL; FK → `teams(team_id)` ON DELETE CASCADE                                             |
+| `player_id`     | UUID        | NOT NULL; FK → `players(player_id)` ON DELETE RESTRICT (gracz nie powinien znikać z historii) |
+| `tournament_id` | UUID        | NULLABLE; FK → `tournaments(tournament_id)` ON DELETE SET NULL                                |
+| `created_at`    | TIMESTAMPTZ | NOT NULL DEFAULT now()                                                                        |
 
 **Klucze/Unikalności:**
 
@@ -205,33 +210,34 @@ Przypisanie graczy do drużyn w kontekście meczu (snapshoty).
 
 ---
 
-### 1.12. `score_history`
+### 1.12. `ranking_history`
 
-Event‑sourcing rankingów (delty), z możliwością manualnych korekt.
+Historia rankingów (snapshot + delta), z możliwością manualnych korekt.
 
-| Kolumna            | Typ          | Ograniczenia                                          |
-| ------------------ | ------------ | ----------------------------------------------------- |
-| `score_history_id` | UUID         | PK                                                    |
-| `player_id`        | UUID         | NOT NULL; FK → `players(player_id)` ON DELETE CASCADE |
-| `match_id`         | UUID         | NULLABLE; FK → `matches(match_id)` ON DELETE CASCADE  |
-| `delta`            | NUMERIC(6,3) | NOT NULL                                              |
-| `previous_rating`  | NUMERIC(6,3) | NOT NULL **[Zmiana vs. aktualny plan]**               |
-| `new_rating`       | NUMERIC(6,3) | NOT NULL **[Zmiana vs. aktualny plan]**               |
-| `created_at`       | TIMESTAMPTZ  | NOT NULL DEFAULT now()                                |
+| Kolumna              | Typ          | Ograniczenia                                          |
+| -------------------- | ------------ | ----------------------------------------------------- |
+| `ranking_history_id` | UUID         | PK                                                    |
+| `player_id`          | UUID         | NOT NULL; FK → `players(player_id)` ON DELETE CASCADE |
+| `match_id`           | UUID         | NULLABLE; FK → `matches(match_id)` ON DELETE SET NULL |
+| `ranking`            | NUMERIC(6,3) | NOT NULL                                              |
+| `change`             | NUMERIC(6,3) | NULLABLE                                              |
+| `match_score`        | JSONB        | NULLABLE                                              |
+| `created_at`         | TIMESTAMPTZ  | NOT NULL DEFAULT now()                                |
+| `updated_at`         | TIMESTAMPTZ  | NULLABLE                                              |
 
 **Unikalność warunkowa:**
 
-* UNIQUE `(player_id, match_id)` **WHERE `match_id` IS NOT NULL**. **[Zmiana vs. aktualny plan]**
+* UNIQUE `(player_id, match_id)` **WHERE `match_id` IS NOT NULL**
 
-> **Brak** kolumn audytowych `changed_by/reason` w MVP – zgodnie z decyzją (audyt operacji w osobnej tabeli). **[Zmiana vs. aktualny plan]**
+> **Brak** kolumn audytowych `changed_by/reason` w MVP – zgodnie z decyzją (audyt operacji w osobnej tabeli).
 
 
 ---
 
 ## 2. Relacje między tabelami (kardynalność)
 
-* `users` **1—N** `squads` (przez `squads.owner_id`)
-* `users` **N—N** `squads` (przez `user_squads`)
+* `auth.users` **1—N** `squads` (przez `squads.owner_id`)
+* `auth.users` **N—N** `squads` (przez `user_squads`)
 * `squads` **1—N** `players`
 * `squads` **1—N** `matches`
 * `squads` **1—N** `tournaments`
@@ -242,8 +248,8 @@ Event‑sourcing rankingów (delty), z możliwością manualnych korekt.
 * `tournament_teams` **N—N** `players` (przez `tournament_team_players`; dodatkowo UNIQUE `(tournament_id, player_id)`)
 * `matches` **N—1** `tournaments` (NULLABLE)
 * `teams` **N—1** `tournament_teams` (NULLABLE; snapshot referencji)
-* `players` **1—N** `score_history`
-* `matches` **1—N** `score_history` (NULLABLE FK; manualne korekty mają `match_id IS NULL`)
+* `players` **1—N** `ranking_history`
+* `matches` **1—N** `ranking_history` (NULLABLE FK; manualne korekty mają `match_id IS NULL`)
 
 ---
 
@@ -267,10 +273,10 @@ Event‑sourcing rankingów (delty), z możliwością manualnych korekt.
 
     * INDEX `matches_squad_played_at_idx` ON `(squad_id, played_at DESC)`
     * INDEX `matches_tournament_idx` ON `(tournament_id)`
-  * `score_history`:
+  * `ranking_history`:
 
-    * INDEX `score_history_player_time_idx` ON `(player_id, created_at DESC)`
-    * INDEX `score_history_match_idx` ON `(match_id)` WHERE `match_id IS NOT NULL`
+    * INDEX `ranking_history_player_idx` ON `(player_id)`
+    * INDEX `ranking_history_match_idx` ON `(match_id)` WHERE `match_id IS NOT NULL`
   * `players`:
 
     * INDEX `players_squad_idx` ON `(squad_id)`
@@ -286,34 +292,26 @@ Event‑sourcing rankingów (delty), z możliwością manualnych korekt.
 
 ## 4. Zasady PostgreSQL (RLS)
 
-* **MVP:** **brak RLS** – zgodnie z decyzją (kontrola dostępu i widoczności egzekwowana wyłącznie w API na podstawie `user_squads.role` i `squads.visibility`).
-* **Szkic po‑MVP (opcjonalnie):**
-
-  * Aktywować RLS dla: `squads`, `players`, `matches`, `tournaments`, `teams`, `team_players`.
-  * Polityki przykładowe:
-
-    * Publiczny odczyt `squads` z `visibility='public'`.
-    * Dla `visibility='private'` odczyt/ zapis wyłącznie gdy istnieje wiersz w `user_squads` z `(user_id=current_setting('app.user_id')::uuid)` i `role IN ('owner','admin','member')`.
-    * Osobne polityki dla operacji administracyjnych (np. zatwierdzanie wyników) dla `role IN ('owner')`.
-  * Wymaga ustawiania `app.user_id` na połączeniu (np. `SET LOCAL` w warstwie API).
+* **MVP:** **RLS włączone** – zgodnie z aktualnymi migracjami Supabase.
+  * Polityki są oparte o `auth.uid()` oraz role z `user_squads` (`owner/admin/member` dla dostępu).
+  * Dla ról wrażliwych (insert/update/delete) wymagane są role `owner/admin`.
 
 ---
 
 ## 5. Dodatkowe uwagi i decyzje projektowe
 
-* **Wynik meczu jako krotka** `score_pair` (home, away) w `matches.score`; `result_type` + `score_meta(JSONB)` dla metadanych (np. `{ "penalties": {"home":5,"away":4}, "walkover": true }`). **[Zmiana vs. aktualny plan]**
+* **Wynik meczu**: `home_score` + `away_score` w `matches`, `score_type` + `score_meta(JSONB)` dla metadanych (np. `{ "penalties": {"home":5,"away":4}, "walkover": true }`).
 * **Teams/TeamPlayers – snapshoty**: `teams` przechowuje tylko `side`, `name`, `color` **brak** `score`, **brak** `squad_id`. Integralność składu zapewnia złożony FK w `team_players` oraz `UNIQUE(match_id, player_id)`. **[Zmiana vs. aktualny plan]**
 * **Turnieje**: wprowadzono `tournament_teams` i `tournament_team_players`; mecze turniejowe generują nowe `teams` (snapshoty). Dodano `tournaments.teams_expected_count`. **[Zmiana vs. aktualny plan]**
 
-* **Score history**: `match_id` może być `NULL` dla manualnych korekt; partial UNIQUE `(player_id, match_id)` utrzymuje jeden wpis per gracz‑mecz. **[Zmiana vs. aktualny plan]**
+* **Ranking history**: `match_id` może być `NULL` dla manualnych korekt; partial UNIQUE `(player_id, match_id)` utrzymuje jeden wpis per gracz‑mecz.
 * **Widoczność składów**: `squads.visibility` z DEFAULT `'public'` (filtrowanie po stronie API – brak RLS w MVP). **[Zmiana vs. aktualny plan]**
 * **Unikalność nazw graczy**: w obrębie składu, case‑insensitive dzięki `CITEXT`. **[Zmiana vs. aktualny plan]**
 
-* **Zgodność z SQLAlchemy**: typ złożony `score_pair` może wymagać `TypeDecorator`/composite mapping; alternatywnie (fallback) dwa pola `score_home`/`score_away` + widok/materialized view jako interfejs zgodny z krotką (do rozważenia, jeśli integracja okaże się kłopotliwa).
+* **Score pair**: typ złożony `score_pair` jest zdefiniowany, ale obecnie nieużywany; w razie potrzeby można go wykorzystać w przyszłości.
 * **Kasowanie danych**: twarde kasowanie; `ON DELETE CASCADE` tam, gdzie uzgodniono (dzieci obiektów domenowych). Brak soft‑delete w MVP.
 * **Limity**: limit 1 skład na Ownera i do 100 graczy na skład – egzekwowane w API (brak triggerów/constraintów liczności w DB, zgodnie z decyzją).
 * **SportType**: `squad.sport_type`  przewiduje przyszłe sporty (MVP: tylko `football`).
 
 
 ---
-

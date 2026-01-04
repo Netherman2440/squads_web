@@ -17,6 +17,7 @@ W amatorskich meczach wybór składów bywa chaotyczny i konfliktogenny. Ręczny
 
 3.2 Składy (Squads) (MUST)
 - Tworzenie, edycja, usuwanie; limit 1 skład na Ownera.
+- Tworzenie dostępne tylko dla zalogowanych (guest nie może tworzyć składu).
 - Widoczność: public (read dla wszystkich), private (dostęp tylko dla członków składu).
 - Zarządzanie członkami i rolami; zaproszenia do składów prywatnych.
 - Limit do 100 graczy w jednym składzie.
@@ -90,7 +91,7 @@ Opis: Jako Owner chcę utworzyć skład z nazwą, widocznością i limitem gracz
 Kryteria akceptacji:
 - Utworzenie składu z polami: nazwa, visibility (public/private).
 - Weryfikacja limitu: 1 skład na Ownera; do 100 graczy w składzie.
-- RBAC: tylko zalogowany użytkownik może tworzyć skład.
+- RBAC: tylko zalogowany użytkownik może tworzyć skład (guest nie może).
 
 US-003
 Tytuł: Wyświetlanie listy składów
@@ -129,7 +130,8 @@ Tytuł utwórz mecz
 Opis: Jako Admin gdy kliknę na plus w widoku listy meczy chcę przejść do widoku z draftem.
 Kryteria akceptacji:
 - po kliknięciu na plus przechodzimy do widoku z draftem
-- widok jest pod adresem /squads/:squadId/matches/create
+- widok jest pod adresem /squads/:squadId/matches/draft
+- podgląd propozycji draftu jest pod adresem /squads/:squadId/matches/create
 - przycisk plus jest widoczny tylko dla adminó i ownerów.
 
 US-008
@@ -171,8 +173,9 @@ Tytuł: Wprowadzenie wyniku meczu
 Opis: Jako Admin chcę wprowadzić wynik, aby zaktualizować rankingi graczy.
 Kryteria akceptacji:
 - Zapis home_score i away_score + score_meta.
-- Po zapisie generowana jest delta wpływająca na ranking graczy, którzy zagrali. //to do przy score history
-- Edycja wyniku aktualizuje właściwą deltę i statystyki. //to do przy score history
+- Po zapisie generowana jest delta wpływająca na ranking graczy, którzy zagrali. //to do przy ranking history
+- Edycja wyniku aktualizuje właściwą deltę i statystyki. //to do przy ranking history
+- Po wpisaniu wyniku nie można edytować składów; wynik można zmienić tylko jeśli nie istnieje nowszy mecz z już wpisanym wynikiem.
 
 US-013
 Tytuł: Edycja detali meczu
@@ -186,7 +189,7 @@ Tytuł: Rematch
 Opis: Jako Admin chcę móc utworzyć rematch meczu.
 Kryteria akcjeptacji:
 - będąc w detalach meczu możemy utworzyć rematch poprzez kliknięcie na przycisk "Rematch".
-- tworzy to nowy mecz z takimi samymi drużynami.
+- tworzy to nowy mecz z tymi samymi drużynami, ale zamienionymi stronami (home ↔ away).
 
 US-015
 Tytuł: Redraw
@@ -194,7 +197,7 @@ Jako Admin chcę móc przeprowadzić redraw meczu.
 Kryteria akceptacji:
 - jeśli do meczu dodano / zabrano gracza pojawia się przycisk "Redraw".
 - kliknięcie tego przycisku przenosi nas do draftu z nową listą zawodników
-- aktualny mecz jest usuwany.
+- aktualny mecz jest aktualizowany nowymi drużynami (bez usuwania).
 
 US-016
 Tytuł: Przegląd statystyk składu i graczy

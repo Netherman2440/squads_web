@@ -7,10 +7,14 @@
 -- ###########################################################################
 
 create table public.users (
-  user_id uuid primary key,
+  user_id uuid primary key
+    references auth.users (id)
+    on delete cascade,
   email text not null,
   created_at timestamptz not null
-    default now()
+    default now(),
+  constraint unique_users_email
+    unique (email)
 );
 
 alter table public.users enable row level security;

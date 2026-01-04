@@ -12,13 +12,14 @@ create type public.squad_visibility as enum ('public', 'private');
 create type public.sport_type as enum ('football');
 
 create type public.user_squad_role as enum (
+  'none',
   'owner',
   'admin',
   'member',
-  'invited',
   'pending',
-  'removed',
-  'declined'
+  'invited',
+  'declined',
+  'removed'
 );
 
 create type public.side_enum as enum ('home', 'away');

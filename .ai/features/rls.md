@@ -7,8 +7,10 @@ zaimplementowac je 1:1.
 ## Zalozenia
 - `auth.uid()` identyfikuje zalogowanego uzytkownika. Guest = brak `auth.uid()`.
 - Tabela profili to `public.users` (nazwa moze byc `profiles`, ale zasady te same).
-- Role w `user_squads.role`: `owner`, `admin`, `member`, `pending`, `invited`,
-  `declined`, `removed`, `none`.
+- Role w `user_squads.role`: `none`, `owner`, `admin`, `member`, `pending`,
+  `invited`, `declined`, `removed`.
+  - `none` to stan aplikacyjny (brak relacji). W DB zwykle nie zapisujemy go w
+    `user_squads`, ale enum uwzglednia ten wariant dla spojnosci z kodem.
 - Dostep "member" oznacza role: `owner`, `admin`, `member`.
 - Dostep "admin" oznacza role: `owner`, `admin`.
 - Publiczny sklad (`squads.visibility = 'public'`) jest widoczny dla wszystkich,

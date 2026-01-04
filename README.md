@@ -6,19 +6,19 @@ A Flutter web application for creating balanced teams in amateur sports matches,
 - [Project Description](#project-description)
 - [Tech Stack](#tech-stack)
 - [Getting Started Locally](#getting-started-locally)
-- [Available Scripts](#available-scripts)
-- [Project Scope](#project-scope)
 - [Project Status](#project-status)
 - [License](#license)
 
 ## Project Description
 Squads solves the chaos of team selection in amateur sports by providing deterministic, balanced team division proposals based on player rankings. Users can create squads, add players, generate drafts, record match results, and run simple tournaments. Rankings update automatically via event-sourcing deltas after each match.
 
+This repository is a newer iteration of https://github.com/Netherman2440/squads. The original repo was my learning project (Flutter + Python); this one is full Flutter + Supabase.
+
 Key features include:
 - User accounts with roles (Owner, Admin, Member) and private squad invitations.
 - Squad management (public/private visibility, up to 100 players per squad, 1 squad per owner).
 - Player CRUD with per-squad rankings, stats, and trends.
-- Drafting: Up to 20 sorted proposals for up to 16 players, with balance scores.
+- Drafting: Greedy algorithm with sorted proposals and balance scores.
 - Matches: Create from drafts, score entry (home/away + metadata like penalties), and update rankings.
 - Tournaments: Player selection, team drafting, match addition, and simple standings.
 - Basic stats: Win/loss records, ranking trends, historical scores.
@@ -30,9 +30,8 @@ MVP focuses on football; see [.ai/prd.md](.ai/prd.md) for full requirements, use
 ### Frontend
 - **Framework**: Flutter (Dart) for web.
 - **State Management**: Riverpod (flutter_riverpod).
-- **Routing**: GoRouter (planned), MaterialApp.
+- **Routing**: GoRouter.
 - **Charts**: fl_chart.
-- **Other**: flutter_dotenv for environment config.
 - **Architecture**: Clean Architecture (DDD) with feature-first structure. Legacy Flutter UI serves as UX inspiration only—no code reuse.
 
 ### Backend
@@ -52,8 +51,8 @@ MVP focuses on football; see [.ai/prd.md](.ai/prd.md) for full requirements, use
 
 ### Runtime & Deployment
 - **Backend**: Supabase Cloud.
-- **CI/CD**: GitHub Actions (planned).
-- **Hosting**: Static hosting for Flutter Web (e.g. CDNs or Supabase Storage, planned).
+- **CI/CD**: GitHub Actions.
+- **Hosting**: Vercel (Flutter web build).
 
 For full details, see [.ai/tech-stack.md](.ai/tech-stack.md).
 
@@ -61,7 +60,7 @@ For full details, see [.ai/tech-stack.md](.ai/tech-stack.md).
 ### Prerequisites
 - Flutter SDK (^3.9.2) installed (see [Flutter docs](https://docs.flutter.dev/get-started/install)).
 - Supabase account and project (see [Supabase](https://supabase.com/)).
-- Supabase API keys (anon/public key for frontend, service role key kept server-side only if needed).
+- Supabase keys (publishable/anon key for frontend).
 
 ### Setup
 1. **Clone the Repository**:
@@ -76,16 +75,17 @@ For full details, see [.ai/tech-stack.md](.ai/tech-stack.md).
      ```bash
      flutter pub get
      ```
-   - Configure environment (create `.env` in `app/` using `flutter_dotenv`):
+   - Configure environment (create `.env` in `app/`):
      ```
      SUPABASE_URL=your_supabase_url
-     SUPABASE_ANON_KEY=your_supabase_key
+     SUPABASE_ANON_KEY=your_supabase_publishable_key
      ```
-     (Use the URL and anon key from your Supabase project.)
+     (Use the URL and publishable/anon client key from your Supabase project, not the service role/secret API key.)
    - Run in web mode:
      ```bash
-     flutter run -d chrome
+     flutter run -d chrome --dart-define-from-file=.env
      ```
+     (The app uses `--dart-define-from-file` instead of `flutter_dotenv`.)
 
 3. **Supabase Project Configuration**:
    - Create a new project in the Supabase dashboard.
@@ -104,59 +104,3 @@ For full details, see [.ai/tech-stack.md](.ai/tech-stack.md).
      ```
    - Point the Flutter app to the local Supabase URL for local-only testing.
 
-## Available Scripts
-### Frontend (Flutter)
-- Install dependencies: `flutter pub get`
-- Run dev server (web): `flutter run -d chrome`
-- Build for web: `flutter build web`
-- Generate code (e.g., Riverpod/JSON): `flutter pub run build_runner build --delete-conflicting-outputs`
-- Test: `flutter test`
-- Lint: `flutter analyze`
-
-### Supabase (optional, via Supabase CLI)
-- Start local Supabase stack: `supabase start`
-- Stop local Supabase stack: `supabase stop`
-- Push database schema: `supabase db push`
-- Reset local database: `supabase db reset`
-
-For full CI/CD, see planned GitHub Actions workflows.
-
-## Project Scope
-### MVP Features (MUST)
-- Authentication: Email/password login, guest mode, roles, invitations, RBAC.
-- Squads: CRUD, visibility (public/private), member management (up to 100 players, 1 per owner).
-- Players: CRUD, rankings, basic stats/trends (no user-player mapping).
-- Drafting: Deterministic proposals (up to 20, sorted by balance) for ≤16 players.
-- Matches: Create from drafts, score entry (home/away + meta), delta-based ranking updates.
-- Tournaments: Player/team selection, draft acceptance, match addition, team edits, simple standings (W/L, goal diff).
-- Stats: Matches played, win/loss, ranking history.
-- Security: Audit logs, anti-spam limits (e.g., squad creation).
-
-### SHOULD/NICE TO HAVE
-- Sport type extension (football in MVP).
-- Operational analytics exports.
-- Player name suggestions/import (CSV).
-
-### Out of Scope (Post-MVP)
-- Subscriptions/access limits.
-- Advanced draft rules, offline mode.
-- User-player claiming, full anti-duplication.
-- Advanced tournament tie-breakers, SEO.
-
-### Limits & Assumptions
-- 16-player draft hard limit; per-squad rankings.
-- Online-only sessions; football-only MVP.
-- Results affect only participating players.
-
-See [.ai/prd.md](.ai/prd.md) for all user stories and metrics.
-
-## Project Status
-- **Development Stage**: MVP planning and initial implementation.
-- **Completed**: Basic Flutter setup, GoRouter integration.
-- **In Progress**: Core features (auth, squads, drafting) per Clean Architecture with Supabase backend.
-- **Planned**: Full web build, Supabase integration (RLS, functions), CI/CD with GitHub Actions, and hosting for the Flutter Web build.
-- **Version**: 1.0.0+1 (Flutter app).
-- Open issues: Detailed in GitHub repo; contributions welcome.
-
-## License
-This project is free to use and modify.

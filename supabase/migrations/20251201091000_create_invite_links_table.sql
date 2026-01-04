@@ -1,5 +1,11 @@
--- Invite links for squads: single active code per squad, owner-managed.
--- Secure via RLS; membership handled by RPC join_squad_by_invite.
+-- ###########################################################################
+-- Migration: create invite_links table + join function
+-- Purpose:
+--   - Store single active invite code per squad.
+--   - Provide RPC to join via invite code.
+-- Decisions:
+--   - RLS is owner-only; join happens via RPC.
+-- ###########################################################################
 
 create table public.invite_links (
   code text primary key,
@@ -106,3 +112,6 @@ $$;
 
 comment on function public.join_squad_by_invite is
   'Join a squad by invite code. Validates expiry and adds current user as member.';
+
+revoke all on function public.join_squad_by_invite(text) from public;
+grant execute on function public.join_squad_by_invite(text) to authenticated;

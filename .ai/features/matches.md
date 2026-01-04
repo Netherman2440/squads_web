@@ -39,7 +39,7 @@ w stylu zgodnym z aktualnym kodem aplikacji:
 - Tile zawodników stają się **draggable** - można je przeciągać pomiędzy drużynami (jak w `/matches/create`).
 - Mogę zmienić kolor drużyny klikając w kwadracik i wybierając kolor z palety.
 - **Swap Teams**: zamienia graczy miejscami (Home <-> Away) - tylko w UI, zapis przy Save.
-- Edycja jest możliwa nawet po wpisaniu wyniku (patrz sekcja o recompute).
+- Edycja składów jest możliwa tylko przed wpisaniem wyniku.
 
 ### US-011: Dodawanie/Usuwanie graczy w edycji
 - **Add Player**:
@@ -54,7 +54,7 @@ w stylu zgodnym z aktualnym kodem aplikacji:
 - Wywołuje przeliczenie rankingu graczy (revert zmian).
 
 ### US-013: Redraft (w trybie edycji)
-- Dostępne dla admina (zazwyczaj przed wpisaniem wyniku, ale technicznie możliwe też później).
+- Dostępne dla admina tylko przed wpisaniem wyniku.
 - Kliknięcie przenosi nas z powrotem do `/matches/draft` z **aktualnie wybranymi zawodnikami** (Available + Selected).
 - Po przejściu całego flow Draftu i zatwierdzeniu ("Save/Update"), **aktualizujemy** obecny mecz nowymi składami (zamiast tworzyć nowy duplikat).
 - Zmiany aplikują się dopiero po zatwierdzeniu w flow draftu (nie usuwamy starego meczu od razu po kliknięciu Redraft).
@@ -66,10 +66,12 @@ w stylu zgodnym z aktualnym kodem aplikacji:
 
 ### US-015: Update match score (Wpisanie wyniku)
 - Jako admin chcę móc wpisać/zmienić wynik meczu.
-- Aktualizacja wyniku powoduje wywołanie logiki `Score History`:
+- Aktualizacja wyniku powoduje wywołanie logiki `Ranking History`:
   - Obliczenie delty rankingu.
   - Aktualizacja wpisów w `ranking_history`.
   - Aktualizacja `player.ranking` (poprzez dodanie/odjęcie różnicy).
+- Po wpisaniu wyniku nie można już edytować składów.
+- Wynik można zmienić tylko wtedy, gdy nie istnieje nowszy mecz z wpisanym wynikiem.
 - **Obsługa starych meczy**:
   - Można edytować wynik meczu z przeszłości.
   - Zmiana w starym meczu aktualizuje `player.ranking` o różnicę delty (np. stara delta +2, nowa 0 -> ranking -2).
@@ -79,8 +81,8 @@ w stylu zgodnym z aktualnym kodem aplikacji:
 ### US-012 Update match score 
 - Jako admin chce móc zmienić wynik meczu
 - Aktualizacja wyniku meczu powoduje:
-- to że nie mogę już dłużej edytować drużyn ( po kliknięciu edit od razu nie widzę redraft i add player,)
-- wywołuje to aktualizację score history wszystkich graczy którzy brali 
+- to że nie mogę już dłużej edytować drużyn (po kliknięciu edit od razu nie widzę redraft i add player,)
+- wywołuje to aktualizację ranking history wszystkich graczy którzy brali udział
 
 ### US-013 Squad ranking settings
 - Jako admin chce mieć kontrolę nad tym w jaki sposób aktualizowany jest ranking graczy 
@@ -241,6 +243,7 @@ Interfejs (MVP + pod przyszłe story):
 
 > `Rematch` / `Redraw` traktujemy jako **use case’y aplikacyjne** (orchestracja),
 > nie jako metody repo (repo powinno być “thin” i mapować na DB).
+> `Redraw` aktualizuje istniejący mecz (podmiana rosterów), bez usuwania rekordu meczu.
 
 ### `SupabaseMatchRepository` (infrastructure)
 Wzorzec jak w `SupabasePlayerRepository`:
@@ -409,7 +412,7 @@ UI:
 - [x] `Rematch`
 - [x] `Redraw` 
 - [ ] `UpdateTeamColor/Name` (nie zaimplementowane)
-- [x] Integracja z `score_history` (osobny feature plan)
+- [x] Integracja z `ranking_history` (osobny feature plan)
 - [x] `DeleteMatch` (implementacja usunięcia meczu i cofnięcia rankingu)
 - [x] Invalidacja ranking history po update score (odświeżenie Player Details / graph)
 - [ ] Squad Settings z wzorem obliczania ranking update

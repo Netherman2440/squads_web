@@ -5,7 +5,7 @@
 - **Powiązane wymagania**:
   - **UI**: `PlayersPage` pod ścieżką `/squads/:squadId/players`, lista graczy z filtrem/sortem, pozycja, `score`, `base_score`, licznik graczy, komponenty: `PlayersListWidget`, `SearchBar`, `SortMenu`, `CreatePlayerDialog`.
   - **PRD**: US-005 – CRUD graczy w składzie, ograniczenie do ról Admin/Owner, walidacja duplikatów nazw w obrębie składu (best effort).
-  - **DB**: Tabela `players` (`player_id`, `squad_id`, `name`, `position`, `base_score`, `score`, `created_at`, `updated_at`, `is_deleted`).
+  - **DB**: Tabela `players` (`player_id`, `squad_id`, `name`, `position`, `base_score`, `score`, `created_at`).
 
 ### 2. Struktura katalogów feature'u `players`
 Wszystko w `app/lib/features/players`:
@@ -48,7 +48,7 @@ Wszystko w `app/lib/features/players`:
 
 ### 3. Model domenowy i repozytorium
 - **Encja `Player` (`domain/entities/player.dart`)**:
-  - Pola: `id` (UUID), `squadId` (UUID), `name` (String), `position` (String?), `baseScore` (int), `score` (double), `createdAt`, `updatedAt`, `isDeleted`.
+- Pola: `id` (UUID), `squadId` (UUID), `name` (String), `position` (String?), `baseScore` (int), `score` (double), `createdAt`.
   - Immutable, `const` konstruktor, bez zależności od warstw niższych.
 
 - **Interfejs repozytorium (`domain/repositories/player_repository.dart`)**:
@@ -193,5 +193,4 @@ Wszystko w `app/lib/features/players`:
 - Zaawansowane filtrowanie/sortowanie (po wielu polach, wielokryterialne).
 - Paginations / infinite scroll (jeśli zajdzie potrzeba).
 - Dopracowanie roli i uprawnień na poziomie UI (np. ukrywanie akcji w zależności od roli).
-
 

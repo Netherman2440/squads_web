@@ -88,7 +88,7 @@ Zakres UI obejmuje: autoryzację (login/guest, rejestracja), listy i detale skł
 - UX, dostępność i względy bezpieczeństwa: Edytowalny score; nazwa zgodnie z decyzją MVP; komunikat kolizji 409; potwierdzenie usunięcia gdy dopuszczalne.
 
 9) Nazwa widoku: DraftPage
-- Ścieżka widoku: /squads/:squadId/draft
+- Ścieżka widoku: /squads/:squadId/matches/draft
 - Główny cel: Wybór do 16 graczy i żądanie propozycji draftu.
 - Kluczowe informacje do wyświetlenia: Wybrani vs dostępni gracze, licznik (max 16), ostrzeżenie >16, wynik zapytania.
 - Kluczowe komponenty widoku: DualListSelector, SelectedCounter, DraftButton, DraftWarnings.
@@ -104,7 +104,7 @@ Zakres UI obejmuje: autoryzację (login/guest, rejestracja), listy i detale skł
 11) Nazwa widoku: MatchHistoryPage
 - Ścieżka widoku: /squads/:squadId/matches
 - Główny cel: Lista meczów składu z wynikami i sortowaniem po created_at.
-- Kluczowe informacje do wyświetlenia: Karty/wiersze z datą, wynikiem lub statusem (pending), filtr po dacie/typie.
+- Kluczowe informacje do wyświetlenia: Karty/wiersze z datą, wynikiem lub statusem (brak wyniku), filtr po dacie/typie.
 - Kluczowe komponenty widoku: MatchList, Filters, PaginationBar.
 - UX, dostępność i względy bezpieczeństwa: Sort domyślnie -created_at; różne widoki dla gościa vs członek; Δ: usunąć score na poziomie teamu – wynik na poziomie meczu.
 
@@ -113,7 +113,7 @@ Zakres UI obejmuje: autoryzację (login/guest, rejestracja), listy i detale skł
 - Główny cel: Szczegóły meczu, edycja składu (przed wynikiem), zapis wyniku i score_meta.
 - Kluczowe informacje do wyświetlenia: Snapshot teamów (home/away), roster, wynik [home, away], result_type, score_meta, played_at, status.
 - Kluczowe komponenty widoku: TeamSnapshot, LineupEditor (locked po wyniku), ScoreInput, ScoreMetaForm, SaveButtons.
-- UX, dostępność i względy bezpieczeństwa: Lineup lock po ustawieniu wyniku (bez approval flow w MVP), role: admin/owner; spójne 409 dla zablokowanej edycji; Δ: wynik tylko na poziomie meczu.
+- UX, dostępność i względy bezpieczeństwa: Lineup lock po ustawieniu wyniku, role: admin/owner; spójne 409 dla zablokowanej edycji; edycja wyniku tylko gdy nie istnieje nowszy mecz z wpisanym wynikiem; Δ: wynik tylko na poziomie meczu.
 
 13) Nazwa widoku: Members & Settings Page
 - Ścieżka widoku: /squads/:squadId/settings
@@ -171,13 +171,11 @@ Zakres UI obejmuje: autoryzację (login/guest, rejestracja), listy i detale skł
 - CRUD graczy (US‑005)
   - /squads/:id/players → dodaj/edytuj/usuń (role: admin/owner) → walidacja 409 nazwy.
 - Draft zbalansowanych drużyn (US‑006)
-  - /squads/:id/draft → wybór <=16 → POST /matches/draw → /squads/:id/matches/create (przegląd propozycji) → korekta → POST /matches (utworzenie meczu).
+  - /squads/:id/matches/draft → wybór <=16 → POST /matches/draw → /squads/:id/matches/create (przegląd propozycji) → korekta → POST /matches (utworzenie meczu).
 - Utworzenie meczu z draftu (US‑007)
   - Kontynuacja powyżej → redirect do /squads/:id/matches/:matchId.
 - Wprowadzenie/edycja wyniku (US‑008, US‑016)
-  - /squads/:id/matches/:matchId → wprowadź score [h,a], result_type, score_meta → POST /matches/{id}/score → lineup lock.
-- Zatwierdzenie wyniku (US‑009) – jeśli wdrożone
-  - Owner: /squads/:id/matches/:matchId → Approve (opcjonalnie) → status approved.
+  - /squads/:id/matches/:matchId → wprowadź score [h,a], result_type, score_meta → zapis wyniku → lineup lock.
 - Przegląd statystyk (US‑010)
   - /squads/:id (shell) + PlayerDetail: wykres trendu, podstawowe metryki; opcjonalnie /squads/:id/stats (agregaty).
 - Turnieje (US‑011–US‑014)
@@ -200,7 +198,7 @@ Zakres UI obejmuje: autoryzację (login/guest, rejestracja), listy i detale skł
   - /squads/:squadId (shell)
     - /squads/:squadId/players
     - /squads/:squadId/players/:playerId
-    - /squads/:squadId/draft
+    - /squads/:squadId/matches/draft
     - /squads/:squadId/matches
     - /squads/:squadId/matches/create
     - /squads/:squadId/matches/:matchId
@@ -233,5 +231,3 @@ Zakres UI obejmuje: autoryzację (login/guest, rejestracja), listy i detale skł
 - PrivacyToggle & SquadForm: edycja nazwy i visibility; sport_type read‑only w MVP.
 - Tournament* (Card, Teams, Matches, Table): podstawowe komponenty listy/detalu turniejów.
 - Error/Empty Views: spójne ekrany błędów (NoAccess, NotFound, NetworkError) i pustki z CTA.
-
-

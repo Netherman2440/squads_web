@@ -721,7 +721,7 @@ This design allows us to:
 1. Create placeholder entries when match is created (`change = null`)
 2. Track historical ranking at time of match
 3. Calculate current ranking as `ranking + change`
-4. Support multiple pending matches simultaneously
+4. Support multiple unscored matches simultaneously
 5. Audit trail of all ranking changes
 
 ### Why Not Allow Ranking in `PlayerRepository.updatePlayer`?

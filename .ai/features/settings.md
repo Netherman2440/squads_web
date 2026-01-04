@@ -12,7 +12,7 @@ Implementation of the Squad Settings screen, accessible only to the Squad Owner.
 
 ### 3.1 Domain Layer
 **Entities:**
-- `SquadMember` (existing) will need to ensure `UserSquadRole` covers: `owner`, `admin`, `member`, `pending`, `declined`.
+- `SquadMember` (existing) will need to ensure `UserSquadRole` covers: `none`, `owner`, `admin`, `member`, `pending`, `invited`, `declined`, `removed`.
 
 **Repository Interfaces:**
 - `SquadRepository`:
@@ -106,4 +106,3 @@ Implementation of the Squad Settings screen, accessible only to the Squad Owner.
 - **RBAC:** Ensure bam 
 - **Self-Action:** Owner cannot remove themselves or change their own role here (except "Change Owner" which is todo).
 - **Concurrency:** Optimistic UI updates recommended for role changes.
-

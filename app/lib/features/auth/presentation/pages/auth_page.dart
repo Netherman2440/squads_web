@@ -26,6 +26,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
   bool isPasswordObscured = true;
   bool _processingInvite = false;
   bool _handlingAuthNavigation = false;
+  ProviderSubscription<AsyncValue<AuthEntity?>>? _authSubscription;
 
   @override
   void initState() {
@@ -33,7 +34,8 @@ class _AuthPageState extends ConsumerState<AuthPage> {
     emailController = TextEditingController();
     passwordController = TextEditingController();
     formKey = GlobalKey<FormState>();
-    ref.listenManual<AsyncValue<AuthEntity?>>(
+    _authSubscription?.close();
+    _authSubscription = ref.listenManual<AsyncValue<AuthEntity?>>(
       authStateProvider,
       (previous, next) {
         next.when(
@@ -52,6 +54,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
 
   @override
   void dispose() {
+    _authSubscription?.close();
     emailController.dispose();
     passwordController.dispose();
     super.dispose();
@@ -91,23 +94,26 @@ class _AuthPageState extends ConsumerState<AuthPage> {
       return;
     }
     _handlingAuthNavigation = true;
+    try {
+      if (data.isAnonymous) {
+        context.go('/squads');
+        return;
+      }
 
-    if (data.isAnonymous) {
-      context.go('/squads');
-      return;
+      final joinedSquadId = await _joinPendingInvite();
+      if (!mounted) {
+        return;
+      }
+
+      if (joinedSquadId != null) {
+        context.go('/squads/$joinedSquadId');
+        return;
+      }
+
+      context.go('/me');
+    } finally {
+      _handlingAuthNavigation = false;
     }
-
-    final joinedSquadId = await _joinPendingInvite();
-    if (!mounted) {
-      return;
-    }
-
-    if (joinedSquadId != null) {
-      context.go('/squads/$joinedSquadId');
-      return;
-    }
-
-    context.go('/me');
   }
 
   void _handleAuthError(Object error) {

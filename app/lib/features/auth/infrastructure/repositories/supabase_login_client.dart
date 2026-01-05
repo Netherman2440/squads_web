@@ -154,6 +154,10 @@ class SupabaseLoginClient implements LoginRepository {
       final existing = _supabase.auth.currentSession;
       final session = existing ??
           (await _supabase.auth.getSessionFromUrl(redirectUri)).session;
+      if (session == null) {
+        _logger.warning('OAuth callback returned no session');
+        throw AuthException('OAuth callback did not return a session');
+      }
       final user = session.user;
 
       return AuthEntity(

@@ -58,7 +58,7 @@ Składy z widocznością i właścicielem.
 | `use_experience_factor` | BOOLEAN            | NOT NULL DEFAULT true                                                     |
 | `created_at`            | TIMESTAMPTZ        | NOT NULL DEFAULT now()                                                    |
 
-> **Limit 1 skład na Ownera** – egzekwowany **w API** w MVP (brak DB‑constraint zgodnie z decyzją). **[Zmiana vs. aktualny plan]**
+> **Limit 1 skład na Ownera** – egzekwowany **w API** w MVP (brak DB‑constraint zgodnie z decyzją). 
 
 ---
 
@@ -76,7 +76,6 @@ Członkostwa + zaproszenia (rola jako jeden ENUM).
 **Klucze:**
 PK `(user_id, squad_id)`
 
-> **Usunięto** `player_id` z `user_squads` (brak mapowania user↔player w MVP). **[Zmiana vs. aktualny plan]**
 
 ---
 
@@ -119,7 +118,7 @@ Tożsamości drużyn turniejowych (edytowalne nazwy/kolory).
 
 | Kolumna              | Typ         | Ograniczenia                                                  |
 | -------------------- | ----------- | ------------------------------------------------------------- |
-| `tournament_team_id` | UUID        | PK **[Zmiana vs. aktualny plan – nowa tabela]**               |
+| `tournament_team_id` | UUID        | PK          |
 | `tournament_id`      | UUID        | NOT NULL; FK → `tournaments(tournament_id)` ON DELETE CASCADE |
 | `name`               | TEXT        | NULLABLE                                                      |
 | `color`              | TEXT        | NULLABLE                                                      |
@@ -136,7 +135,7 @@ Składy drużyn turniejowych.
 | Kolumna              | Typ  | Ograniczenia                                                                                                                               |
 | -------------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | `tournament_team_id` | UUID | NOT NULL; FK → `tournament_teams(tournament_team_id)` ON DELETE CASCADE                                                                    |
-| `tournament_id`      | UUID | NOT NULL; **zduplikowane** dla spójności referencyjnej; FK → `tournaments(tournament_id)` ON DELETE CASCADE **[Zmiana vs. aktualny plan]** |
+| `tournament_id`      | UUID | NOT NULL;  FK → `tournaments(tournament_id)` ON DELETE CASCADE |
 | `player_id`          | UUID | NOT NULL; FK → `players(player_id)` ON DELETE CASCADE                                                                                      |
 
 **Klucze/unikalności:**
@@ -156,10 +155,10 @@ Mecze i wynik (bez workflow zatwierdzania).
 | `match_id`            | UUID                    | PK                                                                         |
 | `squad_id`            | UUID                    | NOT NULL; FK → `squads(squad_id)` ON DELETE CASCADE                        |
 | `tournament_id`       | UUID                    | NULLABLE; FK → `tournaments(tournament_id)` ON DELETE CASCADE              |
-| `score_type`         | `match_score_type`     | NULLABLE (ustawiane po wprowadzeniu wyniku) **[Zmiana vs. aktualny plan]** |
-| `home_score`               | SMALLINT            | NULLABLE **[Zmiana vs. aktualny plan]**  |
-| `away_score`               | SMALLINT            | NULLABLE **[Zmiana vs. aktualny plan]**  |
-| `score_meta`          | JSONB                   | NOT NULL DEFAULT '{}'::jsonb **[Zmiana vs. aktualny plan]**                |
+| `score_type`         | `match_score_type`     | NULLABLE (ustawiane po wprowadzeniu wyniku) |
+| `home_score`               | SMALLINT            | NULLABLE |
+| `away_score`               | SMALLINT            | NULLABLE  |
+| `score_meta`          | JSONB                   | NOT NULL DEFAULT '{}'::jsonb             |
 | `played_at`           | TIMESTAMPTZ             | NULLABLE                                                                  |
 | `created_at`          | TIMESTAMPTZ             | NOT NULL DEFAULT now()                                                     |
 
@@ -181,10 +180,9 @@ Drużyny per mecz (snapshot; bez wyniku; z atrybutem strony).
 
 **Unikalności:**
 
-* UNIQUE `(match_id, side)` – dokładnie jedna drużyna na stronę. **[Zmiana vs. aktualny plan]**
-* UNIQUE `(match_id, team_id)` – na potrzeby złożonego FK z `team_players`. **[Zmiana vs. aktualny plan]**
+* UNIQUE `(match_id, side)` – dokładnie jedna drużyna na stronę. 
+* UNIQUE `(match_id, team_id)` – na potrzeby złożonego FK z `team_players`. 
 
-> **Usunięto** z `teams`: `squad_id`, `score`. **[Zmiana vs. aktualny plan]**
 
 ---
 
@@ -202,11 +200,10 @@ Przypisanie graczy do drużyn w kontekście meczu (snapshoty).
 
 **Klucze/Unikalności:**
 
-* PK `(match_id, team_id, player_id)` **[Zmiana vs. aktualny plan]**
-* **Złożony FK:** `(match_id, team_id)` → `teams(match_id, team_id)` **[Zmiana vs. aktualny plan]**
-* UNIQUE `(match_id, player_id)` – gracz nie może być w obu drużynach jednego meczu. **[Zmiana vs. aktualny plan]**
+* PK `(match_id, team_id, player_id)`   
+* **Złożony FK:** `(match_id, team_id)` → `teams(match_id, team_id)` 
+* UNIQUE `(match_id, player_id)` – gracz nie może być w obu drużynach jednego meczu.
 
-> **Usunięto** `squad_id` z `team_players`. **[Zmiana vs. aktualny plan]**
 
 ---
 
@@ -301,12 +298,12 @@ Historia rankingów (snapshot + delta), z możliwością manualnych korekt.
 ## 5. Dodatkowe uwagi i decyzje projektowe
 
 * **Wynik meczu**: `home_score` + `away_score` w `matches`, `score_type` + `score_meta(JSONB)` dla metadanych (np. `{ "penalties": {"home":5,"away":4}, "walkover": true }`).
-* **Teams/TeamPlayers – snapshoty**: `teams` przechowuje tylko `side`, `name`, `color` **brak** `score`, **brak** `squad_id`. Integralność składu zapewnia złożony FK w `team_players` oraz `UNIQUE(match_id, player_id)`. **[Zmiana vs. aktualny plan]**
-* **Turnieje**: wprowadzono `tournament_teams` i `tournament_team_players`; mecze turniejowe generują nowe `teams` (snapshoty). Dodano `tournaments.teams_expected_count`. **[Zmiana vs. aktualny plan]**
+* **Teams/TeamPlayers – snapshoty**: `teams` przechowuje tylko `side`, `name`, `color` **brak** `score`, **brak** `squad_id`. Integralność składu zapewnia złożony FK w `team_players` oraz `UNIQUE(match_id, player_id)`
+* **Turnieje**: wprowadzono `tournament_teams` i `tournament_team_players`; mecze turniejowe generują nowe `teams` (snapshoty). Dodano `tournaments.teams_expected_count`.
 
 * **Ranking history**: `match_id` może być `NULL` dla manualnych korekt; partial UNIQUE `(player_id, match_id)` utrzymuje jeden wpis per gracz‑mecz.
-* **Widoczność składów**: `squads.visibility` z DEFAULT `'public'` (filtrowanie po stronie API – brak RLS w MVP). **[Zmiana vs. aktualny plan]**
-* **Unikalność nazw graczy**: w obrębie składu, case‑insensitive dzięki `CITEXT`. **[Zmiana vs. aktualny plan]**
+* **Widoczność składów**: `squads.visibility` z DEFAULT `'public'` (filtrowanie po stronie API – brak RLS w MVP). 
+* **Unikalność nazw graczy**: w obrębie składu, case‑insensitive dzięki `CITEXT`. 
 
 * **Score pair**: typ złożony `score_pair` jest zdefiniowany, ale obecnie nieużywany; w razie potrzeby można go wykorzystać w przyszłości.
 * **Kasowanie danych**: twarde kasowanie; `ON DELETE CASCADE` tam, gdzie uzgodniono (dzieci obiektów domenowych). Brak soft‑delete w MVP.

@@ -4,6 +4,7 @@ import 'package:app/features/players/presentation/pages/player_details_page.dart
 import 'package:app/core/root_shell.dart';
 import 'package:app/features/auth/presentation/pages/auth_page.dart';
 import 'package:app/features/auth/presentation/pages/auth_confirm_page.dart';
+import 'package:app/features/auth/presentation/pages/auth_callback_page.dart';
 import 'package:app/features/auth/presentation/pages/register_page.dart';
 import 'package:app/features/auth/presentation/pages/reset_password_page.dart';
 import 'package:app/features/draft/presentation/pages/draft_results_page.dart';
@@ -22,6 +23,7 @@ enum AppRoute {
   auth,
   authRegister,
   authConfirm,
+  authCallback,
   authReset,
   squads,
   squadHome,
@@ -54,6 +56,12 @@ final appRouter = GoRouter(
         final email = state.uri.queryParameters['email'];
         return NoTransitionPage(child: AuthConfirmPage(email: email));
       },
+    ),
+    GoRoute(
+      path: '/auth/callback',
+      name: AppRoute.authCallback.name,
+      pageBuilder: (context, state) =>
+          const NoTransitionPage(child: AuthCallbackPage()),
     ),
     GoRoute(
       path: '/auth/reset',

@@ -10,7 +10,8 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  //flutter run -d chrome --dart-define-from-file=.env
+  //flutter run -d chrome --web-port=3000 --dart-define-from-file=.env
+  //flutter run -d chrome --web-port=3000 --web-hostname=127.0.0.1 --dart-define-from-file=.env
   AppConfig.validate();
 
   await Supabase.initialize(

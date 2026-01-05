@@ -6,6 +6,9 @@ import '../../application/register_use_case.dart';
 import '../../application/guest_login_use_case.dart';
 import '../../application/logout_use_case.dart';
 import '../../application/refresh_session_use_case.dart';
+import '../../application/oauth_sign_in_use_case.dart';
+import '../../application/complete_oauth_sign_in_use_case.dart';
+import '../../domain/entities/auth_provider.dart';
 
 class AuthNotifier extends Notifier<AsyncValue<AuthEntity?>> {
   late final RefreshSessionUseCase _refreshSessionUseCase = ref.read(
@@ -19,6 +22,12 @@ class AuthNotifier extends Notifier<AsyncValue<AuthEntity?>> {
     guestLoginUseCaseProvider,
   );
   late final LogoutUseCase _logoutUseCase = ref.read(logoutUseCaseProvider);
+  late final OAuthSignInUseCase _oauthSignInUseCase = ref.read(
+    oauthSignInUseCaseProvider,
+  );
+  late final CompleteOAuthSignInUseCase _completeOAuthSignInUseCase = ref.read(
+    completeOAuthSignInUseCaseProvider,
+  );
 
   @override
   AsyncValue<AuthEntity?> build() {
@@ -53,6 +62,27 @@ class AuthNotifier extends Notifier<AsyncValue<AuthEntity?>> {
       // The UI can check entity.accessToken.isEmpty if needed.
       return entity;
     });
+  }
+
+  Future<void> signInWithProvider({
+    required AuthProvider provider,
+    String? redirectTo,
+  }) async {
+    final previous = state.asData?.value;
+    state = const AsyncValue.loading();
+    try {
+      await _oauthSignInUseCase.execute(provider, redirectTo: redirectTo);
+      state = AsyncValue.data(previous);
+    } catch (error, stackTrace) {
+      state = AsyncValue.error(error, stackTrace);
+    }
+  }
+
+  Future<void> completeOAuthSignIn(Uri redirectUri) async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(
+      () => _completeOAuthSignInUseCase.execute(redirectUri),
+    );
   }
 
   Future<void> guestLogin() async {

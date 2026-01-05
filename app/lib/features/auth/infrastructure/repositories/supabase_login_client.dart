@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:logging/logging.dart';
 
 import '../../domain/entities/auth_entity.dart';
+import '../../domain/entities/auth_provider.dart' as domain_auth;
 import '../../domain/repositories/login_repository.dart';
 
 class SupabaseLoginClient implements LoginRepository {
@@ -13,6 +14,13 @@ class SupabaseLoginClient implements LoginRepository {
   final Logger _logger = Logger('SupabaseLoginClient');
 
   SupabaseLoginClient(this._supabase);
+
+  OAuthProvider _mapProvider(domain_auth.AuthProvider provider) {
+    switch (provider) {
+      case domain_auth.AuthProvider.google:
+        return OAuthProvider.google;
+    }
+  }
 
   @override
   Future<AuthEntity> login(String email, String password) async {
@@ -117,6 +125,46 @@ class SupabaseLoginClient implements LoginRepository {
       );
     } catch (e, stackTrace) {
       _logger.warning('Session refresh failed', e, stackTrace);
+      throw e.toFailure();
+    }
+  }
+
+  @override
+  Future<void> signInWithProvider(
+    domain_auth.AuthProvider provider, {
+    String? redirectTo,
+  }) async {
+    try {
+      final launched = await _supabase.auth.signInWithOAuth(
+        _mapProvider(provider),
+        redirectTo: redirectTo,
+      );
+      if (!launched) {
+        throw const ServerFailure('OAuth sign-in could not be started');
+      }
+    } catch (e, stackTrace) {
+      _logger.severe('OAuth sign-in failed', e, stackTrace);
+      throw e.toFailure();
+    }
+  }
+
+  @override
+  Future<AuthEntity> getSessionFromRedirect(Uri redirectUri) async {
+    try {
+      final existing = _supabase.auth.currentSession;
+      final session = existing ??
+          (await _supabase.auth.getSessionFromUrl(redirectUri)).session;
+      final user = session.user;
+
+      return AuthEntity(
+        accessToken: session.accessToken,
+        refreshToken: session.refreshToken ?? '',
+        userId: user.id,
+        isAnonymous: user.isAnonymous,
+        email: user.email ?? '',
+      );
+    } catch (e, stackTrace) {
+      _logger.severe('OAuth callback handling failed', e, stackTrace);
       throw e.toFailure();
     }
   }

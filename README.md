@@ -93,6 +93,19 @@ For full details, see [.ai/tech-stack.md](.ai/tech-stack.md).
    - Configure RLS policies and auth settings according to the PRD (roles, visibility, etc.).
    - Ensure the Flutter app's `SUPABASE_URL` and `SUPABASE_ANON_KEY` match the project.
 
+### Third-Party Login (Google) - Local Setup
+- Add credentials to `supabase/.env` (see `supabase/.env.example`):
+  ```
+  SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID=your_google_client_id
+  SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET=your_google_client_secret
+  ```
+- Ensure `supabase/config.toml` has `[auth.external.google]` enabled and uses the env vars.
+- In Google Cloud OAuth, add the local redirect URI:
+  `http://127.0.0.1:54321/auth/v1/callback`
+- In `supabase/config.toml`, make sure `auth.site_url` and `auth.additional_redirect_urls`
+  include your app callback URL (for example `http://127.0.0.1:3000/#/auth/callback`).
+- Restart local Supabase: `supabase stop && supabase start`.
+
 4. **Optional: Supabase Local Development**:
    - Install the Supabase CLI and start a local instance:
      ```bash
@@ -103,4 +116,3 @@ For full details, see [.ai/tech-stack.md](.ai/tech-stack.md).
      supabase db push
      ```
    - Point the Flutter app to the local Supabase URL for local-only testing.
-

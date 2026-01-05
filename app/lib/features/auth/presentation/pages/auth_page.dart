@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:app/core/app_theme.dart';
 import 'package:app/core/error/failure.dart';
 import 'package:app/features/auth/domain/entities/auth_entity.dart';
+import 'package:app/features/auth/domain/entities/auth_provider.dart';
 import 'package:app/features/auth/application/request_password_reset_use_case.dart';
 import 'package:app/features/squads/application/join_squad_from_invite_use_case.dart';
 import 'package:app/features/squads/infrastructure/storage/invite_code_storage.dart';
@@ -24,6 +25,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
   late final GlobalKey<FormState> formKey;
   bool isPasswordObscured = true;
   bool _processingInvite = false;
+  bool _handlingAuthNavigation = false;
 
   @override
   void initState() {
@@ -31,6 +33,21 @@ class _AuthPageState extends ConsumerState<AuthPage> {
     emailController = TextEditingController();
     passwordController = TextEditingController();
     formKey = GlobalKey<FormState>();
+    ref.listenManual<AsyncValue<AuthEntity?>>(
+      authStateProvider,
+      (previous, next) {
+        next.when(
+          data: (data) {
+            _handleAuthSuccess(data);
+          },
+          error: (error, stackTrace) {
+            _handleAuthError(error);
+          },
+          loading: () {},
+        );
+      },
+      fireImmediately: true,
+    );
   }
 
   @override
@@ -69,60 +86,55 @@ class _AuthPageState extends ConsumerState<AuthPage> {
     }
   }
 
+  Future<void> _handleAuthSuccess(AuthEntity? data) async {
+    if (data == null || !mounted || _handlingAuthNavigation) {
+      return;
+    }
+    _handlingAuthNavigation = true;
+
+    if (data.isAnonymous) {
+      context.go('/squads');
+      return;
+    }
+
+    final joinedSquadId = await _joinPendingInvite();
+    if (!mounted) {
+      return;
+    }
+
+    if (joinedSquadId != null) {
+      context.go('/squads/$joinedSquadId');
+      return;
+    }
+
+    context.go('/me');
+  }
+
+  void _handleAuthError(Object error) {
+    if (!mounted) {
+      return;
+    }
+
+    String message = 'Login failed. Please try again.';
+
+    if (error is InvalidCredentialsFailure) {
+      message = 'Invalid email or password.';
+    } else if (error is UserNotConfirmedFailure) {
+      message = 'Email not confirmed. Please check your inbox.';
+    } else if (error is NetworkFailure) {
+      message = 'Failed to connect to the server. Please try again later.';
+    } else if (error is Failure) {
+      message = error.message;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
-
-    // Handle side effects (Navigation, Errors)
-    ref.listen<AsyncValue<AuthEntity?>>(authStateProvider, (
-      previous,
-      next,
-    ) async {
-      await next.when(
-        data: (data) async {
-          if (data == null || !mounted) {
-            return;
-          }
-
-          if (data.isAnonymous) {
-            context.go('/squads');
-            return;
-          }
-
-          final router = GoRouter.of(context);
-          final joinedSquadId = await _joinPendingInvite();
-          if (!mounted) {
-            return;
-          }
-
-          if (joinedSquadId != null) {
-            router.go('/squads/$joinedSquadId');
-            return;
-          }
-
-          router.go('/me');
-        },
-        error: (error, stackTrace) {
-          String message = 'Login failed. Please try again.';
-
-          if (error is InvalidCredentialsFailure) {
-            message = 'Invalid email or password.';
-          } else if (error is UserNotConfirmedFailure) {
-            message = 'Email not confirmed. Please check your inbox.';
-          } else if (error is NetworkFailure) {
-            message =
-                'Failed to connect to the server. Please try again later.';
-          } else if (error is Failure) {
-            message = error.message;
-          }
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(message), backgroundColor: Colors.red),
-          );
-        },
-        loading: () {},
-      );
-    });
 
     final isLoading = authState.isLoading;
 
@@ -141,6 +153,14 @@ class _AuthPageState extends ConsumerState<AuthPage> {
 
     Future<void> handleGuest() async {
       await ref.read(authStateProvider.notifier).guestLogin();
+    }
+
+    Future<void> handleGoogleSignIn() async {
+      final redirectTo = '${Uri.base.origin}/#/auth/callback';
+      await ref.read(authStateProvider.notifier).signInWithProvider(
+        provider: AuthProvider.google,
+        redirectTo: redirectTo,
+      );
     }
 
     Future<void> handlePasswordReset() async {
@@ -318,6 +338,16 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                             ),
                           )
                         : const Text('Login'),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: OutlinedButton.icon(
+                    onPressed: isLoading ? null : handleGoogleSignIn,
+                    icon: const Icon(Icons.g_mobiledata),
+                    label: const Text('Continue with Google'),
                   ),
                 ),
                 const SizedBox(height: 16),

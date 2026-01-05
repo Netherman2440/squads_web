@@ -10,10 +10,7 @@ class OAuthSignInUseCase {
   OAuthSignInUseCase(this._loginRepository);
 
   Future<void> execute(AuthProvider provider, {String? redirectTo}) async {
-    await _loginRepository.signInWithProvider(
-      provider,
-      redirectTo: redirectTo,
-    );
+    await _loginRepository.signInWithProvider(provider, redirectTo: redirectTo);
   }
 }
 

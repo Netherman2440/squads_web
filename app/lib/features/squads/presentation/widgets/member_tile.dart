@@ -26,26 +26,42 @@ class MemberTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final displayName = member.fullName.trim().isNotEmpty
+        ? member.fullName
+        : member.email;
 
     return Card(
       color: colorScheme.surfaceContainerHighest,
       child: ListTile(
+        isThreeLine: true,
         leading: CircleAvatar(
           backgroundColor: colorScheme.primary.withValues(alpha: 0.16),
           child: Icon(Icons.person, color: colorScheme.onPrimary),
         ),
         title: Text(
-          member.email,
+          displayName,
           style: theme.textTheme.bodyLarge?.copyWith(
             color: colorScheme.onSurface,
           ),
           overflow: TextOverflow.ellipsis,
         ),
-        subtitle: Text(
-          member.role.label,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: _getRoleColor(context, member.role),
-          ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              member.email,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              member.role.label,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: _getRoleColor(context, member.role),
+              ),
+            ),
+          ],
         ),
         trailing: _buildActions(context),
       ),

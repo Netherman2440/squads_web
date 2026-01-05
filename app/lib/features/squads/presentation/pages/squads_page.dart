@@ -57,14 +57,15 @@ class _SquadsPageState extends ConsumerState<SquadsPage> {
         );
         return;
       case SquadRole.none:
-        if (squad.visibility == SquadVisibility.private) {
-          await _showApplyDialog(squad, notifier);
+        if (_isGuest) {
+          messenger.showSnackBar(
+            const SnackBar(
+              content: Text('Log in to request access to this squad.'),
+            ),
+          );
           return;
         }
-        if (!mounted) {
-          return;
-        }
-        context.go('/squads/${squad.squadId}');
+        await _showApplyDialog(squad, notifier);
         return;
       case SquadRole.declined:
       case SquadRole.removed:

@@ -19,6 +19,7 @@ class GetSquadSettingsMembersUseCase {
     final userIds = members.map((m) => m.userId).toSet().toList();
     final users = await _userRepository.getUsers(userIds);
     final emailByUserId = {for (final user in users) user.id: user.email};
+    final fullNameByUserId = {for (final user in users) user.id: user.fullName};
 
     final enrichedMembers = members
         .map(
@@ -27,6 +28,7 @@ class GetSquadSettingsMembersUseCase {
             role: m.role,
             userId: m.userId,
             email: emailByUserId[m.userId] ?? m.email,
+            fullName: fullNameByUserId[m.userId] ?? m.fullName,
           ),
         )
         .toList();

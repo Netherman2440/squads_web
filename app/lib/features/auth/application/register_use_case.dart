@@ -9,8 +9,12 @@ class RegisterUseCase {
 
   RegisterUseCase(this._loginRepository);
 
-  Future<AuthEntity> execute(String email, String password) async {
-    final entity = await _loginRepository.register(email, password);
+  Future<AuthEntity> execute(
+    String email,
+    String password,
+    String fullName,
+  ) async {
+    final entity = await _loginRepository.register(email, password, fullName);
 
     return entity;
   }

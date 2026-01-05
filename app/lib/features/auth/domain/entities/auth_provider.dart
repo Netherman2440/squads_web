@@ -1,3 +1,1 @@
-enum AuthProvider {
-  google,
-}
+enum AuthProvider { google }

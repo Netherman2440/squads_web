@@ -38,11 +38,11 @@ class _UserPageState extends ConsumerState<UserPage> {
 
     final profile = userState.profile;
     final mySquads = profile?.memberships ?? const [];
-    final hasOwnedSquad = mySquads.any(
-      (membership) => membership.role == SquadRole.owner,
+    final hasSquad = mySquads.any(
+      (membership) => membership.role != SquadRole.none,
     );
 
-    final text = hasOwnedSquad ? 'Add more' : 'Add your first squad';
+    final text = hasSquad ? 'Add more' : 'Add your first squad';
 
     return Scaffold(
       body: RefreshIndicator(

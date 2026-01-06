@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:logging/logging.dart';
 
 import 'package:app/core/error/failure.dart';
 import 'package:app/features/draft/application/create_draft_use_case.dart';
@@ -11,11 +12,14 @@ enum DraftAlgorithm { combinatory, greedy }
 class DraftAlgorithmNotifier extends Notifier<DraftAlgorithm> {
   @override
   DraftAlgorithm build() {
-    return DraftAlgorithm.combinatory;
+    return DraftAlgorithm.greedy;
   }
 
   void setAlgorithm(DraftAlgorithm algorithm) {
-    state = algorithm;
+    Logger(
+      'DraftAlgorithmNotifier',
+    ).info('Can\'t change algorithm to $algorithm');
+    state = DraftAlgorithm.greedy;
   }
 }
 

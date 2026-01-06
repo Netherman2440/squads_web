@@ -163,10 +163,12 @@ class _AuthPageState extends ConsumerState<AuthPage> {
 
     Future<void> handleGoogleSignIn() async {
       final redirectTo = '${Uri.base.origin}/#/auth/callback';
-      await ref.read(authStateProvider.notifier).signInWithProvider(
-        provider: AuthProvider.google,
-        redirectTo: redirectTo,
-      );
+      await ref
+          .read(authStateProvider.notifier)
+          .signInWithProvider(
+            provider: AuthProvider.google,
+            redirectTo: redirectTo,
+          );
     }
 
     Future<void> handlePasswordReset() async {
@@ -296,9 +298,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                               const SizedBox(height: 16),
                               Text(
                                 'Squads App',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleLarge
+                                style: Theme.of(context).textTheme.titleLarge
                                     ?.copyWith(fontWeight: FontWeight.bold),
                               ),
                             ],
@@ -389,13 +389,12 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                             children: [
                               const Expanded(child: Divider()),
                               Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 12),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                ),
                                 child: Text(
                                   'or',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
+                                  style: Theme.of(context).textTheme.bodySmall
                                       ?.copyWith(
                                         color: Theme.of(context)
                                             .colorScheme

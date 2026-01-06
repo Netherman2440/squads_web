@@ -12,6 +12,18 @@ class SupabaseUserRepository implements UserRepository {
 
   SupabaseUserRepository(this._supabase);
 
+  String _resolveFullNameFromMetadata(Map<String, dynamic>? metadata) {
+    if (metadata == null) {
+      return '';
+    }
+    final raw =
+        metadata['full_name'] ?? metadata['name'] ?? metadata['display_name'];
+    if (raw is! String) {
+      return '';
+    }
+    return raw.trim();
+  }
+
   @override
   Future<domain.User?> getCurrentUser() async {
     try {
@@ -21,8 +33,44 @@ class SupabaseUserRepository implements UserRepository {
       }
 
       final email = authUser.email ?? '';
+      final fallbackFullName = _resolveFullNameFromMetadata(
+        authUser.userMetadata,
+      );
 
-      return domain.User(id: authUser.id, email: email);
+      try {
+        final response = await _supabase
+            .from('users')
+            .select('user_id, email, full_name')
+            .eq('user_id', authUser.id)
+            .maybeSingle();
+
+        if (response != null) {
+          final map = Map<String, dynamic>.from(response);
+          final storedFullName = (map['full_name'] as String?)?.trim() ?? '';
+          final fullName = storedFullName.isNotEmpty
+              ? storedFullName
+              : fallbackFullName;
+          final user = domain.User(
+            id: map['user_id'] as String,
+            email: (map['email'] as String?) ?? email,
+            fullName: fullName,
+          );
+
+          if (fullName.isNotEmpty && storedFullName.isEmpty) {
+            await upsertUser(user);
+          }
+
+          return user;
+        }
+      } catch (e, stack) {
+        _logger.warning('Failed to fetch public.users row', e, stack);
+      }
+
+      return domain.User(
+        id: authUser.id,
+        email: email,
+        fullName: fallbackFullName,
+      );
     } catch (e, stack) {
       _logger.severe('Failed to fetch current user', e, stack);
       rethrow;
@@ -43,7 +91,7 @@ class SupabaseUserRepository implements UserRepository {
     try {
       final response = await _supabase
           .from('users')
-          .select('user_id, email')
+          .select('user_id, email, full_name')
           .inFilter('user_id', userIds);
 
       final List<dynamic> data = response as List<dynamic>;
@@ -53,6 +101,7 @@ class SupabaseUserRepository implements UserRepository {
         return domain.User(
           id: map['user_id'] as String,
           email: (map['email'] as String?) ?? '',
+          fullName: (map['full_name'] as String?)?.trim() ?? '',
         );
       }).toList();
     } catch (e, stack) {
@@ -64,10 +113,16 @@ class SupabaseUserRepository implements UserRepository {
   @override
   Future<void> upsertUser(domain.User user) async {
     try {
-      await _supabase.from('users').upsert({
+      final payload = <String, dynamic>{
         'user_id': user.id,
         'email': user.email,
-      }, onConflict: 'user_id');
+      };
+      final trimmedFullName = user.fullName.trim();
+      if (trimmedFullName.isNotEmpty) {
+        payload['full_name'] = trimmedFullName;
+      }
+
+      await _supabase.from('users').upsert(payload, onConflict: 'user_id');
     } catch (e, stack) {
       _logger.severe(
         'Failed to upsert public.users for id=${user.id}',

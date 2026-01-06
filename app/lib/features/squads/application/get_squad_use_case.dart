@@ -38,21 +38,12 @@ class GetSquadUseCase {
         'Squad $squadId fetched, ownerId=${squad.ownerId}, visibility=${squad.visibility}',
       );
 
-      // Guests: same visibility rules as before, explicit role none.
+      // Guests: browsing allowed via list, but squad entry requires membership.
       if (isGuest || userId == null) {
-        _logger.fine('Treating as guest for squad $squadId');
-        if (squad.visibility == SquadVisibility.private) {
-          _logger.warning('Guest access denied to private squad $squadId');
-          throw const UnauthorizedFailure(
-            'You do not have access to this squad.',
-          );
-        }
-
-        final result = squad.copyWith(role: SquadRole.none);
-        _logger.fine(
-          'Returning public squad $squadId for guest with role=${result.role}',
+        _logger.fine('Guest access denied to squad $squadId');
+        throw const UnauthorizedFailure(
+          'You do not have access to this squad.',
         );
-        return result;
       }
 
       // Owner fallback: even if membership row is missing or inconsistent,
@@ -83,26 +74,30 @@ class GetSquadUseCase {
             );
 
       if (membership.isEmpty) {
-        _logger.fine('No membership found for user $userId in squad $squadId');
-        if (squad.visibility == SquadVisibility.private) {
-          _logger.warning(
-            'Access denied to private squad $squadId for user $userId '
-            '(no membership).',
-          );
-          throw const UnauthorizedFailure(
-            'You do not have access to this squad.',
-          );
-        }
-
-        final result = squad.copyWith(role: SquadRole.none);
-        _logger.fine(
-          'Returning public squad $squadId without membership for user '
-          '$userId, role=${result.role}.',
+        _logger.warning(
+          'Access denied to squad $squadId for user $userId (no membership).',
         );
-        return result;
+        throw const UnauthorizedFailure(
+          'You do not have access to this squad.',
+        );
       }
 
-      final result = squad.copyWith(role: membership.role);
+      final role = membership.role;
+      final allowed =
+          role == SquadRole.owner ||
+          role == SquadRole.admin ||
+          role == SquadRole.member;
+
+      if (!allowed) {
+        _logger.warning(
+          'Access denied to squad $squadId for user $userId with role=$role.',
+        );
+        throw const UnauthorizedFailure(
+          'You do not have access to this squad.',
+        );
+      }
+
+      final result = squad.copyWith(role: role);
       _logger.fine(
         'Returning squad $squadId for user $userId with role=${result.role}.',
       );

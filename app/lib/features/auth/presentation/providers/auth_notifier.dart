@@ -51,10 +51,11 @@ class AuthNotifier extends Notifier<AsyncValue<AuthEntity?>> {
   Future<void> register({
     required String email,
     required String password,
+    required String fullName,
   }) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      final entity = await _registerUseCase.execute(email, password);
+      final entity = await _registerUseCase.execute(email, password, fullName);
 
       // If email confirmation is required (no access token),
       // we might want to throw a specific message or handle it.

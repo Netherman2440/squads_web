@@ -172,11 +172,10 @@ class SupabaseSquadRepository implements SquadRepository {
   @override
   Future<void> applyToSquad(String squadId, String userId) async {
     try {
-      await _supabase.from('user_squads').upsert({
-        'squad_id': squadId,
-        'user_id': userId,
-        'role': SquadRole.pending.name,
-      }, onConflict: 'squad_id,user_id');
+      await _supabase.rpc(
+        'request_squad_access',
+        params: {'target_squad_id': squadId},
+      );
     } catch (e, stack) {
       _logger.severe('Failed to apply to squad $squadId', e, stack);
       throw e.toFailure();

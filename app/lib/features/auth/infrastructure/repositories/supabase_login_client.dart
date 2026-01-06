@@ -50,11 +50,21 @@ class SupabaseLoginClient implements LoginRepository {
   }
 
   @override
-  Future<AuthEntity> register(String email, String password) async {
+  Future<AuthEntity> register(
+    String email,
+    String password,
+    String fullName,
+  ) async {
     try {
+      final trimmedFullName = fullName.trim();
+      final metadata = <String, dynamic>{};
+      if (trimmedFullName.isNotEmpty) {
+        metadata['full_name'] = trimmedFullName;
+      }
       final response = await _supabase.auth.signUp(
         email: email,
         password: password,
+        data: metadata,
       );
       final session = response.session;
       final user = response.user;
@@ -152,12 +162,10 @@ class SupabaseLoginClient implements LoginRepository {
   Future<AuthEntity> getSessionFromRedirect(Uri redirectUri) async {
     try {
       final existing = _supabase.auth.currentSession;
-      final session = existing ??
+      final session =
+          existing ??
           (await _supabase.auth.getSessionFromUrl(redirectUri)).session;
-      if (session == null) {
-        _logger.warning('OAuth callback returned no session');
-        throw AuthException('OAuth callback did not return a session');
-      }
+
       final user = session.user;
 
       return AuthEntity(

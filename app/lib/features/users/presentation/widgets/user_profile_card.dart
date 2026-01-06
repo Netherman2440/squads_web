@@ -54,6 +54,10 @@ class UserProfileCard extends StatelessWidget {
       );
     }
 
+    final displayName = user!.fullName.trim().isNotEmpty
+        ? user!.fullName
+        : user!.email;
+
     return Card(
       margin: const EdgeInsets.all(16),
       child: Padding(
@@ -67,9 +71,16 @@ class UserProfileCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    user!.email,
+                    displayName,
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
+                  if (user!.fullName.trim().isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      user!.email,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
                   const SizedBox(height: 4),
                   Text(
                     'User ID: ${user!.id}',

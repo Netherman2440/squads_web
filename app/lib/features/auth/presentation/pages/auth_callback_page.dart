@@ -23,9 +23,7 @@ class _AuthCallbackPageState extends ConsumerState<AuthCallbackPage> {
     }
     _handled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await ref
-          .read(authStateProvider.notifier)
-          .completeOAuthSignIn(Uri.base);
+      await ref.read(authStateProvider.notifier).completeOAuthSignIn(Uri.base);
       if (!mounted) {
         return;
       }

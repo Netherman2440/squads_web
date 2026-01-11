@@ -36,6 +36,8 @@ class SquadListItem extends StatelessWidget {
         return colorScheme.errorContainer;
       case SquadRole.none:
         return colorScheme.outline;
+      case SquadRole.guest:
+        return colorScheme.outline;
     }
   }
 

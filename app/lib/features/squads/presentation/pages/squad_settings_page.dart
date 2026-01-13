@@ -42,6 +42,10 @@ class _SquadSettingsPageState extends ConsumerState<SquadSettingsPage> {
     final squadState = ref.watch(squadDetailProvider(widget.squadId));
 
     return Scaffold(
+      appBar: AppBar(
+        title: Text('Settings'),
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -57,11 +61,6 @@ class _SquadSettingsPageState extends ConsumerState<SquadSettingsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Members & Settings',
-                      style: theme.textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 8),
                     Text(
                       'Manage squad members, roles and visibility.',
                       style: theme.textTheme.bodySmall,

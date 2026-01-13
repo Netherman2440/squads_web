@@ -17,20 +17,6 @@ class LoginUseCase {
     // Store tokens securely
     await _tokenRepository.setTokensFromEntity(entity);
 
-    // Auto-refresh logic kept from original implementation
-    // We wrap it to ensure login doesn't fail if immediate refresh fails
-    if (entity.refreshToken.isNotEmpty) {
-      try {
-        final refreshed = await _loginRepository.refreshSession(
-          entity.refreshToken,
-        );
-        await _tokenRepository.setTokensFromEntity(refreshed);
-        return refreshed;
-      } catch (_) {
-        // If refresh fails, just return the original entity
-      }
-    }
-
     return entity;
   }
 }

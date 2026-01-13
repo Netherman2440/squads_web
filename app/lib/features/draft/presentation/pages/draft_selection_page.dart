@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:app/core/app_router.dart';
 import 'package:app/core/error/failure.dart';
 import 'package:app/features/draft/presentation/controllers/draft_selection_controller.dart';
 import 'package:app/features/draft/presentation/widgets/draft_draggable_player_tile.dart';
@@ -58,8 +59,9 @@ class _DraftSelectionPageState extends ConsumerState<DraftSelectionPage> {
                         final ids = data.selectedPlayerIds.toList(
                           growable: false,
                         );
-                        context.go(
-                          '/squads/${widget.squadId}/matches/create',
+                        context.pushNamed(
+                          AppRoute.draftCreate.name,
+                          pathParameters: {'squadId': widget.squadId},
                           extra: {
                             'selectedIds': ids,
                             'matchId': widget.matchId,
@@ -189,14 +191,6 @@ class _AvailablePlayersPanel extends StatelessWidget {
               onChanged: onSearchChanged,
             ),
             const SizedBox(height: 8),
-            Row(
-              children: [
-                Text(
-                  'Selected: $selectedCount / 16',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
-            ),
             const SizedBox(height: 8),
             Expanded(
               child: players.isEmpty

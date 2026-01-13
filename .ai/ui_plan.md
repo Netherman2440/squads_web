@@ -68,7 +68,7 @@ Zakres UI obejmuje: autoryzację (login/guest, rejestracja), listy i detale skł
 - Kluczowe komponenty widoku: SquadHeader, TabNav/SideNav, ContextActions.
 - UX, dostępność i względy bezpieczeństwa: RBAC guard (owner/admin/member/guest), spójne breadcrumb i back; unified „No access” dla 403/404.
 6.1) Nazwa widoku: SquadHomePage
-- Ścieżka widoku: /squads/:squadId/home
+- Ścieżka widoku: /squads/:squadId
 - Główny cel: Strona główna składu.
 - Kluczowe informacje do wyświetlenia: duże panele navi Players, Matches,  Tournaments, Stats.
 

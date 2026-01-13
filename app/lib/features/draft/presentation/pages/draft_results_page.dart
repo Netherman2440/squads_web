@@ -53,7 +53,7 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
       data: (data) =>
           data.proposals[data.selectedIndex].homePlayers.length !=
           data.proposals[data.selectedIndex].awayPlayers.length,
-      error: (_, __) => false,
+      error: (error, stackTrace) => false,
       loading: () => false,
     );
     return Scaffold(
@@ -277,26 +277,13 @@ class _CreateMatchButton extends ConsumerWidget {
 
               if (context.mounted && match != null) {
                 ref.invalidate(squadMatchesProvider(squadId));
-                if (matchId != null) {
-                  // If updating, we might just want to pop back to details?
-                  // Or go to details (replace current route).
-                  // Since we are in draft flow stack, we probably want to Go to details.
-                  context.goNamed(
-                    AppRoute.matchDetails.name,
-                    pathParameters: {
-                      'squadId': squadId,
-                      'matchId': match.matchId,
-                    },
-                  );
-                } else {
-                  context.goNamed(
-                    AppRoute.matchDetails.name,
-                    pathParameters: {
-                      'squadId': squadId,
-                      'matchId': match.matchId,
-                    },
-                  );
-                }
+                context.goNamed(
+                  AppRoute.matchDetails.name,
+                  pathParameters: {
+                    'squadId': squadId,
+                    'matchId': match.matchId,
+                  },
+                );
               } else if (context.mounted && createMatchState.hasError) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(

@@ -524,7 +524,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
                 : null,
             onTap: !_isEditing
                 ? () {
-                    context.goNamed(
+                    context.pushNamed(
                       AppRoute.playerDetails.name,
                       pathParameters: {
                         'squadId': widget.squadId,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:app/core/app_router.dart';
 import 'package:app/core/widgets/danger_action_button.dart';
 
 import '../../domain/entities/squad.dart';
@@ -93,7 +94,10 @@ class _DangerZoneSectionState extends State<DangerZoneSection> {
                         'Configure how match results change player rankings.',
                     actionLabel: 'Manage',
                     onPressed: () {
-                      context.go('/squads/${widget.squadId}/settings/ranking');
+                      context.pushNamed(
+                        AppRoute.rankingSettings.name,
+                        pathParameters: {'squadId': widget.squadId},
+                      );
                     },
                   ),
                   _DividerLine(color: theme.dividerColor),

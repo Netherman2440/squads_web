@@ -41,10 +41,27 @@ class _SquadHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  squad.name,
-                  style: theme.textTheme.titleLarge,
-                  overflow: TextOverflow.ellipsis,
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back),
+                      tooltip: 'Back',
+                      onPressed: () {
+                        if (context.canPop()) {
+                          context.pop();
+                          return;
+                        }
+                        context.goNamed(AppRoute.squads.name);
+                      },
+                    ),
+                    Expanded(
+                      child: Text(
+                        squad.name,
+                        style: theme.textTheme.titleLarge,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 4),
                 Row(
@@ -91,7 +108,10 @@ class _SquadHeader extends StatelessWidget {
           if (squad.role == SquadRole.owner)
             IconButton(
               onPressed: () {
-                context.go('/squads/${squad.squadId}/settings');
+                context.pushNamed(
+                  AppRoute.settings.name,
+                  pathParameters: {'squadId': squad.squadId},
+                );
               },
               icon: hasPending
                   ? Stack(
@@ -171,7 +191,10 @@ class _SquadHomeGrid extends StatelessWidget {
             return InkWell(
               onTap: () {
                 if (tile.title == 'Players') {
-                  context.go('/squads/${squad.squadId}/players');
+                  context.pushNamed(
+                    AppRoute.players.name,
+                    pathParameters: {'squadId': squad.squadId},
+                  );
                   return;
                 }
 

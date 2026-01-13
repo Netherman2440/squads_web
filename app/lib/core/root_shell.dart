@@ -6,9 +6,10 @@ import 'package:app/features/auth/presentation/providers/auth_notifier.dart';
 import 'package:app/features/squads/presentation/state/squad_detail_notifier.dart';
 
 class RootShell extends ConsumerStatefulWidget {
-  const RootShell({super.key, required this.child});
+  const RootShell({super.key, required this.child, required this.location});
 
   final Widget child;
+  final String location;
 
   @override
   ConsumerState<RootShell> createState() => _RootShellState();
@@ -28,7 +29,7 @@ class _RootShellState extends ConsumerState<RootShell> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth < 600;
-        final location = _currentLocation(context);
+        final location = widget.location;
         final squadId = _extractSquadId(location);
 
         String? squadName;
@@ -385,8 +386,8 @@ class _SidebarNavigation extends StatelessWidget {
       const _NavItem(icon: Icons.groups, label: 'Squads', path: '/squads'),
     ];
 
-    final hasSquadSection = squadName != null && squadName!.isNotEmpty;
     final squadId = _extractSquadId(location);
+    final hasSquadSection = squadId != null;
 
     return Column(
       crossAxisAlignment: isExpanded
@@ -406,12 +407,14 @@ class _SidebarNavigation extends StatelessWidget {
                       ? _isLocationExact(location, item.path)
                       : _isLocationSelected(location, item.path),
                 ),
-              if (hasSquadSection && squadId != null) ...[
+              if (hasSquadSection) ...[
                 if (isExpanded)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
                     child: Text(
-                      squadName!,
+                      (squadName != null && squadName!.isNotEmpty)
+                          ? squadName!
+                          : 'Squad',
                       style: theme.textTheme.titleSmall,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -423,13 +426,11 @@ class _SidebarNavigation extends StatelessWidget {
                   item: _NavItem(
                     icon: Icons.home,
                     label: 'Home',
-                    path: '/squads/$squadId/home',
+                    path: '/squads/$squadId',
                   ),
                   isExpanded: isExpanded,
-                  isSelected: _isLocationSelected(
-                    location,
-                    '/squads/$squadId/home',
-                  ),
+                  // Home should be selected only for the exact squad root route.
+                  isSelected: _isLocationExact(location, '/squads/$squadId'),
                 ),
                 _SidebarNavItem(
                   item: _NavItem(
@@ -487,6 +488,19 @@ class _SidebarNavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final path = item.path;
+
+    void navigate() {
+      if (path.isEmpty) {
+        return;
+      }
+      final isRoot = path == '/me' || path == '/squads';
+      if (isRoot) {
+        context.go(path);
+        return;
+      }
+      context.push(path);
+    }
 
     if (!isExpanded) {
       return IconButton(
@@ -496,12 +510,7 @@ class _SidebarNavItem extends StatelessWidget {
         ),
         hoverColor: theme.colorScheme.primary.withValues(alpha: 0.18),
         tooltip: item.label,
-        onPressed: () {
-          if (item.path.isEmpty) {
-            return;
-          }
-          context.go(item.path);
-        },
+        onPressed: navigate,
       );
     }
 
@@ -514,12 +523,7 @@ class _SidebarNavItem extends StatelessWidget {
       selected: isSelected,
       hoverColor: theme.colorScheme.primary.withValues(alpha: 0.18),
       selectedTileColor: theme.colorScheme.primary.withValues(alpha: 0.22),
-      onTap: () {
-        if (item.path.isEmpty) {
-          return;
-        }
-        context.go(item.path);
-      },
+      onTap: navigate,
     );
   }
 }
@@ -532,12 +536,26 @@ class _NavItem {
   final String path;
 }
 
-String _currentLocation(BuildContext context) =>
-    GoRouter.of(context).routerDelegate.currentConfiguration.uri.toString();
+String _effectivePath(String location) {
+  // On Flutter web with HashUrlStrategy, the real path is stored in `uri.fragment`
+  // (e.g. `http://.../#/squads/123` -> fragment: `/squads/123`, path: `/`).
+  final uri = Uri.parse(location);
+  final path = uri.path;
+  if (path.isNotEmpty && path != '/') {
+    return path;
+  }
+
+  final fragment = uri.fragment.trim();
+  if (fragment.isEmpty) {
+    return path;
+  }
+
+  final normalized = fragment.startsWith('/') ? fragment : '/$fragment';
+  return Uri.parse(normalized).path;
+}
 
 bool _isLocationExact(String location, String path) {
-  final uri = Uri.parse(location);
-  final currentPath = uri.path;
+  final currentPath = _effectivePath(location);
   if (path.isEmpty) {
     return false;
   }
@@ -545,8 +563,7 @@ bool _isLocationExact(String location, String path) {
 }
 
 bool _isLocationSelected(String location, String path) {
-  final uri = Uri.parse(location);
-  final currentPath = uri.path;
+  final currentPath = _effectivePath(location);
   if (path.isEmpty) {
     return false;
   }
@@ -554,8 +571,8 @@ bool _isLocationSelected(String location, String path) {
 }
 
 String? _extractSquadId(String location) {
-  final uri = Uri.parse(location);
-  final segments = uri.pathSegments;
+  final path = _effectivePath(location);
+  final segments = Uri.parse(path).pathSegments;
   if (segments.length >= 2 && segments.first == 'squads') {
     return segments[1];
   }

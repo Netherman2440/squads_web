@@ -7,6 +7,7 @@ enum SquadRole {
   invited,
   declined,
   removed,
+  guest,
 }
 
 extension SquadRoleParser on SquadRole {
@@ -26,6 +27,8 @@ extension SquadRoleParser on SquadRole {
         return SquadRole.declined;
       case 'removed':
         return SquadRole.removed;
+      case 'guest':
+        return SquadRole.guest;
       default:
         return SquadRole.none;
     }
@@ -49,6 +52,8 @@ extension SquadRoleParser on SquadRole {
         return 'Removed';
       case SquadRole.none:
         return 'None';
+      case SquadRole.guest:
+        return 'Guest';
     }
   }
 }

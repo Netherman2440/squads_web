@@ -42,7 +42,7 @@ class RankingHistoryGraphWidget extends StatelessWidget {
       // The entry.ranking is the ranking BEFORE the change.
       // But we want to show the progression.
       // If we have history, it means there was a change.
-      currentRanking = entry.currentRanking;
+      currentRanking += entry.change ?? 0;
       spots.add(FlSpot((i + 1).toDouble(), currentRanking));
     }
 
@@ -88,7 +88,7 @@ class RankingHistoryGraphWidget extends StatelessWidget {
           lineBarsData: [
             LineChartBarData(
               spots: spots,
-              isCurved: true,
+              isCurved: false,
               color: Theme.of(context).colorScheme.primary,
               barWidth: 3,
               isStrokeCapRound: true,

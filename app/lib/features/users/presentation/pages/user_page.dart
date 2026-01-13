@@ -1,7 +1,10 @@
+import 'package:app/core/app_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:app/features/auth/domain/entities/auth_entity.dart';
+import 'package:app/features/auth/presentation/providers/auth_notifier.dart';
 import 'package:app/features/squads/presentation/state/squads_notifier.dart';
 import 'package:app/features/squads/presentation/widgets/squad_list_item.dart';
 import 'package:app/features/squads/domain/entities/squad.dart';
@@ -17,6 +20,8 @@ class UserPage extends ConsumerStatefulWidget {
 }
 
 class _UserPageState extends ConsumerState<UserPage> {
+  ProviderSubscription<AsyncValue<AuthEntity?>>? _authSubscription;
+
   @override
   void initState() {
     super.initState();
@@ -24,6 +29,26 @@ class _UserPageState extends ConsumerState<UserPage> {
       ref.read(userNotifierProvider.notifier).loadUser();
       ref.read(squadsNotifierProvider.notifier).loadSquads();
     });
+
+    _authSubscription?.close();
+    _authSubscription = ref.listenManual<AsyncValue<AuthEntity?>>(
+      authStateProvider,
+      (previous, next) {
+        final wasAuthed = previous?.value != null;
+        final isAuthed = next.value != null;
+        if (!wasAuthed && isAuthed) {
+          ref.read(userNotifierProvider.notifier).loadUser();
+          ref.read(squadsNotifierProvider.notifier).loadSquads();
+        }
+      },
+      fireImmediately: false,
+    );
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.close();
+    super.dispose();
   }
 
   Future<void> _onRefresh() async {
@@ -38,11 +63,11 @@ class _UserPageState extends ConsumerState<UserPage> {
 
     final profile = userState.profile;
     final mySquads = profile?.memberships ?? const [];
-    final hasOwnedSquad = mySquads.any(
-      (membership) => membership.role == SquadRole.owner,
+    final hasSquad = mySquads.any(
+      (membership) => membership.role != SquadRole.none,
     );
 
-    final text = hasOwnedSquad ? 'Add more' : 'Add your first squad';
+    final text = hasSquad ? 'Add more' : 'Add your first squad';
 
     return Scaffold(
       body: RefreshIndicator(
@@ -65,7 +90,7 @@ class _UserPageState extends ConsumerState<UserPage> {
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   FilledButton.icon(
-                    onPressed: () => context.go('/squads'),
+                    onPressed: () => context.pushNamed(AppRoute.squads.name),
                     icon: const Icon(Icons.add),
                     label: Text(text),
                   ),
@@ -112,7 +137,10 @@ class _UserPageState extends ConsumerState<UserPage> {
                     squad: squad,
                     isGuest: false,
                     onTap: () {
-                      context.go('/squads/${squad.squadId}');
+                      context.pushNamed(
+                        AppRoute.squadDetails.name,
+                        pathParameters: {'squadId': squad.squadId},
+                      );
                     },
                   );
                 },

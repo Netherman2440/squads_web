@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:app/core/app_router.dart';
 import 'package:app/core/app_config.dart';
 import 'package:app/core/error/failure.dart';
 import 'package:app/features/auth/presentation/providers/auth_notifier.dart';
@@ -56,7 +57,7 @@ class _InvitePageState extends ConsumerState<InvitePage> {
     final auth = ref.read(authStateProvider).value;
     if (auth == null || auth.isAnonymous) {
       if (mounted) {
-        context.go('/auth');
+        context.goNamed(AppRoute.auth.name);
       }
       return;
     }
@@ -74,7 +75,10 @@ class _InvitePageState extends ConsumerState<InvitePage> {
         return;
       }
       if (squadId != null) {
-        context.go('/squads/$squadId');
+        context.goNamed(
+          AppRoute.squadDetails.name,
+          pathParameters: {'squadId': squadId},
+        );
         return;
       }
       if (mounted) {

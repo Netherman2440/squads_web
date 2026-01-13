@@ -49,40 +49,47 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
   Widget build(BuildContext context) {
     final state = ref.watch(draftSessionNotifierProvider);
     final algorithm = ref.watch(draftAlgorithmProvider);
-
+    final settingsVisible = state.when(
+      data: (data) =>
+          data.proposals[data.selectedIndex].homePlayers.length !=
+          data.proposals[data.selectedIndex].awayPlayers.length,
+      error: (error, stackTrace) => false,
+      loading: () => false,
+    );
     return Scaffold(
       appBar: AppBar(
         title: const Text('Draft'),
         actions: [
-          _DraftOptionsButton(
-            isPlayWithSubstituteEnabled: _playWithSubstitute,
-            onTogglePlayWithSubstitute: () {
-              setState(() {
-                _playWithSubstitute = !_playWithSubstitute;
-              });
+          if (settingsVisible)
+            _DraftOptionsButton(
+              isPlayWithSubstituteEnabled: _playWithSubstitute,
+              onTogglePlayWithSubstitute: () {
+                setState(() {
+                  _playWithSubstitute = !_playWithSubstitute;
+                });
 
-              ref
-                  .read(draftSessionNotifierProvider.notifier)
-                  .load(
-                    squadId: widget.squadId,
-                    selectedPlayerIds: widget.selectedPlayerIds,
-                    algorithm: algorithm,
-                    playWithSubstitute: _playWithSubstitute,
-                  );
-            },
-            algorithm: algorithm,
-            onSetAlgorithm: (next) {
-              ref.read(draftAlgorithmProvider.notifier).setAlgorithm(next);
-              ref
-                  .read(draftSessionNotifierProvider.notifier)
-                  .load(
-                    squadId: widget.squadId,
-                    selectedPlayerIds: widget.selectedPlayerIds,
-                    algorithm: next,
-                    playWithSubstitute: _playWithSubstitute,
-                  );
-            },
-          ),
+                ref
+                    .read(draftSessionNotifierProvider.notifier)
+                    .load(
+                      squadId: widget.squadId,
+                      selectedPlayerIds: widget.selectedPlayerIds,
+                      algorithm: algorithm,
+                      playWithSubstitute: _playWithSubstitute,
+                    );
+              },
+              algorithm: algorithm,
+              onSetAlgorithm: (next) {
+                ref.read(draftAlgorithmProvider.notifier).setAlgorithm(next);
+                ref
+                    .read(draftSessionNotifierProvider.notifier)
+                    .load(
+                      squadId: widget.squadId,
+                      selectedPlayerIds: widget.selectedPlayerIds,
+                      algorithm: next,
+                      playWithSubstitute: _playWithSubstitute,
+                    );
+              },
+            ),
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: _CreateMatchButton(
@@ -210,7 +217,7 @@ class _DraftOptionsButton extends StatelessWidget {
           checked: isPlayWithSubstituteEnabled,
           child: const Text('Play with substitute'),
         ),
-        const PopupMenuDivider(),
+        /*    const PopupMenuDivider(),
         CheckedPopupMenuItem<_DraftOptionsAction>(
           value: _DraftOptionsAction.useCombinatory,
           checked: algorithm == DraftAlgorithm.combinatory,
@@ -220,7 +227,7 @@ class _DraftOptionsButton extends StatelessWidget {
           value: _DraftOptionsAction.useGreedy,
           checked: algorithm == DraftAlgorithm.greedy,
           child: const Text('Algorithm: Greedy'),
-        ),
+        ),*/
       ],
       icon: const Icon(Icons.tune),
     );
@@ -270,26 +277,13 @@ class _CreateMatchButton extends ConsumerWidget {
 
               if (context.mounted && match != null) {
                 ref.invalidate(squadMatchesProvider(squadId));
-                if (matchId != null) {
-                  // If updating, we might just want to pop back to details?
-                  // Or go to details (replace current route).
-                  // Since we are in draft flow stack, we probably want to Go to details.
-                  context.goNamed(
-                    AppRoute.matchDetails.name,
-                    pathParameters: {
-                      'squadId': squadId,
-                      'matchId': match.matchId,
-                    },
-                  );
-                } else {
-                  context.goNamed(
-                    AppRoute.matchDetails.name,
-                    pathParameters: {
-                      'squadId': squadId,
-                      'matchId': match.matchId,
-                    },
-                  );
-                }
+                context.goNamed(
+                  AppRoute.matchDetails.name,
+                  pathParameters: {
+                    'squadId': squadId,
+                    'matchId': match.matchId,
+                  },
+                );
               } else if (context.mounted && createMatchState.hasError) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(

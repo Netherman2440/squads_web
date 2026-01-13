@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:app/core/app_router.dart';
+
 import '../../../auth/presentation/providers/auth_notifier.dart';
 import '../../domain/entities/squad.dart';
 import '../../domain/entities/user_squad_role.dart';
@@ -49,7 +51,10 @@ class _SquadsPageState extends ConsumerState<SquadsPage> {
         if (!mounted) {
           return;
         }
-        context.go('/squads/${squad.squadId}');
+        context.pushNamed(
+          AppRoute.squadDetails.name,
+          pathParameters: {'squadId': squad.squadId},
+        );
         return;
       case SquadRole.pending:
         messenger.showSnackBar(
@@ -57,16 +62,17 @@ class _SquadsPageState extends ConsumerState<SquadsPage> {
         );
         return;
       case SquadRole.none:
-        if (_isGuest) {
-          messenger.showSnackBar(
-            const SnackBar(
-              content: Text('Log in to request access to this squad.'),
-            ),
+        if (squad.visibility == SquadVisibility.private) {
+          await _showApplyDialog(squad, notifier);
+          return;
+        }
+        if (mounted && squad.visibility == SquadVisibility.public) {
+          context.pushNamed(
+            AppRoute.squadDetails.name,
+            pathParameters: {'squadId': squad.squadId},
           );
           return;
         }
-        await _showApplyDialog(squad, notifier);
-        return;
       case SquadRole.declined:
       case SquadRole.removed:
         messenger.showSnackBar(

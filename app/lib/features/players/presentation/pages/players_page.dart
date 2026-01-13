@@ -7,6 +7,8 @@ import 'package:app/features/players/presentation/controllers/players_notifier.d
 import 'package:app/features/players/presentation/widgets/create_player_dialog.dart';
 import 'package:app/features/players/presentation/widgets/empty_players_state.dart';
 import 'package:app/features/players/presentation/widgets/players_list_widget.dart';
+import 'package:app/features/squads/domain/entities/user_squad_role.dart';
+import 'package:app/features/squads/presentation/state/squad_detail_notifier.dart';
 
 class PlayersPage extends ConsumerStatefulWidget {
   const PlayersPage({super.key, required this.squadId});
@@ -74,6 +76,13 @@ class _PlayersPageState extends ConsumerState<PlayersPage> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(playersNotifierProvider);
+    final squadAsync = ref.watch(squadDetailProvider(widget.squadId));
+    final role = squadAsync.maybeWhen(
+      data: (squad) => squad.role,
+      orElse: () => SquadRole.none,
+    );
+    final canAdd = role == SquadRole.owner || role == SquadRole.admin;
+
     ref.listen<AsyncValue<List<Player>>>(playersNotifierProvider, (
       previous,
       next,
@@ -84,11 +93,13 @@ class _PlayersPageState extends ConsumerState<PlayersPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('Players')),
       body: _buildBody(state),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showCreatePlayerDialog,
-        icon: const Icon(Icons.person_add),
-        label: const Text('Add Player'),
-      ),
+      floatingActionButton: canAdd
+          ? FloatingActionButton.extended(
+              onPressed: _showCreatePlayerDialog,
+              icon: const Icon(Icons.person_add),
+              label: const Text('Add Player'),
+            )
+          : null,
     );
   }
 

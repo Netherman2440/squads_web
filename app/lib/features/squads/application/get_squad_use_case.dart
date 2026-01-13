@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
+import 'package:app/features/auth/domain/entities/auth_entity.dart';
+import 'package:app/features/auth/presentation/providers/auth_notifier.dart';
 import 'package:app/core/error/failure.dart';
 import 'package:app/features/squads/domain/entities/membership.dart';
 import 'package:app/features/squads/domain/entities/squad.dart';
@@ -13,15 +15,19 @@ import 'package:app/features/squads/infrastructure/repositories/supabase_squad_r
 class GetSquadUseCase {
   final SquadRepository _squadRepository;
   final MembershipRepository _membershipRepository;
+  final AuthEntity? _authEntity;
   final Logger _logger = Logger('GetSquadUseCase');
 
-  GetSquadUseCase(this._squadRepository, this._membershipRepository);
+  GetSquadUseCase(
+    this._squadRepository,
+    this._membershipRepository,
+    this._authEntity,
+  );
 
-  Future<Squad> execute({
-    required String squadId,
-    String? userId,
-    bool isGuest = false,
-  }) async {
+  Future<Squad> execute({required String squadId}) async {
+    final userId = _authEntity?.userId;
+    final isGuest = _authEntity == null || _authEntity.isAnonymous;
+
     try {
       _logger.fine(
         'Fetching squad $squadId for userId=$userId, isGuest=$isGuest',
@@ -37,15 +43,6 @@ class GetSquadUseCase {
       _logger.fine(
         'Squad $squadId fetched, ownerId=${squad.ownerId}, visibility=${squad.visibility}',
       );
-
-      // Guests: browsing allowed via list, but squad entry requires membership.
-      if (isGuest || userId == null) {
-        _logger.fine('Guest access denied to squad $squadId');
-        throw const UnauthorizedFailure(
-          'You do not have access to this squad.',
-        );
-      }
-
       // Owner fallback: even if membership row is missing or inconsistent,
       // the owner from squads table always has access and role owner.
       if (squad.ownerId == userId) {
@@ -55,6 +52,15 @@ class GetSquadUseCase {
         final withRole = squad.copyWith(role: SquadRole.owner);
         final withPending = await _withPendingFlag(withRole);
         return withPending;
+      }
+      if (isGuest) {
+        _logger.fine('User $userId is guest of squad $squadId (isGuest=true).');
+        final withRole = squad.copyWith(role: SquadRole.guest);
+        return withRole;
+      }
+
+      if (userId == null) {
+        throw const UnauthorizedFailure('Not authenticated.');
       }
 
       final memberships = await _membershipRepository.getMembershipsForUser(
@@ -137,8 +143,9 @@ class GetSquadUseCase {
 }
 
 final getSquadUseCaseProvider = Provider<GetSquadUseCase>((ref) {
+  final authEntity = ref.watch(authStateProvider).value;
   final squadRepository = ref.read(squadRepositoryProvider);
   final membershipRepository = ref.read(membershipRepositoryProvider);
 
-  return GetSquadUseCase(squadRepository, membershipRepository);
+  return GetSquadUseCase(squadRepository, membershipRepository, authEntity);
 });

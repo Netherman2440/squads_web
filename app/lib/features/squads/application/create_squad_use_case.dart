@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:app/features/auth/domain/entities/auth_entity.dart';
+import 'package:app/features/auth/presentation/providers/auth_notifier.dart';
 import 'package:app/features/squads/infrastructure/repositories/supabase_membership_repository.dart';
 import 'package:app/features/squads/infrastructure/repositories/supabase_squad_repository.dart';
 import 'package:app/core/error/failure.dart';
@@ -12,15 +14,25 @@ import '../domain/repositories/squad_repository.dart';
 class CreateSquadUseCase {
   final SquadRepository _squadRepository;
   final MembershipRepository _membershipRepository;
+  final AuthEntity? _authEntity;
 
-  CreateSquadUseCase(this._squadRepository, this._membershipRepository);
+  CreateSquadUseCase(
+    this._squadRepository,
+    this._membershipRepository,
+    this._authEntity,
+  );
 
   Future<void> execute({
     required String name,
     required SquadVisibility visibility,
-    required String ownerId,
     required SportType sportType,
   }) async {
+    final ownerId = _authEntity?.userId;
+    final isGuest = _authEntity == null || _authEntity.isAnonymous;
+    if (isGuest || ownerId == null) {
+      throw const UnauthorizedFailure('Not authenticated.');
+    }
+
     if (name.trim().isEmpty) {
       throw const ValidationFailure('Squad name cannot be empty');
     }
@@ -49,7 +61,8 @@ class CreateSquadUseCase {
 }
 
 final createSquadUseCaseProvider = Provider<CreateSquadUseCase>((ref) {
+  final authEntity = ref.watch(authStateProvider).value;
   final squadRepository = ref.read(squadRepositoryProvider);
   final membershipRepository = ref.read(membershipRepositoryProvider);
-  return CreateSquadUseCase(squadRepository, membershipRepository);
+  return CreateSquadUseCase(squadRepository, membershipRepository, authEntity);
 });

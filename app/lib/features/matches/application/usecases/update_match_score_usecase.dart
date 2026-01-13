@@ -1,4 +1,6 @@
 import 'package:app/core/app_config.dart';
+import 'package:app/features/auth/domain/entities/auth_entity.dart';
+import 'package:app/features/auth/presentation/providers/auth_notifier.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/core/error/failure.dart';
 import 'package:app/features/matches/domain/entities/match.dart';
@@ -18,6 +20,7 @@ class UpdateMatchScoreUseCase {
   final PlayerRepository _playerRepository;
   final GetSquadUseCase _getSquadUseCase;
   final GetMatchUseCase _getMatchUseCase;
+  final AuthEntity? _authEntity;
 
   UpdateMatchScoreUseCase(
     this._matchRepository,
@@ -26,6 +29,7 @@ class UpdateMatchScoreUseCase {
     this._playerRepository,
     this._getSquadUseCase,
     this._getMatchUseCase,
+    this._authEntity,
   );
 
   Future<Match> execute({
@@ -34,12 +38,12 @@ class UpdateMatchScoreUseCase {
     required int homeScore,
     required int awayScore,
   }) async {
+    if (_authEntity == null) {
+      throw const UnauthorizedFailure('Not authenticated.');
+    }
+
     // 1. Get Squad Settings
-    final squad = await _getSquadUseCase.execute(
-      squadId: squadId,
-      userId: null,
-      isGuest: false,
-    );
+    final squad = await _getSquadUseCase.execute(squadId: squadId);
 
     // 2. Update Match Score
     await _matchRepository.updateMatchScore(
@@ -131,6 +135,7 @@ class UpdateMatchScoreUseCase {
 final updateMatchScoreUseCaseProvider = Provider<UpdateMatchScoreUseCase>((
   ref,
 ) {
+  final authEntity = ref.watch(authStateProvider).value;
   return UpdateMatchScoreUseCase(
     ref.read(matchRepositoryProvider),
     ref.read(teamRepositoryProvider),
@@ -138,5 +143,6 @@ final updateMatchScoreUseCaseProvider = Provider<UpdateMatchScoreUseCase>((
     ref.read(playerRepositoryProvider),
     ref.read(getSquadUseCaseProvider),
     ref.read(getMatchUseCaseProvider),
+    authEntity,
   );
 });

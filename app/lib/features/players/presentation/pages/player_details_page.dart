@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:app/features/squads/domain/entities/user_squad_role.dart';
+import 'package:app/features/squads/presentation/state/squad_detail_notifier.dart';
+
 import '../controllers/player_details_controller.dart';
 import '../widgets/ranking_history_graph_widget.dart';
 import '../widgets/edit_player_name_dialog.dart';
@@ -20,6 +23,12 @@ class PlayerDetailsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final stateAsync = ref.watch(playerDetailsProvider(playerId));
+    final squadAsync = ref.watch(squadDetailProvider(squadId));
+    final role = squadAsync.maybeWhen(
+      data: (squad) => squad.role,
+      orElse: () => SquadRole.none,
+    );
+    final canEdit = role == SquadRole.owner || role == SquadRole.admin;
 
     return Scaffold(
       appBar: AppBar(
@@ -63,9 +72,36 @@ class PlayerDetailsPage extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            player.name,
-                            style: Theme.of(context).textTheme.headlineMedium,
+                          Row(
+                            children: [
+                              Text(
+                                player.name,
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.headlineMedium,
+                              ),
+
+                              if (canEdit)
+                                IconButton(
+                                  tooltip: 'Edit name',
+                                  onPressed: () async {
+                                    final result = await showDialog<bool>(
+                                      context: context,
+                                      builder: (context) =>
+                                          EditPlayerNameDialog(
+                                            playerId: playerId,
+                                            initialName: player.name,
+                                          ),
+                                    );
+                                    if (result == true) {
+                                      ref.invalidate(
+                                        playerDetailsProvider(playerId),
+                                      );
+                                    }
+                                  },
+                                  icon: const Icon(Icons.edit),
+                                ),
+                            ],
                           ),
                           const SizedBox(height: 8),
                           Row(
@@ -79,6 +115,28 @@ class PlayerDetailsPage extends ConsumerWidget {
                                 difference: difference,
                                 isPositive: isPositive,
                               ),
+                              if (canEdit) ...[
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  tooltip: 'Edit ranking',
+                                  onPressed: () async {
+                                    final result = await showDialog<bool>(
+                                      context: context,
+                                      builder: (context) =>
+                                          EditPlayerRankingDialog(
+                                            playerId: playerId,
+                                            currentRanking: player.ranking,
+                                          ),
+                                    );
+                                    if (result == true) {
+                                      ref.invalidate(
+                                        playerDetailsProvider(playerId),
+                                      );
+                                    }
+                                  },
+                                  icon: const Icon(Icons.edit),
+                                ),
+                              ],
                             ],
                           ),
                         ],
@@ -87,44 +145,7 @@ class PlayerDetailsPage extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 24),
-                Row(
-                  children: [
-                    FilledButton.icon(
-                      onPressed: () async {
-                        final result = await showDialog<bool>(
-                          context: context,
-                          builder: (context) => EditPlayerNameDialog(
-                            playerId: playerId,
-                            initialName: player.name,
-                          ),
-                        );
-                        if (result == true) {
-                          ref.invalidate(playerDetailsProvider(playerId));
-                        }
-                      },
-                      icon: const Icon(Icons.edit),
-                      label: const Text('Edit Name'),
-                    ),
-                    const SizedBox(width: 12),
-                    FilledButton.icon(
-                      onPressed: () async {
-                        final result = await showDialog<bool>(
-                          context: context,
-                          builder: (context) => EditPlayerRankingDialog(
-                            playerId: playerId,
-                            currentRanking: player.ranking,
-                          ),
-                        );
-                        if (result == true) {
-                          ref.invalidate(playerDetailsProvider(playerId));
-                        }
-                      },
-                      icon: const Icon(Icons.trending_up),
-                      label: const Text('Edit Ranking'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 8),
                 Text(
                   'Ranking History',
                   style: Theme.of(context).textTheme.titleMedium,

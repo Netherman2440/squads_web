@@ -29,7 +29,13 @@ class SquadShellPage extends ConsumerWidget {
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, stackTrace) => _SquadShellErrorView(
             error: error,
-            onBack: () => context.go('/home'),
+            onBack: () {
+              if (context.canPop()) {
+                context.pop();
+                return;
+              }
+              context.goNamed(AppRoute.squads.name);
+            },
           ),
           data: (squad) => SquadHomePage(squad: squad),
         ),
@@ -179,7 +185,7 @@ class _QuickActionsSheet extends StatelessWidget {
               subtitle: const Text('Schedule a new squad match.'),
               onTap: () {
                 Navigator.of(context).pop();
-                context.goNamed(
+                context.pushNamed(
                   AppRoute.draftSelection.name,
                   pathParameters: {'squadId': squad.squadId},
                 );

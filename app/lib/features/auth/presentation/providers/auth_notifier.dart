@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:logging/logging.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../domain/entities/auth_entity.dart';
@@ -11,6 +12,8 @@ import '../../application/complete_oauth_sign_in_use_case.dart';
 import '../../domain/entities/auth_provider.dart';
 import '../../../../core/global_dependencies.dart';
 import '../../infrastructure/repositories/token_secure_storage.dart';
+
+final _logger = Logger('AuthNotifier');
 
 class AuthNotifier extends Notifier<AsyncValue<AuthEntity?>> {
   late final LoginUseCase _loginUseCase = ref.read(loginUseCaseProvider);
@@ -51,33 +54,43 @@ class AuthNotifier extends Notifier<AsyncValue<AuthEntity?>> {
       final session = data.session;
       final user = session?.user;
 
-      try {
-        if (event == AuthChangeEvent.signedOut) {
+      if (event == AuthChangeEvent.signedOut) {
+        try {
           await tokenRepository.clearTokens();
-          state = const AsyncValue.data(null);
-          return;
+        } catch (error, stackTrace) {
+          _logger.severe('Failed to clear tokens on sign out.', error, stackTrace);
         }
-
-        if (session == null || user == null) {
-          state = const AsyncValue.data(null);
-          return;
-        }
-
-        final entity = AuthEntity(
-          accessToken: session.accessToken,
-          refreshToken: session.refreshToken ?? '',
-          userId: user.id,
-          isAnonymous: user.isAnonymous,
-          email: user.email ?? '',
-        );
-
-        // Persist rotated refresh tokens as soon as Supabase emits them.
-        await tokenRepository.setTokensFromEntity(entity);
-        state = AsyncValue.data(entity);
-      } catch (error, stackTrace) {
-        // We keep the last known auth state if persistence fails.
-        state = AsyncValue.error(error, stackTrace);
+        state = const AsyncValue.data(null);
+        return;
       }
+
+      if (session == null || user == null) {
+        state = const AsyncValue.data(null);
+        return;
+      }
+
+      final entity = AuthEntity(
+        accessToken: session.accessToken,
+        refreshToken: session.refreshToken ?? '',
+        userId: user.id,
+        isAnonymous: user.isAnonymous,
+        email: user.email ?? '',
+      );
+
+      // Persist rotated refresh tokens as soon as Supabase emits them; if
+      // tokenRepository.setTokensFromEntity fails, log it and keep the
+      // AuthEntity in state rather than swapping state to AsyncValue.error, so
+      // we do not unauthenticate the user.
+      try {
+        await tokenRepository.setTokensFromEntity(entity);
+      } catch (error, stackTrace) {
+        _logger.severe(
+          'Failed to persist auth tokens from AuthEntity.',
+          error,
+          stackTrace,
+        );
+      }
+      state = AsyncValue.data(entity);
     });
 
     ref.onDispose(sub.cancel);

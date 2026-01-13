@@ -536,9 +536,6 @@ class _NavItem {
   final String path;
 }
 
-String _currentLocation(BuildContext context) =>
-    GoRouter.of(context).routerDelegate.currentConfiguration.uri.toString();
-
 String _effectivePath(String location) {
   // On Flutter web with HashUrlStrategy, the real path is stored in `uri.fragment`
   // (e.g. `http://.../#/squads/123` -> fragment: `/squads/123`, path: `/`).

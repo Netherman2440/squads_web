@@ -43,17 +43,7 @@ class _SquadHeader extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back),
-                      tooltip: 'Back',
-                      onPressed: () {
-                        if (context.canPop()) {
-                          context.pop();
-                          return;
-                        }
-                        context.goNamed(AppRoute.squads.name);
-                      },
-                    ),
+                    SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         squad.name,

@@ -88,7 +88,7 @@ final appRouter = () {
       ),
       ShellRoute(
         builder: (context, state, child) =>
-            RootShell(child: child, location: state.uri.toString()),
+            RootShell(location: state.uri.toString(), child: child),
         routes: [
           GoRoute(
             path: '/squads',

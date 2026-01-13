@@ -66,7 +66,7 @@ class _SquadsPageState extends ConsumerState<SquadsPage> {
           await _showApplyDialog(squad, notifier);
           return;
         }
-        if (!mounted && squad.visibility == SquadVisibility.public) {
+        if (mounted && squad.visibility == SquadVisibility.public) {
           context.pushNamed(
             AppRoute.squadDetails.name,
             pathParameters: {'squadId': squad.squadId},

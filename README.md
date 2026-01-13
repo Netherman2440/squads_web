@@ -6,8 +6,6 @@ A Flutter web application for creating balanced teams in amateur sports matches,
 - [Project Description](#project-description)
 - [Tech Stack](#tech-stack)
 - [Getting Started Locally](#getting-started-locally)
-- [Project Status](#project-status)
-- [License](#license)
 
 ## Project Description
 Squads solves the chaos of team selection in amateur sports by providing deterministic, balanced team division proposals based on player rankings. Users can create squads, add players, generate drafts, record match results, and run simple tournaments. Rankings update automatically via event-sourcing deltas after each match.

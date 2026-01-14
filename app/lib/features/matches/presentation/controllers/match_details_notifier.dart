@@ -2,6 +2,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:app/features/matches/application/usecases/get_match_usecase.dart';
 import 'package:app/features/matches/application/usecases/update_match_score_usecase.dart';
 import 'package:app/features/matches/application/usecases/delete_match_usecase.dart';
+import 'package:app/features/matches/application/usecases/update_match_team_usecase.dart';
 import 'package:app/features/matches/application/usecases/update_match_teams_usecase.dart';
 import 'package:app/features/matches/application/usecases/rematch_usecase.dart';
 import 'package:app/features/matches/domain/entities/match.dart';
@@ -66,6 +67,36 @@ class MatchDetailsNotifier extends _$MatchDetailsNotifier {
             awayPlayerIds: awayPlayerIds,
           );
       // Reload to get fresh state (rankings etc)
+      return ref.read(getMatchUseCaseProvider).execute(matchId: matchId);
+    });
+  }
+
+  Future<void> updateTeamsMeta({
+    required String homeTeamId,
+    required String awayTeamId,
+    String? homeName,
+    String? homeColor,
+    String? awayName,
+    String? awayColor,
+  }) async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      if (homeName != null || homeColor != null) {
+        await ref.read(updateMatchTeamUseCaseProvider).execute(
+              matchId: matchId,
+              teamId: homeTeamId,
+              name: homeName,
+              color: homeColor,
+            );
+      }
+      if (awayName != null || awayColor != null) {
+        await ref.read(updateMatchTeamUseCaseProvider).execute(
+              matchId: matchId,
+              teamId: awayTeamId,
+              name: awayName,
+              color: awayColor,
+            );
+      }
       return ref.read(getMatchUseCaseProvider).execute(matchId: matchId);
     });
   }

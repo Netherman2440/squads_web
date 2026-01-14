@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:app/core/error/failure.dart';
+import 'package:app/features/players/application/usecases/delete_player_usecase.dart';
+import 'package:app/features/players/presentation/controllers/players_notifier.dart';
 import 'package:app/features/squads/domain/entities/user_squad_role.dart';
 import 'package:app/features/squads/presentation/state/squad_detail_notifier.dart';
 
@@ -29,11 +32,30 @@ class PlayerDetailsPage extends ConsumerWidget {
       orElse: () => SquadRole.none,
     );
     final canEdit = role == SquadRole.owner || role == SquadRole.admin;
+    final playerName = stateAsync.maybeWhen(
+      data: (state) => state.player.name,
+      orElse: () => null,
+    );
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Player Details'),
         leading: BackButton(onPressed: () => context.pop()),
+        actions: [
+          if (canEdit && playerName != null)
+            IconButton(
+              tooltip: 'Delete player',
+              icon: const Icon(Icons.delete),
+              color: Colors.red,
+              onPressed: () => _confirmDeletePlayer(
+                context,
+                ref,
+                squadId: squadId,
+                playerId: playerId,
+                playerName: playerName,
+              ),
+            ),
+        ],
       ),
       body: stateAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -168,6 +190,57 @@ class PlayerDetailsPage extends ConsumerWidget {
         },
       ),
     );
+  }
+
+  Future<void> _confirmDeletePlayer(
+    BuildContext context,
+    WidgetRef ref, {
+    required String squadId,
+    required String playerId,
+    required String playerName,
+  }) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete player?'),
+        content: Text(
+          'This will permanently remove '
+          '${playerName.isNotEmpty ? playerName : 'this player'} '
+          'from the squad. This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      await ref.read(deletePlayerUseCaseProvider).execute(playerId: playerId);
+      await ref
+          .read(playersNotifierProvider.notifier)
+          .refreshPlayers(squadId: squadId);
+      if (context.mounted) {
+        context.pop();
+      }
+    } catch (error) {
+      if (!context.mounted) return;
+      final message = error is Failure ? error.message : error.toString();
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text(message), backgroundColor: Colors.red),
+        );
+    }
   }
 }
 

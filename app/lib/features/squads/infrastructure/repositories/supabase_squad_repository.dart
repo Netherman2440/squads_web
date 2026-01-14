@@ -170,6 +170,16 @@ class SupabaseSquadRepository implements SquadRepository {
   }
 
   @override
+  Future<void> deleteSquad(String squadId) async {
+    try {
+      await _supabase.from('squads').delete().eq('squad_id', squadId);
+    } catch (e, stack) {
+      _logger.severe('Failed to delete squad $squadId', e, stack);
+      throw e.toFailure();
+    }
+  }
+
+  @override
   Future<void> applyToSquad(String squadId, String userId) async {
     try {
       await _supabase.rpc(

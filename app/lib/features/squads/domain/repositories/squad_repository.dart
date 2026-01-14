@@ -29,6 +29,8 @@ abstract class SquadRepository {
     bool? useExperienceFactor,
   });
 
+  Future<void> deleteSquad(String squadId);
+
   Future<void> applyToSquad(String squadId, String userId);
 
   Future<void> addUserToSquad(String squadId, String userId);

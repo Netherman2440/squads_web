@@ -33,6 +33,8 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
   bool _isEditing = false;
   final TextEditingController _homeScoreController = TextEditingController();
   final TextEditingController _awayScoreController = TextEditingController();
+  final TextEditingController _homeTeamNameController = TextEditingController();
+  final TextEditingController _awayTeamNameController = TextEditingController();
 
   List<Player> _homePlayers = [];
   List<Player> _awayPlayers = [];
@@ -41,11 +43,36 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
   bool _isAddPlayerOpen = false;
   final TextEditingController _playerSearchController = TextEditingController();
   List<Player> _squadPlayers = [];
+  String? _homeTeamColorHex;
+  String? _awayTeamColorHex;
+  String? _initialHomeTeamName;
+  String? _initialAwayTeamName;
+  String? _initialHomeTeamColorHex;
+  String? _initialAwayTeamColorHex;
+
+  static const List<String> _teamColorOptions = [
+    '#E53935',
+    '#D81B60',
+    '#8E24AA',
+    '#5E35B1',
+    '#3949AB',
+    '#1E88E5',
+    '#039BE5',
+    '#00897B',
+    '#43A047',
+    '#7CB342',
+    '#FDD835',
+    '#FB8C00',
+    '#6D4C41',
+    '#546E7A',
+  ];
 
   @override
   void dispose() {
     _homeScoreController.dispose();
     _awayScoreController.dispose();
+    _homeTeamNameController.dispose();
+    _awayTeamNameController.dispose();
     _playerSearchController.dispose();
     super.dispose();
   }
@@ -58,6 +85,14 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
       _isAddPlayerOpen = false;
       _homePlayers = [];
       _awayPlayers = [];
+      _homeTeamNameController.clear();
+      _awayTeamNameController.clear();
+      _homeTeamColorHex = null;
+      _awayTeamColorHex = null;
+      _initialHomeTeamName = null;
+      _initialAwayTeamName = null;
+      _initialHomeTeamColorHex = null;
+      _initialAwayTeamColorHex = null;
       ref.invalidate(matchDetailsProvider(widget.matchId));
     }
   }
@@ -70,6 +105,14 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
       _awayScoreController.text = match.awayScore?.toString() ?? '';
       _homePlayers = List.from(match.homeTeam!.players);
       _awayPlayers = List.from(match.awayTeam!.players);
+      _homeTeamNameController.text = match.homeTeam?.name ?? '';
+      _awayTeamNameController.text = match.awayTeam?.name ?? '';
+      _homeTeamColorHex = match.homeTeam?.color;
+      _awayTeamColorHex = match.awayTeam?.color;
+      _initialHomeTeamName = match.homeTeam?.name ?? '';
+      _initialAwayTeamName = match.awayTeam?.name ?? '';
+      _initialHomeTeamColorHex = match.homeTeam?.color;
+      _initialAwayTeamColorHex = match.awayTeam?.color;
     });
   }
 
@@ -80,17 +123,65 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
       _awayPlayers.clear();
       _isAddPlayerOpen = false;
       _isDraggingPlayer = false;
+      _homeTeamNameController.clear();
+      _awayTeamNameController.clear();
+      _homeTeamColorHex = null;
+      _awayTeamColorHex = null;
+      _initialHomeTeamName = null;
+      _initialAwayTeamName = null;
+      _initialHomeTeamColorHex = null;
+      _initialAwayTeamColorHex = null;
     });
   }
 
-  Future<void> _saveChanges() async {
+  Future<void> _saveChanges(Match match) async {
+    final homeTeam = match.homeTeam;
+    final awayTeam = match.awayTeam;
+    if (homeTeam == null || awayTeam == null) return;
+
+    final nextHomeName = _homeTeamNameController.text.trim();
+    final nextAwayName = _awayTeamNameController.text.trim();
+
+    final homeNameChanged = nextHomeName != (_initialHomeTeamName ?? '');
+    final awayNameChanged = nextAwayName != (_initialAwayTeamName ?? '');
+
+    final homeColorChanged = _homeTeamColorHex != _initialHomeTeamColorHex;
+    final awayColorChanged = _awayTeamColorHex != _initialAwayTeamColorHex;
+
+    if (homeNameChanged ||
+        awayNameChanged ||
+        homeColorChanged ||
+        awayColorChanged) {
+      await ref
+          .read(matchDetailsProvider(widget.matchId).notifier)
+          .updateTeamsMeta(
+            homeTeamId: homeTeam.teamId,
+            awayTeamId: awayTeam.teamId,
+            homeName: homeNameChanged ? nextHomeName : null,
+            awayName: awayNameChanged ? nextAwayName : null,
+            homeColor: homeColorChanged ? _homeTeamColorHex : null,
+            awayColor: awayColorChanged ? _awayTeamColorHex : null,
+          );
+    }
+
     // 1. Save Teams FIRST
     final homeIds = _homePlayers.map((p) => p.playerId).toList();
     final awayIds = _awayPlayers.map((p) => p.playerId).toList();
 
-    await ref
-        .read(matchDetailsProvider(widget.matchId).notifier)
-        .updateTeams(homeIds, awayIds);
+    final homePlayersChanged = !_arePlayerIdsEqual(
+      _homePlayers,
+      homeTeam.players,
+    );
+    final awayPlayersChanged = !_arePlayerIdsEqual(
+      _awayPlayers,
+      awayTeam.players,
+    );
+
+    if (homePlayersChanged || awayPlayersChanged) {
+      await ref
+          .read(matchDetailsProvider(widget.matchId).notifier)
+          .updateTeams(homeIds, awayIds);
+    }
 
     // 2. Save Score THEN
     final homeScoreText = _homeScoreController.text.trim();
@@ -253,6 +344,69 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
     }
   }
 
+  String _displayTeamName(String? name, String fallback) {
+    final trimmed = name?.trim() ?? '';
+    return trimmed.isEmpty ? fallback : trimmed;
+  }
+
+  bool _arePlayerIdsEqual(List<Player> a, List<Player> b) {
+    if (a.length != b.length) return false;
+    final aIds = {for (final p in a) p.playerId};
+    final bIds = {for (final p in b) p.playerId};
+    return aIds.length == bIds.length && aIds.containsAll(bIds);
+  }
+
+  Future<void> _pickTeamColor(String side) async {
+    final current = side == 'home' ? _homeTeamColorHex : _awayTeamColorHex;
+    final theme = Theme.of(context);
+    final selected = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select team color'),
+        content: Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: _teamColorOptions.map((hex) {
+            final isSelected = hex == current;
+            return InkWell(
+              onTap: () => Navigator.of(context).pop(hex),
+              borderRadius: BorderRadius.circular(6),
+              child: Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: _parseColor(hex),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: isSelected
+                        ? theme.colorScheme.primary
+                        : Colors.grey.withValues(alpha: 0.5),
+                    width: isSelected ? 2 : 1,
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted || selected == null) return;
+    setState(() {
+      if (side == 'home') {
+        _homeTeamColorHex = selected;
+      } else {
+        _awayTeamColorHex = selected;
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final matchAsync = ref.watch(matchDetailsProvider(widget.matchId));
@@ -277,7 +431,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
               ),
               IconButton(
                 icon: const Icon(Icons.save),
-                onPressed: _saveChanges,
+                onPressed: () => _saveChanges(matchAsync.value!),
                 tooltip: 'Save',
               ),
               IconButton(
@@ -339,6 +493,9 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
 
   Widget _buildContent(BuildContext context, Match match) {
     final dateFormat = DateFormat('dd.MM.yyyy HH:mm');
+    final scoreBoard = _isEditing
+        ? _buildEditScoreBoard()
+        : _buildScoreBoard(match);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
@@ -349,9 +506,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 16),
-          if (_isEditing) _buildEditScoreBoard() else _buildScoreBoard(match),
           if (_isEditing && _isAddPlayerOpen) ...[
-            const SizedBox(height: 16),
             _AddPlayerPanel(
               players: _availableSquadPlayers(),
               searchController: _playerSearchController,
@@ -361,35 +516,63 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
             ),
           ],
           const SizedBox(height: 24),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: _buildTeamSection(
-                  context,
-                  _isEditing ? _homePlayers : (match.homeTeam?.players ?? []),
-                  match.homeTeam?.name ?? 'Home',
-                  'home',
-                  match.homeTeam?.color,
-                  opponentCount: _isEditing
-                      ? _awayPlayers.length
-                      : (match.awayTeam?.players.length ?? 0),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildTeamSection(
-                  context,
-                  _isEditing ? _awayPlayers : (match.awayTeam?.players ?? []),
-                  match.awayTeam?.name ?? 'Away',
-                  'away',
-                  match.awayTeam?.color,
-                  opponentCount: _isEditing
-                      ? _homePlayers.length
-                      : (match.homeTeam?.players.length ?? 0),
-                ),
-              ),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isNarrow = constraints.maxWidth < 720;
+              final homeSection = _buildTeamSection(
+                context,
+                _isEditing ? _homePlayers : (match.homeTeam?.players ?? []),
+                match.homeTeam?.name,
+                'Home',
+                'home',
+                _isEditing ? _homeTeamColorHex : match.homeTeam?.color,
+                opponentCount: _isEditing
+                    ? _awayPlayers.length
+                    : (match.awayTeam?.players.length ?? 0),
+                nameController: _isEditing ? _homeTeamNameController : null,
+              );
+              final awaySection = _buildTeamSection(
+                context,
+                _isEditing ? _awayPlayers : (match.awayTeam?.players ?? []),
+                match.awayTeam?.name,
+                'Away',
+                'away',
+                _isEditing ? _awayTeamColorHex : match.awayTeam?.color,
+                opponentCount: _isEditing
+                    ? _homePlayers.length
+                    : (match.homeTeam?.players.length ?? 0),
+                nameController: _isEditing ? _awayTeamNameController : null,
+              );
+
+              if (isNarrow) {
+                return Column(
+                  children: [
+                    homeSection,
+                    const SizedBox(height: 16),
+                    Center(child: scoreBoard),
+                    const SizedBox(height: 16),
+                    awaySection,
+                  ],
+                );
+              }
+
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: homeSection),
+                  const SizedBox(width: 16),
+                  SizedBox(
+                    width: 220,
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      child: scoreBoard,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(child: awaySection),
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -463,13 +646,17 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
   Widget _buildTeamSection(
     BuildContext context,
     List<Player> players,
-    String label,
+    String? teamName,
+    String fallbackLabel,
     String side,
     String? colorHex, {
     required int opponentCount,
+    TextEditingController? nameController,
   }) {
     final teamColor = _parseColor(colorHex);
     final theme = Theme.of(context);
+    final sortedPlayers = [...players]
+      ..sort((a, b) => b.ranking.compareTo(a.ranking));
 
     // Compute ranking
     double totalRanking = 0;
@@ -491,19 +678,61 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 16,
-              height: 16,
-              decoration: BoxDecoration(
-                color: teamColor,
-                border: Border.all(color: Colors.grey.withValues(alpha: 0.5)),
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
+            _isEditing
+                ? GestureDetector(
+                    onTap: () => _pickTeamColor(side),
+                    child: Tooltip(
+                      message: 'Change color',
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: teamColor,
+                          border: Border.all(
+                            color: Colors.grey.withValues(alpha: 0.5),
+                          ),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    ),
+                  )
+                : Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: teamColor,
+                      border: Border.all(
+                        color: Colors.grey.withValues(alpha: 0.5),
+                      ),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
             const SizedBox(width: 8),
-            Text(label, style: theme.textTheme.titleLarge),
+            if (_isEditing && nameController != null)
+              Flexible(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 200),
+                  child: TextField(
+                    controller: nameController,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.titleLarge,
+                    decoration: InputDecoration(
+                      hintText: fallbackLabel,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                      border: const UnderlineInputBorder(),
+                    ),
+                  ),
+                ),
+              )
+            else
+              Text(
+                _displayTeamName(teamName, fallbackLabel),
+                style: theme.textTheme.titleLarge,
+              ),
           ],
         ),
+        const SizedBox(height: 6),
         Text(
           'Rating: ${effective.toStringAsFixed(1)}',
           style: theme.textTheme.bodySmall?.copyWith(
@@ -511,7 +740,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
           ),
         ),
         const Divider(),
-        ...players.map(
+        ...sortedPlayers.map(
           (player) => MatchPlayerTile(
             player: player,
             trailing: const SizedBox.shrink(),

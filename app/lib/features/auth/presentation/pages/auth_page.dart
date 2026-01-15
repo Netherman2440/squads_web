@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -25,6 +27,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
   late final GlobalKey<FormState> formKey;
   bool isPasswordObscured = true;
   bool _processingInvite = false;
+  bool _guestLoginRequested = false;
   bool _handlingAuthNavigation = false;
   ProviderSubscription<AsyncValue<AuthEntity?>>? _authSubscription;
 
@@ -93,10 +96,14 @@ class _AuthPageState extends ConsumerState<AuthPage> {
     if (data == null || !mounted || _handlingAuthNavigation) {
       return;
     }
+    if (data.isAnonymous && !_guestLoginRequested) {
+      return;
+    }
+
     _handlingAuthNavigation = true;
     try {
       if (data.isAnonymous) {
-        context.go('/squads');
+        await _navigateAfterBuild('/squads');
         return;
       }
 
@@ -106,13 +113,14 @@ class _AuthPageState extends ConsumerState<AuthPage> {
       }
 
       if (joinedSquadId != null) {
-        context.go('/squads/$joinedSquadId');
+        await _navigateAfterBuild('/squads/$joinedSquadId');
         return;
       }
 
-      context.go('/me');
+      await _navigateAfterBuild('/me');
     } finally {
       _handlingAuthNavigation = false;
+      _guestLoginRequested = false;
     }
   }
 
@@ -136,6 +144,18 @@ class _AuthPageState extends ConsumerState<AuthPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), backgroundColor: Colors.red),
     );
+    _guestLoginRequested = false;
+  }
+
+  Future<void> _navigateAfterBuild(String location) async {
+    final completer = Completer<void>();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.go(location);
+      }
+      completer.complete();
+    });
+    await completer.future;
   }
 
   @override
@@ -158,6 +178,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
     }
 
     Future<void> handleGuest() async {
+      _guestLoginRequested = true;
       await ref.read(authStateProvider.notifier).guestLogin();
     }
 

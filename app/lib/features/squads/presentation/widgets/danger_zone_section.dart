@@ -14,6 +14,7 @@ class DangerZoneSection extends StatefulWidget {
     required this.visibility,
     required this.onChangeName,
     required this.onChangeVisibility,
+    required this.onDelete,
   });
 
   final String squadId;
@@ -21,6 +22,7 @@ class DangerZoneSection extends StatefulWidget {
   final SquadVisibility visibility;
   final Future<void> Function(String name) onChangeName;
   final Future<void> Function(SquadVisibility visibility) onChangeVisibility;
+  final Future<void> Function() onDelete;
 
   static const double _maxContentWidth = 860;
   static const double _actionButtonMinWidth = 200;
@@ -120,10 +122,8 @@ class _DangerZoneSectionState extends State<DangerZoneSection> {
                         'Once you delete a squad, there is no going back. '
                         'Please be certain.',
                     actionLabel: 'Delete',
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('TODO: Delete squad')),
-                      );
+                    onPressed: () async {
+                      await widget.onDelete();
                     },
                   ),
                 ],

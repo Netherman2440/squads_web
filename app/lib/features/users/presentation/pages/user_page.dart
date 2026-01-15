@@ -67,6 +67,10 @@ class _UserPageState extends ConsumerState<UserPage> {
       (membership) => membership.role != SquadRole.none,
     );
 
+    final showSquadsLoading =
+        squadsState.isLoading && mySquads.isEmpty && !userState.isLoading;
+    final showEmptySquads = mySquads.isEmpty && !userState.isLoading;
+
     final text = hasSquad ? 'Add more' : 'Add your first squad';
 
     return Scaffold(
@@ -98,12 +102,12 @@ class _UserPageState extends ConsumerState<UserPage> {
               ),
             ),
             const SizedBox(height: 8),
-            if (squadsState.isLoading && mySquads.isEmpty)
+            if (showSquadsLoading)
               const Padding(
                 padding: EdgeInsets.all(16),
                 child: Center(child: CircularProgressIndicator()),
               )
-            else if (mySquads.isEmpty)
+            else if (showEmptySquads)
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text(

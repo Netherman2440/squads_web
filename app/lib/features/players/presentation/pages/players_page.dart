@@ -21,6 +21,9 @@ class PlayersPage extends ConsumerStatefulWidget {
 
 class _PlayersPageState extends ConsumerState<PlayersPage> {
   List<Player>? players;
+  String _searchQuery = '';
+  _PlayerSortOption _sortOption = _PlayerSortOption.scoreDesc;
+
   @override
   void initState() {
     super.initState();
@@ -43,32 +46,20 @@ class _PlayersPageState extends ConsumerState<PlayersPage> {
       data: (players) {
         this.players = players;
         if (players.isEmpty) {
-          return RefreshIndicator(
-            onRefresh: () => ref
-                .read(playersNotifierProvider.notifier)
-                .refreshPlayers(squadId: widget.squadId),
-            child: const EmptyPlayersState(),
-          );
+          return _buildEmptyState();
         }
 
-        return RefreshIndicator(
-          onRefresh: () => ref
-              .read(playersNotifierProvider.notifier)
-              .refreshPlayers(squadId: widget.squadId),
-          child: PlayersListWidget(players: players, squadId: widget.squadId),
+        final visiblePlayers = _applySearchAndSort(players);
+        return Column(
+          children: [
+            _buildSearchAndSortControls(),
+            Expanded(child: _buildPlayersList(visiblePlayers)),
+          ],
         );
       },
       error: (error, stackTrace) =>
           //show snackbar
-          RefreshIndicator(
-            onRefresh: () => ref
-                .read(playersNotifierProvider.notifier)
-                .refreshPlayers(squadId: widget.squadId),
-            child: PlayersListWidget(
-              players: players ?? [],
-              squadId: widget.squadId,
-            ),
-          ),
+          _buildErrorState(),
       loading: () => const Center(child: CircularProgressIndicator()),
     );
   }
@@ -114,4 +105,135 @@ class _PlayersPageState extends ConsumerState<PlayersPage> {
         );
     });
   }
+
+  Widget _buildPlayersList(List<Player> players) {
+    return RefreshIndicator(
+      onRefresh: () => ref
+          .read(playersNotifierProvider.notifier)
+          .refreshPlayers(squadId: widget.squadId),
+      child: PlayersListWidget(players: players, squadId: widget.squadId),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return RefreshIndicator(
+      onRefresh: () => ref
+          .read(playersNotifierProvider.notifier)
+          .refreshPlayers(squadId: widget.squadId),
+      child: const EmptyPlayersState(),
+    );
+  }
+
+  Widget _buildErrorState() {
+    final cachedPlayers = players ?? [];
+    if (cachedPlayers.isEmpty) {
+      return _buildEmptyState();
+    }
+    final visiblePlayers = _applySearchAndSort(cachedPlayers);
+    return Column(
+      children: [
+        _buildSearchAndSortControls(),
+        Expanded(child: _buildPlayersList(visiblePlayers)),
+      ],
+    );
+  }
+
+  Widget _buildSearchAndSortControls() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isNarrow = constraints.maxWidth < 600;
+
+          final searchField = TextField(
+            decoration: const InputDecoration(
+              labelText: 'Search',
+              prefixIcon: Icon(Icons.search),
+            ),
+            textCapitalization: TextCapitalization.none,
+            onChanged: (value) => setState(() => _searchQuery = value),
+          );
+
+          final sortDropdown = DropdownButtonFormField<_PlayerSortOption>(
+            initialValue: _sortOption,
+            decoration: const InputDecoration(
+              labelText: 'Sort',
+              prefixIcon: Icon(Icons.sort),
+            ),
+            items: _PlayerSortOption.values
+                .map(
+                  (option) => DropdownMenuItem(
+                    value: option,
+                    child: Text(_sortLabel(option)),
+                  ),
+                )
+                .toList(growable: false),
+            onChanged: (value) {
+              if (value == null) return;
+              setState(() => _sortOption = value);
+            },
+          );
+
+          if (isNarrow) {
+            return Column(
+              children: [searchField, const SizedBox(height: 12), sortDropdown],
+            );
+          }
+
+          return Row(
+            children: [
+              Expanded(child: searchField),
+              const SizedBox(width: 12),
+              SizedBox(width: 240, child: sortDropdown),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  List<Player> _applySearchAndSort(List<Player> players) {
+    final query = _searchQuery.trim().toLowerCase();
+    final filtered = query.isEmpty
+        ? players
+        : players
+              .where((player) => player.name.toLowerCase().contains(query))
+              .toList(growable: false);
+
+    final sorted = [...filtered];
+    switch (_sortOption) {
+      case _PlayerSortOption.scoreDesc:
+        sorted.sort((a, b) => b.ranking.compareTo(a.ranking));
+        break;
+      case _PlayerSortOption.scoreAsc:
+        sorted.sort((a, b) => a.ranking.compareTo(b.ranking));
+        break;
+      case _PlayerSortOption.nameAsc:
+        sorted.sort(
+          (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+        );
+        break;
+      case _PlayerSortOption.nameDesc:
+        sorted.sort(
+          (a, b) => b.name.toLowerCase().compareTo(a.name.toLowerCase()),
+        );
+        break;
+    }
+    return sorted;
+  }
+
+  String _sortLabel(_PlayerSortOption option) {
+    switch (option) {
+      case _PlayerSortOption.scoreDesc:
+        return 'Score: High to low';
+      case _PlayerSortOption.scoreAsc:
+        return 'Score: Low to high';
+      case _PlayerSortOption.nameAsc:
+        return 'Name: A to Z';
+      case _PlayerSortOption.nameDesc:
+        return 'Name: Z to A';
+    }
+  }
 }
+
+enum _PlayerSortOption { scoreDesc, scoreAsc, nameAsc, nameDesc }

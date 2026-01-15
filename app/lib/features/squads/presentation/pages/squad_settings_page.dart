@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import 'package:app/core/app_router.dart';
+import 'package:app/core/error/failure.dart';
+import 'package:app/features/squads/application/delete_squad_use_case.dart';
 import 'package:app/features/squads/application/generate_invite_link_use_case.dart';
 import 'package:app/features/squads/domain/entities/squad_member.dart';
 import 'package:app/features/squads/domain/entities/user_squad_role.dart';
 import 'package:app/features/squads/presentation/state/squad_detail_notifier.dart';
 import 'package:app/features/squads/presentation/state/squad_invite_link_provider.dart';
 import 'package:app/features/squads/presentation/state/squad_settings_notifier.dart';
+import 'package:app/features/squads/presentation/state/squads_notifier.dart';
 import 'package:app/features/squads/presentation/widgets/danger_zone_section.dart';
 import 'package:app/features/squads/presentation/widgets/member_tile.dart';
 
@@ -114,6 +119,7 @@ class _SquadSettingsPageState extends ConsumerState<SquadSettingsPage> {
                             .updateVisibility(visibility);
                         ref.invalidate(squadDetailProvider(widget.squadId));
                       },
+                      onDelete: () => _deleteSquad(squad.name),
                     ),
                   ],
                 ),
@@ -123,6 +129,53 @@ class _SquadSettingsPageState extends ConsumerState<SquadSettingsPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _deleteSquad(String squadName) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete squad?'),
+        content: Text(
+          'This will permanently remove '
+          '${squadName.isNotEmpty ? squadName : 'this squad'} '
+          'and all related data. This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      await ref
+          .read(deleteSquadUseCaseProvider)
+          .execute(squadId: widget.squadId);
+      await ref
+          .read(squadsNotifierProvider.notifier)
+          .loadSquads(searchQuery: null);
+      if (mounted) {
+        context.goNamed(AppRoute.squads.name);
+      }
+    } catch (error) {
+      if (!mounted) return;
+      final message = error is Failure ? error.message : error.toString();
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text(message), backgroundColor: Colors.red),
+        );
+    }
   }
 }
 

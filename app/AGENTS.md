@@ -1,7 +1,7 @@
 ﻿# Repository Guidelines
 
 ## Project Structure & Module Organization
-Source code for features lives in `lib/`, organized by domain (auth, squads, shared widgets). Routing is handled through `lib/router` via `go_router`, while providers reside in `lib/application` for Riverpod usage. Tests mirror the `lib/` tree under `test/`. Platform runners (`android/`, `ios/`, `web/`, `linux/`, `macos/`, `windows/`) should remain untouched unless you are editing native integrations. Environment files sit in `.env` and `.env.EXAMPLE`; keep secrets out of git and document new keys in the example file. Local SQLite or mock data goes inside `db/`.
+Source code for features lives in `lib/`, organized by domain (auth, squads, shared widgets). Routing is handled through `lib/router` via `go_router`, while providers reside in `lib/application` for Riverpod usage. Tests mirror the `lib/` tree under `test/`. Platform runners (`android/`, `ios/`, `web/`, `linux/`, `macos/`, `windows/`) should remain untouched unless you are editing native integrations. Environment files sit in `.env` and `.env.EXAMPLE`; keep secrets out of git and document new keys in the example file. 
 
 ## Build, Test, and Development Commands
 Run `flutter pub get` any time dependencies change. Use `flutter run -d chrome` for the default local web runner; `flutter run -d emulator-id` supports devices. `flutter test` executes the unit/widget test suite, and `flutter analyze` must be clean before opening a PR. Production builds rely on `flutter build web --release` or the corresponding platform-specific `flutter build` target. When code generation is needed (Riverpod/JSON), execute `dart run build_runner build --delete-conflicting-outputs`.

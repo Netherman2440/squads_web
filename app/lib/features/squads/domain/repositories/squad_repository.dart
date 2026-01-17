@@ -1,4 +1,5 @@
 import 'package:app/features/squads/domain/entities/squad_member.dart';
+import 'package:app/features/squads/domain/entities/squad_stats.dart';
 
 import '../entities/squad.dart';
 
@@ -12,6 +13,8 @@ abstract class SquadRepository {
   Future<List<Squad>> getSquadsByIds(List<String> squadIds);
 
   Future<Squad?> getSquad(String squadId);
+
+  Future<SquadStats> getSquadStats(String squadId);
 
   Future<void> createSquad(
     String name,

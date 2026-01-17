@@ -1,5 +1,7 @@
+import 'package:app/core/error/failure.dart';
 import 'package:app/core/error/supabase_error_extension.dart';
 import 'package:app/features/squads/domain/entities/squad_member.dart';
+import 'package:app/features/squads/domain/entities/squad_stats.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -106,6 +108,34 @@ class SupabaseSquadRepository implements SquadRepository {
     } catch (e, stack) {
       _logger.severe('Failed to fetch squad $squadId', e, stack);
       throw e.toFailure();
+    }
+  }
+
+  @override
+  Future<SquadStats> getSquadStats(String squadId) async {
+    try {
+      final response = await _supabase.rpc(
+        'get_squad_stats',
+        params: {'p_squad_id': squadId},
+      );
+
+      final Map<String, dynamic> data;
+
+      if (response is List && response.isNotEmpty) {
+        data = Map<String, dynamic>.from(response.first as Map);
+      } else if (response is Map) {
+        data = Map<String, dynamic>.from(response);
+      } else {
+        throw const ServerFailure('Failed to load squad stats.');
+      }
+
+      return SquadStats.fromMap(data);
+    } catch (e, stack) {
+      _logger.severe('Failed to fetch squad stats for $squadId', e, stack);
+      if (e is Failure) {
+        rethrow;
+      }
+      rethrow;
     }
   }
 

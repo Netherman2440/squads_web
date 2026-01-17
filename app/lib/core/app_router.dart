@@ -14,6 +14,7 @@ import 'package:app/features/matches/presentation/pages/match_details_page.dart'
 import 'package:app/features/matches/presentation/pages/squad_matches_page.dart';
 import 'package:app/features/squads/presentation/pages/squad_ranking_settings_page.dart';
 import 'package:app/features/squads/presentation/pages/squad_settings_page.dart';
+import 'package:app/features/squads/presentation/pages/squad_stats_page.dart';
 import 'package:app/features/players/presentation/pages/players_page.dart';
 import 'package:app/features/squads/presentation/pages/squads_page.dart';
 import 'package:app/features/users/presentation/pages/user_page.dart';
@@ -28,6 +29,7 @@ enum AppRoute {
   squads,
   settings,
   rankingSettings,
+  squadStats,
   profile,
   squadDetails,
   players,
@@ -130,6 +132,16 @@ final appRouter = () {
               final squadId = state.pathParameters['squadId'] ?? '';
               return NoTransitionPage(
                 child: SquadMatchesPage(squadId: squadId),
+              );
+            },
+          ),
+          GoRoute(
+            path: '/squads/:squadId/stats',
+            name: AppRoute.squadStats.name,
+            pageBuilder: (context, state) {
+              final squadId = state.pathParameters['squadId'] ?? '';
+              return NoTransitionPage(
+                child: SquadStatsPage(squadId: squadId),
               );
             },
           ),

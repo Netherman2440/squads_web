@@ -1,6 +1,8 @@
 import 'package:go_router/go_router.dart';
 
 import 'package:app/features/players/presentation/pages/player_details_page.dart';
+import 'package:app/features/players/presentation/pages/player_matches_page.dart';
+import 'package:app/features/players/presentation/pages/player_stats_page.dart';
 import 'package:app/core/root_shell.dart';
 import 'package:app/features/auth/presentation/pages/auth_page.dart';
 import 'package:app/features/auth/presentation/pages/auth_confirm_page.dart';
@@ -36,6 +38,8 @@ enum AppRoute {
   draftSelection,
   draftCreate,
   playerDetails,
+  playerMatches,
+  playerStats,
   matches,
   matchDetails,
   invite,
@@ -122,6 +126,34 @@ final appRouter = () {
               final playerId = state.pathParameters['playerId'] ?? '';
               return NoTransitionPage(
                 child: PlayerDetailsPage(squadId: squadId, playerId: playerId),
+              );
+            },
+          ),
+          GoRoute(
+            path: '/squads/:squadId/players/:playerId/matches',
+            name: AppRoute.playerMatches.name,
+            pageBuilder: (context, state) {
+              final squadId = state.pathParameters['squadId'] ?? '';
+              final playerId = state.pathParameters['playerId'] ?? '';
+              return NoTransitionPage(
+                child: PlayerMatchesPage(
+                  squadId: squadId,
+                  playerId: playerId,
+                ),
+              );
+            },
+          ),
+          GoRoute(
+            path: '/squads/:squadId/players/:playerId/stats',
+            name: AppRoute.playerStats.name,
+            pageBuilder: (context, state) {
+              final squadId = state.pathParameters['squadId'] ?? '';
+              final playerId = state.pathParameters['playerId'] ?? '';
+              return NoTransitionPage(
+                child: PlayerStatsPage(
+                  squadId: squadId,
+                  playerId: playerId,
+                ),
               );
             },
           ),

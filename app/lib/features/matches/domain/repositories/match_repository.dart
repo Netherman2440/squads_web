@@ -7,6 +7,8 @@ abstract class MatchRepository {
 
   Future<Match> getMatch({required String matchId});
 
+  Future<List<Match>> getMatches({required List<String> matchIds});
+
   Future<Match> createMatch({
     required String squadId,
     String? tournamentId,
@@ -36,4 +38,6 @@ abstract class MatchRepository {
     String? name,
     String? color,
   });
+
+  Future<double?> refreshMatchWinProbability({required String matchId});
 }

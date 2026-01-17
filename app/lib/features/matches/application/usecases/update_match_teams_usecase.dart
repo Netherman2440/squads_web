@@ -44,6 +44,8 @@ class UpdateMatchTeamsUseCase {
       awayPlayerIds: awayPlayerIds,
     );
 
+    await _matchRepository.refreshMatchWinProbability(matchId: matchId);
+
     final newPlayerIds = {...homePlayerIds, ...awayPlayerIds};
 
     // Identify Added Players

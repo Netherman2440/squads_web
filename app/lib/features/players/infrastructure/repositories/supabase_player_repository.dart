@@ -8,6 +8,8 @@ import 'package:app/core/error/failure.dart';
 import 'package:app/core/error/supabase_error_extension.dart';
 
 import '../../domain/entities/player.dart';
+import '../../domain/entities/player_head_to_head_stat.dart';
+import '../../domain/entities/player_stats.dart';
 import '../../domain/repositories/player_repository.dart';
 
 class SupabasePlayerRepository implements PlayerRepository {
@@ -182,6 +184,66 @@ class SupabasePlayerRepository implements PlayerRepository {
           .eq('player_id', playerId);
     } catch (e, stack) {
       _logger.severe('Failed to update ranking for player $playerId', e, stack);
+      throw e.toFailure();
+    }
+  }
+
+  @override
+  Future<PlayerStats> getPlayerStats({required String playerId}) async {
+    try {
+      final response = await _supabase.rpc(
+        'get_player_stats',
+        params: {'p_player_id': playerId},
+      );
+
+      final Map<String, dynamic> data;
+      if (response is List && response.isNotEmpty) {
+        data = Map<String, dynamic>.from(response.first as Map);
+      } else if (response is Map) {
+        data = Map<String, dynamic>.from(response);
+      } else {
+        throw const ServerFailure('Failed to load player stats.');
+      }
+
+      return PlayerStats.fromMap(data);
+    } catch (e, stack) {
+      _logger.severe('Failed to fetch player stats for $playerId', e, stack);
+      throw e.toFailure();
+    }
+  }
+
+  @override
+  Future<List<PlayerHeadToHeadStat>> getPlayerHeadToHeadStats({
+    required String playerId,
+  }) async {
+    try {
+      final response = await _supabase.rpc(
+        'get_player_head_to_head_stats',
+        params: {'p_player_id': playerId},
+      );
+
+      final List<dynamic> data;
+      if (response is List) {
+        data = response;
+      } else if (response is Map) {
+        data = [response];
+      } else {
+        return [];
+      }
+
+      return data
+          .map(
+            (row) => PlayerHeadToHeadStat.fromMap(
+              Map<String, dynamic>.from(row as Map),
+            ),
+          )
+          .toList(growable: false);
+    } catch (e, stack) {
+      _logger.severe(
+        'Failed to fetch head-to-head stats for $playerId',
+        e,
+        stack,
+      );
       throw e.toFailure();
     }
   }

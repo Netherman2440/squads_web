@@ -31,11 +31,12 @@ class StatTile extends StatelessWidget {
     if (value is Player) {
       return value.name;
     }
-    if (value is double) {
-      return value.toStringAsFixed(2);
-    }
-    if (value is int) {
-      return value.toString();
+    if (value is num) {
+      final number = value.toDouble();
+      if ((number - number.roundToDouble()).abs() < 0.0001) {
+        return number.toInt().toString();
+      }
+      return number.toStringAsFixed(2);
     }
     return value.toString();
   }

@@ -12,6 +12,8 @@ class Match {
   final MatchScoreType? scoreType;
   final int? homeScore;
   final int? awayScore;
+  @JsonKey(name: 'home_win_prob')
+  final double? homeWinProbability;
   final Map<String, dynamic> scoreMeta;
   final DateTime createdAt;
 
@@ -30,6 +32,7 @@ class Match {
     this.scoreType,
     this.homeScore,
     this.awayScore,
+    this.homeWinProbability,
     this.scoreMeta = const {},
     required this.createdAt,
     this.homeTeam,
@@ -46,6 +49,7 @@ class Match {
     MatchScoreType? scoreType,
     int? homeScore,
     int? awayScore,
+    double? homeWinProbability,
     Map<String, dynamic>? scoreMeta,
     DateTime? createdAt,
     Team? homeTeam,
@@ -58,10 +62,32 @@ class Match {
       scoreType: scoreType ?? this.scoreType,
       homeScore: homeScore ?? this.homeScore,
       awayScore: awayScore ?? this.awayScore,
+      homeWinProbability: homeWinProbability ?? this.homeWinProbability,
       scoreMeta: scoreMeta ?? this.scoreMeta,
       createdAt: createdAt ?? this.createdAt,
       homeTeam: homeTeam ?? this.homeTeam,
       awayTeam: awayTeam ?? this.awayTeam,
     );
   }
+
+  double? get awayWinProbability {
+    final value = homeWinProbability;
+    if (value == null) return null;
+    return (1 - value).clamp(0.0, 1.0).toDouble();
+  }
+
+  Probability? get probability {
+    final value = homeWinProbability;
+    if (value == null) return null;
+    return Probability(value.clamp(0.0, 1.0).toDouble());
+  }
+}
+
+class Probability {
+  final double homeWinProbability;
+
+  const Probability(this.homeWinProbability);
+
+  double get awayWinProbability =>
+      (1 - homeWinProbability).clamp(0.0, 1.0).toDouble();
 }

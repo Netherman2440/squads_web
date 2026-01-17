@@ -60,6 +60,31 @@ class SupabaseMatchRepository implements MatchRepository {
   }
 
   @override
+  Future<List<Match>> getMatches({required List<String> matchIds}) async {
+    if (matchIds.isEmpty) {
+      return const [];
+    }
+
+    try {
+      final response = await _supabase
+          .from('matches')
+          .select()
+          .inFilter('match_id', matchIds)
+          .order('played_at', ascending: false, nullsFirst: false)
+          .order('created_at', ascending: false);
+
+      final List<dynamic> data = response as List<dynamic>;
+
+      return data
+          .map((row) => Match.fromJson(Map<String, dynamic>.from(row as Map)))
+          .toList();
+    } catch (e, stack) {
+      _logger.severe('Failed to fetch matches by ids', e, stack);
+      throw e.toFailure();
+    }
+  }
+
+  @override
   Future<Match> createMatch({
     required String squadId,
     String? tournamentId,
@@ -265,6 +290,40 @@ class SupabaseMatchRepository implements MatchRepository {
     } catch (e, stack) {
       _logger.severe(
         'Failed to update team $teamId in match $matchId',
+        e,
+        stack,
+      );
+      throw e.toFailure();
+    }
+  }
+
+  @override
+  Future<double?> refreshMatchWinProbability({required String matchId}) async {
+    try {
+      final response = await _supabase.rpc(
+        'refresh_match_win_probability',
+        params: {'p_match_id': matchId},
+      );
+
+      if (response is num) {
+        return response.toDouble();
+      }
+      if (response is List && response.isNotEmpty) {
+        final value = response.first;
+        if (value is num) {
+          return value.toDouble();
+        }
+        if (value is Map && value['home_win_prob'] is num) {
+          return (value['home_win_prob'] as num).toDouble();
+        }
+      }
+      if (response is Map && response['home_win_prob'] is num) {
+        return (response['home_win_prob'] as num).toDouble();
+      }
+      return null;
+    } catch (e, stack) {
+      _logger.severe(
+        'Failed to refresh win probability for match $matchId',
         e,
         stack,
       );

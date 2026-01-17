@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:app/core/error/failure.dart';
+import 'package:app/core/app_router.dart';
 import 'package:app/features/players/application/usecases/delete_player_usecase.dart';
 import 'package:app/features/players/presentation/controllers/players_notifier.dart';
 import 'package:app/features/squads/domain/entities/user_squad_role.dart';
@@ -295,7 +296,13 @@ class _PlayerTabs extends StatelessWidget {
             _TabButton(
               label: 'Matches',
               icon: Icons.sports_soccer,
-              onPressed: () => _showTodo(context),
+              onPressed: () => context.pushNamed(
+                AppRoute.playerMatches.name,
+                pathParameters: {
+                  'squadId': squadId,
+                  'playerId': playerId,
+                },
+              ),
             ),
             _TabButton(
               label: 'Tournaments',
@@ -305,7 +312,13 @@ class _PlayerTabs extends StatelessWidget {
             _TabButton(
               label: 'Stats',
               icon: Icons.analytics,
-              onPressed: () => _showTodo(context),
+              onPressed: () => context.pushNamed(
+                AppRoute.playerStats.name,
+                pathParameters: {
+                  'squadId': squadId,
+                  'playerId': playerId,
+                },
+              ),
             ),
           ],
         ),

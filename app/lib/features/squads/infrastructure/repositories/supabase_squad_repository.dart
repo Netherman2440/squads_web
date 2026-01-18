@@ -135,7 +135,7 @@ class SupabaseSquadRepository implements SquadRepository {
       if (e is Failure) {
         rethrow;
       }
-      rethrow;
+      throw e.toFailure();
     }
   }
 

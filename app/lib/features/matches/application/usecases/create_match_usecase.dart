@@ -93,6 +93,8 @@ class CreateMatchUseCase {
       tournamentId: tournamentId,
     );
 
+    await _matchRepository.refreshMatchWinProbability(matchId: match.matchId);
+
     // 5. Create Ranking Entries
     // We need to use the current score of players (from step 1)
 

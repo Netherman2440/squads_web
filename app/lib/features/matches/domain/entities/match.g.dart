@@ -13,6 +13,7 @@ Match _$MatchFromJson(Map<String, dynamic> json) => Match(
   scoreType: $enumDecodeNullable(_$MatchScoreTypeEnumMap, json['score_type']),
   homeScore: (json['home_score'] as num?)?.toInt(),
   awayScore: (json['away_score'] as num?)?.toInt(),
+  homeWinProbability: (json['home_win_prob'] as num?)?.toDouble(),
   scoreMeta: json['score_meta'] as Map<String, dynamic>? ?? const {},
   createdAt: DateTime.parse(json['created_at'] as String),
   homeTeam: json['home_team'] == null
@@ -30,6 +31,7 @@ Map<String, dynamic> _$MatchToJson(Match instance) => <String, dynamic>{
   'score_type': _$MatchScoreTypeEnumMap[instance.scoreType],
   'home_score': instance.homeScore,
   'away_score': instance.awayScore,
+  'home_win_prob': instance.homeWinProbability,
   'score_meta': instance.scoreMeta,
   'created_at': instance.createdAt.toIso8601String(),
   'home_team': instance.homeTeam,

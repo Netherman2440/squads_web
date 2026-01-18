@@ -14,6 +14,7 @@ import 'package:app/features/players/domain/entities/player.dart';
 import 'package:app/features/squads/domain/entities/user_squad_role.dart';
 import 'package:app/features/squads/presentation/state/squad_detail_notifier.dart';
 import 'package:app/features/matches/presentation/controllers/squad_matches_notifier.dart';
+import 'package:app/core/widgets/probability_slider.dart';
 
 class MatchDetailsPage extends ConsumerStatefulWidget {
   final String squadId;
@@ -574,6 +575,18 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
               );
             },
           ),
+          if (!_isEditing && match.homeWinProbability != null) ...[
+            const SizedBox(height: 24),
+            ProbabilitySlider(
+              title: 'Win probability',
+              homeColor: _parseColor(match.homeTeam?.color),
+              awayColor: _parseColor(match.awayTeam?.color),
+              homeProbability: match.homeWinProbability!,
+              infoText:
+                  'Estimated from historical head-to-head results between '
+                  'players in this squad.',
+            ),
+          ],
         ],
       ),
     );

@@ -457,13 +457,16 @@ class _SidebarNavigation extends StatelessWidget {
                   ),
                 ),
                 _SidebarNavItem(
-                  item: const _NavItem(
+                  item: _NavItem(
                     icon: Icons.bar_chart,
                     label: 'Stats',
-                    path: '',
+                    path: '/squads/$squadId/stats',
                   ),
                   isExpanded: isExpanded,
-                  isSelected: false,
+                  isSelected: _isLocationSelected(
+                    location,
+                    '/squads/$squadId/stats',
+                  ),
                 ),
               ],
             ],

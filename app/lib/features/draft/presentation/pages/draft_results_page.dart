@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:app/core/app_router.dart';
 import 'package:app/core/error/failure.dart';
 import 'package:app/core/utils/team_ranking.dart';
+import 'package:app/core/widgets/probability_slider.dart';
 import 'package:app/features/draft/presentation/controllers/draft_session_notifier.dart';
 import 'package:app/features/draft/presentation/widgets/draft_draggable_player_tile.dart';
 import 'package:app/features/matches/domain/entities/match.dart';
@@ -135,6 +136,7 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
                   homeCount: data.home.length,
                   awayCount: data.away.length,
                   playWithSubstitute: _playWithSubstitute,
+                  homeWinProbability: data.homeWinProbability,
                 ),
                 const SizedBox(height: 12),
                 Expanded(
@@ -339,6 +341,7 @@ class _TotalsRow extends StatelessWidget {
     required this.homeCount,
     required this.awayCount,
     required this.playWithSubstitute,
+    required this.homeWinProbability,
   });
 
   final double homeTotal;
@@ -346,6 +349,7 @@ class _TotalsRow extends StatelessWidget {
   final int homeCount;
   final int awayCount;
   final bool playWithSubstitute;
+  final double homeWinProbability;
 
   @override
   Widget build(BuildContext context) {
@@ -363,12 +367,57 @@ class _TotalsRow extends StatelessWidget {
       playWithSubstitute: playWithSubstitute,
     );
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        _TotalChip(label: 'Home ranking', value: effectiveHome),
-        _TotalChip(label: 'Away ranking', value: effectiveAway),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 700;
+        final theme = Theme.of(context);
+        final slider = ProbabilitySlider(
+          title: 'Draft win probability',
+          homeColor: theme.colorScheme.primary,
+          awayColor: theme.colorScheme.secondary,
+          homeProbability: homeWinProbability,
+          infoText:
+              'Calculated from head-to-head win rates between the '
+              'selected players.',
+        );
+
+        if (isCompact) {
+          return Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _TotalChip(label: 'Home ranking', value: effectiveHome),
+                  _TotalChip(label: 'Away ranking', value: effectiveAway),
+                ],
+              ),
+              const SizedBox(height: 12),
+              slider,
+            ],
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Align(
+                alignment: Alignment.center,
+                child: _TotalChip(label: 'Home ranking', value: effectiveHome),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Flexible(flex: 2, child: slider),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Align(
+                alignment: Alignment.center,
+                child: _TotalChip(label: 'Away ranking', value: effectiveAway),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

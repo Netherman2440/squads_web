@@ -3,6 +3,8 @@ import 'package:logging/logging.dart';
 
 import 'package:app/core/error/failure.dart';
 import 'package:app/features/draft/application/create_draft_use_case.dart';
+import 'package:app/features/draft/application/get_player_pair_win_rates_use_case.dart';
+import 'package:app/features/draft/domain/entities/head_to_head_win_rate.dart';
 import 'package:app/features/draft/presentation/state/draft_session_state.dart';
 import 'package:app/features/players/application/usecases/get_squad_players_usecase.dart';
 import 'package:app/features/players/domain/entities/player.dart';
@@ -68,22 +70,37 @@ class DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>> {
         playWithSubstitute: playWithSubstitute,
       );
 
+      final winRates = await ref
+          .read(getPlayerPairWinRatesUseCaseProvider)
+          .execute(playerIds: selectedPlayerIds);
+
+      final winRateMatrix = _buildWinRateMatrix(winRates);
+
       if (proposals.isEmpty) {
         return const DraftSessionState(
           proposals: [],
           selectedIndex: 0,
           home: [],
           away: [],
+          winRateMatrix: {},
+          homeWinProbability: 0.5,
         );
       }
 
       final first = proposals.first;
+      final homeWinProbability = _calculateHomeWinProbability(
+        home: first.homePlayers,
+        away: first.awayPlayers,
+        winRateMatrix: winRateMatrix,
+      );
 
       return DraftSessionState(
         proposals: proposals,
         selectedIndex: 0,
         home: first.homePlayers,
         away: first.awayPlayers,
+        winRateMatrix: winRateMatrix,
+        homeWinProbability: homeWinProbability,
       );
     });
   }
@@ -99,12 +116,18 @@ class DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>> {
     }
 
     final proposal = current.proposals[index];
+    final homeWinProbability = _calculateHomeWinProbability(
+      home: proposal.homePlayers,
+      away: proposal.awayPlayers,
+      winRateMatrix: current.winRateMatrix,
+    );
 
     state = AsyncValue.data(
       current.copyWith(
         selectedIndex: index,
         home: proposal.homePlayers,
         away: proposal.awayPlayers,
+        homeWinProbability: homeWinProbability,
       ),
     );
   }
@@ -148,7 +171,19 @@ class DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>> {
       away.add(player);
     }
 
-    state = AsyncValue.data(current.copyWith(home: home, away: away));
+    final homeWinProbability = _calculateHomeWinProbability(
+      home: home,
+      away: away,
+      winRateMatrix: current.winRateMatrix,
+    );
+
+    state = AsyncValue.data(
+      current.copyWith(
+        home: home,
+        away: away,
+        homeWinProbability: homeWinProbability,
+      ),
+    );
   }
 }
 
@@ -164,4 +199,44 @@ List<Player> _filterByIds({
   final byId = {for (final p in players) p.playerId: p};
 
   return ids.map(byId.remove).whereType<Player>().toList(growable: false);
+}
+
+Map<String, Map<String, double>> _buildWinRateMatrix(
+  List<HeadToHeadWinRate> winRates,
+) {
+  final matrix = <String, Map<String, double>>{};
+  for (final rate in winRates) {
+    final oppMap = matrix.putIfAbsent(rate.playerId, () => <String, double>{});
+    oppMap[rate.oppPlayerId] = rate.winRate;
+  }
+  return matrix;
+}
+
+double _calculateHomeWinProbability({
+  required List<Player> home,
+  required List<Player> away,
+  required Map<String, Map<String, double>> winRateMatrix,
+}) {
+  if (home.isEmpty || away.isEmpty) {
+    return 0.5;
+  }
+
+  var total = 0.0;
+  var count = 0;
+
+  for (final homePlayer in home) {
+    final oppRates = winRateMatrix[homePlayer.playerId];
+    for (final awayPlayer in away) {
+      final rate = oppRates?[awayPlayer.playerId] ?? 0.5;
+      total += rate;
+      count += 1;
+    }
+  }
+
+  if (count == 0) {
+    return 0.5;
+  }
+
+  final average = total / count;
+  return average.clamp(0.0, 1.0);
 }

@@ -114,3 +114,11 @@ For full details, see [.ai/tech-stack.md](.ai/tech-stack.md).
      supabase db push
      ```
    - Point the Flutter app to the local Supabase URL for local-only testing.
+
+## TODO
+
+- [ ] Tournaments
+- [ ] Change squad ownership
+- [ ] REFACTOR UI
+- [ ] Draft - relations
+- [ ] Różne pozycje (bramkarz, obrońca pomocnik napastnik)

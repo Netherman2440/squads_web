@@ -1,29 +1,42 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class AppColors {
   // Background colors
-  static const Color bgDark = Color(0xFF18140F); // oklch(0.1 0.025 72)
-  static const Color bg = Color(0xFF241D13); // oklch(0.15 0.025 72)
-  static const Color bgLight = Color(0xFF30281A); // oklch(0.2 0.025 72)
+  static const Color bgDark = Color(0xFF25231F);
+  static const Color bg = Color(0xFF2E2C29);
+  static const Color bgLight = Color(0xFF3A3833);
   // Light mode backgrounds
-  static const Color lightBg = Color(0xFFF8F5F2); // oklch(0.96 0.05 72)
+  static const Color lightBg = Color(0xFFFFFFFF);
   static const Color lightSurface = Color(0xFFFFFFFF);
   // Text colors
-  static const Color text = Color(0xFFF8F5F2); // oklch(0.96 0.05 72)
-  static const Color textMuted = Color(0xFFCCC2B8); // oklch(0.76 0.05 72)
-  static const Color lightText = Color(0xFF18140F);
-  static const Color lightTextMuted = Color(0xFF66573A);
+  static const Color text = Color(0xFFFFFFFF);
+  static const Color textMuted = Color(0xFFC9C6C1);
+  static const Color lightText = Color(0xFF2E2C29);
+  static const Color lightTextMuted = Color(0xFF6E6A64);
   // Highlight and border colors
-  static const Color highlight = Color(0xFF7C6B4A); // oklch(0.5 0.05 72)
-  static const Color border = Color(0xFF66573A); // oklch(0.4 0.05 72)
-  static const Color borderMuted = Color(0xFF4D3F28); // oklch(0.3 0.05 72)
+  static const Color highlight = Color(0xFF4A4742);
+  static const Color border = Color(0xFF5A5651);
+  static const Color borderMuted = Color(0xFF3D3A36);
   // Semantic colors
-  static const Color primary = Color(0xFFE3A15A); // oklch(0.76 0.1 72)
-  static const Color secondary = Color(0xFF7DA6F6); // oklch(0.76 0.1 252)
-  static const Color danger = Color(0xFFE3B07A); // oklch(0.7 0.05 30)
-  static const Color warning = Color(0xFFE3D37A); // oklch(0.7 0.05 100)
-  static const Color success = Color(0xFF8BE37A); // oklch(0.7 0.05 160)
-  static const Color info = Color(0xFF7A9FE3); // oklch(0.7 0.05 260)
+  static const Color primary = Color(0xFF81B64C);
+  static const Color secondary = Color(0xFFA4C88A);
+  static const Color danger = Color(0xFFE06C5B);
+  static const Color warning = Color(0xFFE3C45B);
+  static const Color success = Color(0xFF86C36A);
+  static const Color info = Color(0xFF6FB0D6);
+}
+
+class AppFonts {
+  static final String displayFamily =
+      GoogleFonts.nunito().fontFamily ?? 'Nunito';
+  static final String bodyFamily =
+      GoogleFonts.openSans().fontFamily ?? 'Open Sans';
+
+  static TextStyle display({TextStyle? textStyle}) =>
+      GoogleFonts.nunito(textStyle: textStyle);
+  static TextStyle body({TextStyle? textStyle}) =>
+      GoogleFonts.openSans(textStyle: textStyle);
 }
 
 class AppTheme {
@@ -31,17 +44,20 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
+      fontFamily: AppFonts.bodyFamily,
 
       // Color scheme
       colorScheme: const ColorScheme.dark(
         surface: AppColors.bgLight,
         primary: AppColors.primary,
         secondary: AppColors.secondary,
+        tertiary: AppColors.highlight,
         error: AppColors.danger,
         onSurface: AppColors.text,
         onPrimary: AppColors.bgDark,
         onSecondary: AppColors.bgDark,
         onError: AppColors.text,
+        inversePrimary: AppColors.primary,
         outline: AppColors.border,
         outlineVariant: AppColors.borderMuted,
       ),
@@ -117,22 +133,52 @@ class AppTheme {
       ),
 
       // Text theme
-      textTheme: const TextTheme(
-        displayLarge: TextStyle(color: AppColors.text),
-        displayMedium: TextStyle(color: AppColors.text),
-        displaySmall: TextStyle(color: AppColors.text),
-        headlineLarge: TextStyle(color: AppColors.text),
-        headlineMedium: TextStyle(color: AppColors.text),
-        headlineSmall: TextStyle(color: AppColors.text),
-        titleLarge: TextStyle(color: AppColors.text),
-        titleMedium: TextStyle(color: AppColors.text),
-        titleSmall: TextStyle(color: AppColors.text),
-        bodyLarge: TextStyle(color: AppColors.text),
-        bodyMedium: TextStyle(color: AppColors.text),
-        bodySmall: TextStyle(color: AppColors.textMuted),
-        labelLarge: TextStyle(color: AppColors.text),
-        labelMedium: TextStyle(color: AppColors.text),
-        labelSmall: TextStyle(color: AppColors.textMuted),
+      textTheme: TextTheme(
+        displayLarge: AppFonts.display(
+          textStyle: const TextStyle(color: AppColors.text),
+        ),
+        displayMedium: AppFonts.display(
+          textStyle: const TextStyle(color: AppColors.text),
+        ),
+        displaySmall: AppFonts.display(
+          textStyle: const TextStyle(color: AppColors.text),
+        ),
+        headlineLarge: AppFonts.display(
+          textStyle: const TextStyle(color: AppColors.text),
+        ),
+        headlineMedium: AppFonts.display(
+          textStyle: const TextStyle(color: AppColors.text),
+        ),
+        headlineSmall: AppFonts.display(
+          textStyle: const TextStyle(color: AppColors.text),
+        ),
+        titleLarge: AppFonts.display(
+          textStyle: const TextStyle(color: AppColors.text),
+        ),
+        titleMedium: AppFonts.display(
+          textStyle: const TextStyle(color: AppColors.text),
+        ),
+        titleSmall: AppFonts.display(
+          textStyle: const TextStyle(color: AppColors.text),
+        ),
+        bodyLarge: AppFonts.body(
+          textStyle: const TextStyle(color: AppColors.text),
+        ),
+        bodyMedium: AppFonts.body(
+          textStyle: const TextStyle(color: AppColors.text),
+        ),
+        bodySmall: AppFonts.body(
+          textStyle: const TextStyle(color: AppColors.textMuted),
+        ),
+        labelLarge: AppFonts.body(
+          textStyle: const TextStyle(color: AppColors.text),
+        ),
+        labelMedium: AppFonts.body(
+          textStyle: const TextStyle(color: AppColors.text),
+        ),
+        labelSmall: AppFonts.body(
+          textStyle: const TextStyle(color: AppColors.textMuted),
+        ),
       ),
 
       // Icon theme
@@ -175,15 +221,18 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
+      fontFamily: AppFonts.bodyFamily,
       colorScheme: const ColorScheme.light(
         surface: AppColors.lightSurface,
         primary: AppColors.primary,
         secondary: AppColors.secondary,
+        tertiary: AppColors.highlight,
         error: AppColors.danger,
         onSurface: AppColors.lightText,
         onPrimary: AppColors.lightSurface,
         onSecondary: AppColors.lightSurface,
         onError: AppColors.lightText,
+        inversePrimary: AppColors.primary,
         outline: Colors.transparent,
         outlineVariant: Colors.transparent,
       ),
@@ -243,22 +292,52 @@ class AppTheme {
         labelStyle: const TextStyle(color: AppColors.lightTextMuted),
         hintStyle: const TextStyle(color: AppColors.lightTextMuted),
       ),
-      textTheme: const TextTheme(
-        displayLarge: TextStyle(color: AppColors.lightText),
-        displayMedium: TextStyle(color: AppColors.lightText),
-        displaySmall: TextStyle(color: AppColors.lightText),
-        headlineLarge: TextStyle(color: AppColors.lightText),
-        headlineMedium: TextStyle(color: AppColors.lightText),
-        headlineSmall: TextStyle(color: AppColors.lightText),
-        titleLarge: TextStyle(color: AppColors.lightText),
-        titleMedium: TextStyle(color: AppColors.lightText),
-        titleSmall: TextStyle(color: AppColors.lightText),
-        bodyLarge: TextStyle(color: AppColors.lightText),
-        bodyMedium: TextStyle(color: AppColors.lightText),
-        bodySmall: TextStyle(color: AppColors.lightTextMuted),
-        labelLarge: TextStyle(color: AppColors.lightText),
-        labelMedium: TextStyle(color: AppColors.lightText),
-        labelSmall: TextStyle(color: AppColors.lightTextMuted),
+      textTheme: TextTheme(
+        displayLarge: AppFonts.display(
+          textStyle: const TextStyle(color: AppColors.lightText),
+        ),
+        displayMedium: AppFonts.display(
+          textStyle: const TextStyle(color: AppColors.lightText),
+        ),
+        displaySmall: AppFonts.display(
+          textStyle: const TextStyle(color: AppColors.lightText),
+        ),
+        headlineLarge: AppFonts.display(
+          textStyle: const TextStyle(color: AppColors.lightText),
+        ),
+        headlineMedium: AppFonts.display(
+          textStyle: const TextStyle(color: AppColors.lightText),
+        ),
+        headlineSmall: AppFonts.display(
+          textStyle: const TextStyle(color: AppColors.lightText),
+        ),
+        titleLarge: AppFonts.display(
+          textStyle: const TextStyle(color: AppColors.lightText),
+        ),
+        titleMedium: AppFonts.display(
+          textStyle: const TextStyle(color: AppColors.lightText),
+        ),
+        titleSmall: AppFonts.display(
+          textStyle: const TextStyle(color: AppColors.lightText),
+        ),
+        bodyLarge: AppFonts.body(
+          textStyle: const TextStyle(color: AppColors.lightText),
+        ),
+        bodyMedium: AppFonts.body(
+          textStyle: const TextStyle(color: AppColors.lightText),
+        ),
+        bodySmall: AppFonts.body(
+          textStyle: const TextStyle(color: AppColors.lightTextMuted),
+        ),
+        labelLarge: AppFonts.body(
+          textStyle: const TextStyle(color: AppColors.lightText),
+        ),
+        labelMedium: AppFonts.body(
+          textStyle: const TextStyle(color: AppColors.lightText),
+        ),
+        labelSmall: AppFonts.body(
+          textStyle: const TextStyle(color: AppColors.lightTextMuted),
+        ),
       ),
       iconTheme: const IconThemeData(color: AppColors.lightText, size: 24),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(

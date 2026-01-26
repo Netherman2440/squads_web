@@ -257,6 +257,13 @@ class _RootShellState extends ConsumerState<RootShell> {
     required String email,
     required bool isMobile,
   }) {
+    final theme = Theme.of(context);
+    final titleColor =
+        theme.appBarTheme.foregroundColor ?? theme.colorScheme.onSurface;
+    final titleStyle = theme.textTheme.titleLarge?.copyWith(
+      fontWeight: FontWeight.w700,
+      color: titleColor,
+    );
     final title = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -275,7 +282,19 @@ class _RootShellState extends ConsumerState<RootShell> {
           },
         ),
         const SizedBox(width: 8),
-        const Text('Squads'),
+        Text.rich(
+          TextSpan(
+            style: titleStyle,
+            children: [
+              const TextSpan(text: 'pick'),
+              TextSpan(
+                text: 'teams',
+                style: TextStyle(color: theme.colorScheme.primary),
+              ),
+              const TextSpan(text: '.pl'),
+            ],
+          ),
+        ),
       ],
     );
 

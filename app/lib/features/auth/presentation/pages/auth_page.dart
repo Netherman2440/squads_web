@@ -13,6 +13,7 @@ import 'package:app/features/squads/application/join_squad_from_invite_use_case.
 import 'package:app/features/squads/infrastructure/storage/invite_code_storage.dart';
 
 import '../providers/auth_notifier.dart';
+import '../widgets/brand_header.dart';
 
 class AuthPage extends ConsumerStatefulWidget {
   const AuthPage({super.key});
@@ -163,6 +164,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
     final authState = ref.watch(authStateProvider);
 
     final isLoading = authState.isLoading;
+    final theme = Theme.of(context);
 
     Future<void> handleLogin() async {
       if (!(formKey.currentState?.validate() ?? false)) {
@@ -277,7 +279,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
     }
 
     final actionButtonStyle = TextButton.styleFrom(
-      backgroundColor: Theme.of(context).brightness == Brightness.dark
+      backgroundColor: theme.brightness == Brightness.dark
           ? AppColors.bgLight
           : AppColors.lightSurface,
       foregroundColor: AppColors.primary,
@@ -286,10 +288,6 @@ class _AuthPageState extends ConsumerState<AuthPage> {
     );
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Authentication'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-      ),
       body: LayoutBuilder(
         builder: (context, constraints) {
           const maxCardWidth = 420.0;
@@ -303,176 +301,174 @@ class _AuthPageState extends ConsumerState<AuthPage> {
               ),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: maxCardWidth),
-                child: Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Form(
-                      key: formKey,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Column(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const BrandHeader(maxWidth: maxCardWidth),
+                    const SizedBox(height: 24),
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Form(
+                          key: formKey,
+                          child: Column(
                             mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              const Icon(Icons.sports_soccer, size: 96),
-                              const SizedBox(height: 16),
-                              Text(
-                                'Squads App',
-                                style: Theme.of(context).textTheme.titleLarge
-                                    ?.copyWith(fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 24),
-                          TextFormField(
-                            controller: emailController,
-                            decoration: const InputDecoration(
-                              labelText: 'Email',
-                              border: OutlineInputBorder(),
-                              prefixIcon: Icon(Icons.email_outlined),
-                            ),
-                            textCapitalization: TextCapitalization.none,
-                            keyboardType: TextInputType.emailAddress,
-                            textInputAction: TextInputAction.next,
-                            validator: (value) {
-                              final text = value?.trim() ?? '';
-                              if (text.isEmpty) {
-                                return 'Please enter email';
-                              }
-                              final emailRegex = RegExp(
-                                r'^[^@]+@[^@]+\.[^@]+$',
-                              );
-                              if (!emailRegex.hasMatch(text)) {
-                                return 'Please enter valid email';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                          TextFormField(
-                            controller: passwordController,
-                            decoration: InputDecoration(
-                              labelText: 'Password',
-                              border: const OutlineInputBorder(),
-                              prefixIcon: const Icon(Icons.lock_outline),
-                              suffixIcon: IconButton(
-                                onPressed: () {
-                                  setState(
-                                    () => isPasswordObscured =
-                                        !isPasswordObscured,
+                              const SizedBox(height: 24),
+                              TextFormField(
+                                controller: emailController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Email',
+                                  border: OutlineInputBorder(),
+                                  prefixIcon: Icon(Icons.email_outlined),
+                                ),
+                                textCapitalization: TextCapitalization.none,
+                                keyboardType: TextInputType.emailAddress,
+                                textInputAction: TextInputAction.next,
+                                validator: (value) {
+                                  final text = value?.trim() ?? '';
+                                  if (text.isEmpty) {
+                                    return 'Please enter email';
+                                  }
+                                  final emailRegex = RegExp(
+                                    r'^[^@]+@[^@]+\.[^@]+$',
                                   );
+                                  if (!emailRegex.hasMatch(text)) {
+                                    return 'Please enter valid email';
+                                  }
+                                  return null;
                                 },
-                                icon: Icon(
-                                  isPasswordObscured
-                                      ? Icons.visibility_off
-                                      : Icons.visibility,
-                                ),
                               ),
-                            ),
-                            obscureText: isPasswordObscured,
-                            textInputAction: TextInputAction.done,
-                            validator: (value) {
-                              final text = value ?? '';
-                              if (text.isEmpty) {
-                                return 'Please enter password';
-                              }
-                              return null;
-                            },
-                            onFieldSubmitted: (_) => handleLogin(),
-                          ),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton(
-                              onPressed: isLoading ? null : handlePasswordReset,
-                              child: const Text('Forgot password?'),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          SizedBox(
-                            height: 48,
-                            child: ElevatedButton(
-                              onPressed: isLoading ? null : handleLogin,
-                              child: isLoading
-                                  ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : const Text('Login'),
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          Row(
-                            children: [
-                              const Expanded(child: Divider()),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
+                              const SizedBox(height: 16),
+                              TextFormField(
+                                controller: passwordController,
+                                decoration: InputDecoration(
+                                  labelText: 'Password',
+                                  border: const OutlineInputBorder(),
+                                  prefixIcon: const Icon(Icons.lock_outline),
+                                  suffixIcon: IconButton(
+                                    onPressed: () {
+                                      setState(
+                                        () => isPasswordObscured =
+                                            !isPasswordObscured,
+                                      );
+                                    },
+                                    icon: Icon(
+                                      isPasswordObscured
+                                          ? Icons.visibility_off
+                                          : Icons.visibility,
+                                    ),
+                                  ),
                                 ),
-                                child: Text(
-                                  'or',
-                                  style: Theme.of(context).textTheme.bodySmall
-                                      ?.copyWith(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface
-                                            .withValues(alpha: 0.6),
-                                      ),
-                                ),
+                                obscureText: isPasswordObscured,
+                                textInputAction: TextInputAction.done,
+                                validator: (value) {
+                                  final text = value ?? '';
+                                  if (text.isEmpty) {
+                                    return 'Please enter password';
+                                  }
+                                  return null;
+                                },
+                                onFieldSubmitted: (_) => handleLogin(),
                               ),
-                              const Expanded(child: Divider()),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
-                          SizedBox(
-                            height: 48,
-                            child: OutlinedButton.icon(
-                              onPressed: isLoading ? null : handleGoogleSignIn,
-                              icon: const Icon(Icons.g_mobiledata),
-                              label: const Text('Continue with Google'),
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          Wrap(
-                            alignment: WrapAlignment.center,
-                            spacing: 12,
-                            runSpacing: 12,
-                            children: [
-                              SizedBox(
-                                width: 160,
-                                height: 40,
+                              Align(
+                                alignment: Alignment.centerRight,
                                 child: TextButton(
-                                  style: actionButtonStyle,
                                   onPressed: isLoading
                                       ? null
-                                      : () {
-                                          if (!context.mounted) {
-                                            return;
-                                          }
-                                          context.go('/auth/register');
-                                        },
-                                  child: const Text('Create account'),
+                                      : handlePasswordReset,
+                                  child: const Text('Forgot password?'),
                                 ),
                               ),
+                              const SizedBox(height: 16),
                               SizedBox(
-                                width: 180,
-                                height: 40,
-                                child: TextButton(
-                                  style: actionButtonStyle,
-                                  onPressed: isLoading ? null : handleGuest,
-                                  child: const Text('Continue as guest'),
+                                height: 48,
+                                child: ElevatedButton(
+                                  onPressed: isLoading ? null : handleLogin,
+                                  child: isLoading
+                                      ? const SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white,
+                                          ),
+                                        )
+                                      : const Text('Login'),
                                 ),
+                              ),
+                              const SizedBox(height: 20),
+                              Row(
+                                children: [
+                                  const Expanded(child: Divider()),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                    ),
+                                    child: Text(
+                                      'or',
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                            color: theme.colorScheme.onSurface
+                                                .withValues(alpha: 0.6),
+                                          ),
+                                    ),
+                                  ),
+                                  const Expanded(child: Divider()),
+                                ],
+                              ),
+                              const SizedBox(height: 20),
+                              SizedBox(
+                                height: 48,
+                                child: OutlinedButton.icon(
+                                  onPressed: isLoading
+                                      ? null
+                                      : handleGoogleSignIn,
+                                  icon: const Icon(Icons.g_mobiledata),
+                                  label: const Text('Continue with Google'),
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              Wrap(
+                                alignment: WrapAlignment.center,
+                                spacing: 12,
+                                runSpacing: 12,
+                                children: [
+                                  SizedBox(
+                                    width: 160,
+                                    height: 40,
+                                    child: TextButton(
+                                      style: actionButtonStyle,
+                                      onPressed: isLoading
+                                          ? null
+                                          : () {
+                                              if (!context.mounted) {
+                                                return;
+                                              }
+                                              context.go('/auth/register');
+                                            },
+                                      child: const Text('Create account'),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: 180,
+                                    height: 40,
+                                    child: TextButton(
+                                      style: actionButtonStyle,
+                                      onPressed: isLoading ? null : handleGuest,
+                                      child: const Text('Continue as guest'),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
               ),
             ),

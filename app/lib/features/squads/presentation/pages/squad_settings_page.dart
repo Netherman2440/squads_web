@@ -47,10 +47,7 @@ class _SquadSettingsPageState extends ConsumerState<SquadSettingsPage> {
     final squadState = ref.watch(squadDetailProvider(widget.squadId));
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Settings'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-      ),
+      appBar: AppBar(title: Text('Settings')),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:app/features/auth/presentation/providers/auth_notifier.dart';
@@ -257,6 +258,13 @@ class _RootShellState extends ConsumerState<RootShell> {
     required String email,
     required bool isMobile,
   }) {
+    final theme = Theme.of(context);
+    final titleColor =
+        theme.appBarTheme.foregroundColor ?? theme.colorScheme.onSurface;
+    final titleStyle = theme.textTheme.titleLarge?.copyWith(
+      fontWeight: FontWeight.w700,
+      color: titleColor,
+    );
     final title = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -275,7 +283,19 @@ class _RootShellState extends ConsumerState<RootShell> {
           },
         ),
         const SizedBox(width: 8),
-        const Text('Squads'),
+        Text.rich(
+          TextSpan(
+            style: titleStyle,
+            children: [
+              const TextSpan(text: 'pick'),
+              TextSpan(
+                text: 'teams',
+                style: TextStyle(color: theme.colorScheme.primary),
+              ),
+              const TextSpan(text: '.pl'),
+            ],
+          ),
+        ),
       ],
     );
 

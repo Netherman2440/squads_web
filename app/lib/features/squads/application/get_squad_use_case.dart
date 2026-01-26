@@ -54,9 +54,16 @@ class GetSquadUseCase {
         return withPending;
       }
       if (isGuest) {
+        if (squad.visibility == SquadVisibility.private) {
+          _logger.warning(
+            'Access denied to private squad $squadId for guest user.',
+          );
+          throw const UnauthorizedFailure(
+            'You do not have access to this squad.',
+          );
+        }
         _logger.fine('User $userId is guest of squad $squadId (isGuest=true).');
-        final withRole = squad.copyWith(role: SquadRole.guest);
-        return withRole;
+        return squad.copyWith(role: SquadRole.guest);
       }
 
       if (userId == null) {
@@ -79,16 +86,24 @@ class GetSquadUseCase {
               orElse: () => Membership.empty(),
             );
 
+      final role = membership.isEmpty ? SquadRole.none : membership.role;
+
+      if (squad.visibility == SquadVisibility.public) {
+        _logger.fine(
+          'Public squad $squadId; returning role=$role for user $userId.',
+        );
+        return squad.copyWith(role: role);
+      }
+
       if (membership.isEmpty) {
         _logger.warning(
-          'Access denied to squad $squadId for user $userId (no membership).',
+          'Access denied to private squad $squadId for user $userId (no membership).',
         );
         throw const UnauthorizedFailure(
           'You do not have access to this squad.',
         );
       }
 
-      final role = membership.role;
       final allowed =
           role == SquadRole.owner ||
           role == SquadRole.admin ||
@@ -96,7 +111,7 @@ class GetSquadUseCase {
 
       if (!allowed) {
         _logger.warning(
-          'Access denied to squad $squadId for user $userId with role=$role.',
+          'Access denied to private squad $squadId for user $userId with role=$role.',
         );
         throw const UnauthorizedFailure(
           'You do not have access to this squad.',

@@ -208,6 +208,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                                   if (text.isEmpty) {
                                     return 'Please enter password';
                                   }
+                                  if (text.length < 6) {
+                                    return 'Password must be at least 6 characters';
+                                  }
 
                                   return null;
                                 },

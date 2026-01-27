@@ -35,10 +35,11 @@ class BrandHeader extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Image.asset(
-          'assets/icons/app_icon.png',
+          'assets/icons/logo.png',
           width: textPainter.size.width,
           fit: BoxFit.contain,
         ),
+        SizedBox(height: 36),
 
         Text.rich(span, textAlign: TextAlign.center),
       ],

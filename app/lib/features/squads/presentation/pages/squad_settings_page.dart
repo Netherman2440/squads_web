@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import 'package:app/core/app_config.dart';
 import 'package:app/core/app_router.dart';
 import 'package:app/core/error/failure.dart';
 import 'package:app/features/squads/application/delete_squad_use_case.dart';
@@ -378,23 +379,52 @@ class _InviteSectionState extends ConsumerState<_InviteSection> {
               children: [
                 SelectableText(inviteUrl, style: theme.textTheme.bodySmall),
                 const SizedBox(height: 8),
-                Row(
-                  children: [
-                    FilledButton.tonal(
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isNarrow =
+                        constraints.maxWidth < AppConfig.mobileWidth;
+                    final validityText =
+                        'Valid until ${_formatValidity(inviteLink!.validUntil)}';
+                    final copyButton = FilledButton.tonal(
                       onPressed: isBusy ? null : () => _copyLink(inviteUrl),
                       child: const Text('Copy link'),
-                    ),
-                    const SizedBox(width: 12),
-                    OutlinedButton(
+                    );
+                    final regenerateButton = OutlinedButton(
                       onPressed: isBusy ? null : _generateInviteLink,
                       child: const Text('Regenerate'),
-                    ),
-                    const Spacer(),
-                    Text(
-                      'Valid until ${_formatValidity(inviteLink!.validUntil)}',
-                      style: theme.textTheme.bodySmall,
-                    ),
-                  ],
+                    );
+
+                    if (isNarrow) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            validityText,
+                            style: theme.textTheme.bodySmall,
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 8,
+                            children: [copyButton, regenerateButton],
+                          ),
+                        ],
+                      );
+                    }
+
+                    return Row(
+                      children: [
+                        copyButton,
+                        const SizedBox(width: 12),
+                        regenerateButton,
+                        const Spacer(),
+                        Text(
+                          validityText,
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ],
             ),

@@ -7,6 +7,7 @@ class MatchPlayerTile extends StatelessWidget {
     super.key,
     required this.player,
     required this.trailing,
+    this.compact = false,
     this.onTap,
     this.dragData,
     this.snapshotRanking,
@@ -16,6 +17,7 @@ class MatchPlayerTile extends StatelessWidget {
 
   final Player player;
   final Widget trailing;
+  final bool compact;
   final VoidCallback? onTap;
   final Object? dragData;
 
@@ -28,16 +30,31 @@ class MatchPlayerTile extends StatelessWidget {
   Widget build(BuildContext context) {
     // In match history, we should show the snapshot ranking if available.
     final displayRanking = snapshotRanking ?? player.ranking;
+    final theme = Theme.of(context);
 
     final tile = Card(
       child: ListTile(
+        dense: compact,
+        visualDensity: compact ? VisualDensity.compact : VisualDensity.standard,
+        contentPadding: compact
+            ? const EdgeInsets.symmetric(horizontal: 8)
+            : null,
         leading: CircleAvatar(
+          radius: compact ? 14 : null,
           child: Text(
             player.name.isNotEmpty ? player.name[0].toUpperCase() : '?',
+            style: compact ? theme.textTheme.labelSmall : null,
           ),
         ),
-        title: Text(player.name),
-        subtitle: Text(displayRanking.toStringAsFixed(2)),
+        title: Text(
+          player.name,
+          maxLines: compact ? 2 : 1,
+          overflow: TextOverflow.ellipsis,
+          style: compact ? theme.textTheme.bodyMedium : null,
+        ),
+        subtitle: compact
+            ? null
+            : Text(displayRanking.toStringAsFixed(2)),
         trailing: trailing,
         onTap: onTap,
       ),
@@ -49,7 +66,7 @@ class MatchPlayerTile extends StatelessWidget {
     }
 
     final feedback = ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 520),
+      constraints: BoxConstraints(maxWidth: compact ? 320 : 520),
       child: Material(
         color: Colors.transparent,
         child: Opacity(opacity: 0.9, child: tile),

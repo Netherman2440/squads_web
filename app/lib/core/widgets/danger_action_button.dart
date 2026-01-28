@@ -22,6 +22,7 @@ class DangerActionButton extends StatelessWidget {
         child: OutlinedButton(
           style: OutlinedButton.styleFrom(
             foregroundColor: theme.colorScheme.error,
+            side: BorderSide(color: theme.colorScheme.error),
           ),
           onPressed: onPressed,
           child: FittedBox(

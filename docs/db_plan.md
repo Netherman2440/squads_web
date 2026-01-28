@@ -107,7 +107,7 @@ Turnieje i ich akceptowany zestaw draftu.
 | `tournament_id`        | UUID        | PK                                                  |
 | `squad_id`             | UUID        | NOT NULL; FK → `squads(squad_id)` ON DELETE CASCADE |
 | `name`                 | TEXT        | NULLABLE                                            |
-| `teams_expected_count` | INTEGER     | NULLABLE                                            |
+| `teams_count`          | INTEGER     | NULLABLE                                            |
 | `created_at`           | TIMESTAMPTZ | NOT NULL DEFAULT now()                              |
 
 ---

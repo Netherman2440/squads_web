@@ -1,6 +1,9 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:app/core/app_config.dart';
 import 'package:app/core/app_router.dart';
 import 'package:app/core/error/failure.dart';
 import 'package:app/core/utils/team_ranking.dart';
@@ -142,36 +145,98 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
                 Expanded(
                   child: LayoutBuilder(
                     builder: (context, constraints) {
-                      final isWide = constraints.maxWidth >= 900;
-
-                      final panels = [
-                        Expanded(
-                          child: _RosterPanel(
-                            title: 'Home',
-                            players: data.home,
-                            onAcceptPlayerId: (playerId) => ref
-                                .read(draftSessionNotifierProvider.notifier)
-                                .movePlayer(playerId: playerId, toHome: true),
-                          ),
-                        ),
-                        const SizedBox(width: 12, height: 12),
-                        Expanded(
-                          child: _RosterPanel(
-                            title: 'Away',
-                            players: data.away,
-                            onAcceptPlayerId: (playerId) => ref
-                                .read(draftSessionNotifierProvider.notifier)
-                                .movePlayer(playerId: playerId, toHome: false),
-                          ),
-                        ),
-                      ];
-
-                      return isWide
-                          ? Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: panels,
+                      final isCompact =
+                          constraints.maxWidth < AppConfig.compactWidth;
+                      final gap = isCompact ? 8.0 : 12.0;
+                      final panelWidth = math.max(
+                        220.0,
+                        (constraints.maxWidth - gap) / 2,
+                      );
+                      final homePanel = isCompact
+                          ? SizedBox(
+                              width: panelWidth,
+                              child: _RosterPanel(
+                                title: 'Home',
+                                players: data.home,
+                                compact: isCompact,
+                                onAcceptPlayerId: (playerId) => ref
+                                    .read(
+                                      draftSessionNotifierProvider.notifier,
+                                    )
+                                    .movePlayer(
+                                      playerId: playerId,
+                                      toHome: true,
+                                    ),
+                              ),
                             )
-                          : Column(children: panels);
+                          : Expanded(
+                              child: _RosterPanel(
+                                title: 'Home',
+                                players: data.home,
+                                compact: isCompact,
+                                onAcceptPlayerId: (playerId) => ref
+                                    .read(
+                                      draftSessionNotifierProvider.notifier,
+                                    )
+                                    .movePlayer(
+                                      playerId: playerId,
+                                      toHome: true,
+                                    ),
+                              ),
+                            );
+
+                      final awayPanel = isCompact
+                          ? SizedBox(
+                              width: panelWidth,
+                              child: _RosterPanel(
+                                title: 'Away',
+                                players: data.away,
+                                compact: isCompact,
+                                onAcceptPlayerId: (playerId) => ref
+                                    .read(
+                                      draftSessionNotifierProvider.notifier,
+                                    )
+                                    .movePlayer(
+                                      playerId: playerId,
+                                      toHome: false,
+                                    ),
+                              ),
+                            )
+                          : Expanded(
+                              child: _RosterPanel(
+                                title: 'Away',
+                                players: data.away,
+                                compact: isCompact,
+                                onAcceptPlayerId: (playerId) => ref
+                                    .read(
+                                      draftSessionNotifierProvider.notifier,
+                                    )
+                                    .movePlayer(
+                                      playerId: playerId,
+                                      toHome: false,
+                                    ),
+                              ),
+                            );
+
+                      final content = Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          homePanel,
+                          SizedBox(width: gap),
+                          awayPanel,
+                        ],
+                      );
+                      if (isCompact) {
+                        return SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: ConstrainedBox(
+                            constraints:
+                                BoxConstraints(minWidth: constraints.maxWidth),
+                            child: content,
+                          ),
+                        );
+                      }
+                      return content;
                     },
                   ),
                 ),
@@ -438,11 +503,13 @@ class _RosterPanel extends StatelessWidget {
   const _RosterPanel({
     required this.title,
     required this.players,
+    required this.compact,
     required this.onAcceptPlayerId,
   });
 
   final String title;
   final List<Player> players;
+  final bool compact;
   final ValueChanged<String> onAcceptPlayerId;
 
   @override
@@ -478,12 +545,17 @@ class _RosterPanel extends StatelessWidget {
                 )
               : null,
           child: Padding(
-            padding: const EdgeInsets.all(12),
+            padding: EdgeInsets.all(compact ? 8 : 12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 8),
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontSize: compact ? 14 : null,
+                      ),
+                ),
+                SizedBox(height: compact ? 6 : 8),
                 Expanded(
                   child: players.isEmpty
                       ? const Center(child: Text('No players.'))
@@ -499,6 +571,7 @@ class _RosterPanel extends StatelessWidget {
                                   player: p,
                                   trailing: const Icon(Icons.drag_indicator),
                                   dragData: p.playerId,
+                                  compact: compact,
                                 );
                               },
                             );

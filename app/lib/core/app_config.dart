@@ -6,9 +6,9 @@ class AppConfig {
 
   static const int maxMatchesPlayed = 10;
   static const Duration inviteLinkValidity = Duration(hours: 24);
-  static const double mobileWidth = 1000;
-  static const double compactWidth = 2000;
-  static const double wideLayoutWidth = 3000;
+  static const double mobileWidth = 600;
+  static const double compactWidth = 720;
+  static const double wideLayoutWidth = 900;
 
   static void validate() {
     final missing = <String>[];

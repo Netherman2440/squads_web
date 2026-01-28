@@ -24,7 +24,8 @@ class DraftDraggablePlayerTile extends StatelessWidget {
     final theme = Theme.of(context);
     final difference = player.ranking - player.baseRanking;
     final positionText = player.position?.trim();
-    final hasPosition = positionText != null &&
+    final hasPosition =
+        positionText != null &&
         positionText.isNotEmpty &&
         positionText.toLowerCase() != 'none';
 
@@ -67,7 +68,7 @@ class DraftDraggablePlayerTile extends StatelessWidget {
                           color: theme.colorScheme.primary,
                         ),
                         const SizedBox(width: 4),
-                        Text(positionText!),
+                        Text(positionText),
                       ],
                     ),
                   ],

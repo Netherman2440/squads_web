@@ -22,6 +22,7 @@ class _CreatePlayerDialogState extends ConsumerState<CreatePlayerDialog> {
   int _sliderValue = 50;
   bool _isSubmitting = false;
   bool _isUpdatingFromSlider = false;
+  bool _isUpdatingFromText = false;
   String? _errorText;
 
   @override
@@ -101,7 +102,7 @@ class _CreatePlayerDialogState extends ConsumerState<CreatePlayerDialog> {
   }
 
   void _handleBaseRankingTextChanged(String value) {
-    if (_isUpdatingFromSlider) {
+    if (_isUpdatingFromSlider || _isUpdatingFromText) {
       return;
     }
 
@@ -112,12 +113,29 @@ class _CreatePlayerDialogState extends ConsumerState<CreatePlayerDialog> {
 
     final clamped = parsed.clamp(1, 100);
     if (clamped == _sliderValue) {
-      return;
+      if (value == clamped.toString()) {
+        return;
+      }
     }
 
     setState(() {
       _sliderValue = clamped;
     });
+
+    final clampedText = clamped.toString();
+    if (value != clampedText) {
+      final selection = _baseRankingController.selection;
+      _isUpdatingFromText = true;
+      _baseRankingController.text = clampedText;
+      final maxOffset = clampedText.length;
+      final baseOffset = selection.baseOffset.clamp(0, maxOffset);
+      final extentOffset = selection.extentOffset.clamp(0, maxOffset);
+      _baseRankingController.selection = TextSelection(
+        baseOffset: baseOffset,
+        extentOffset: extentOffset,
+      );
+      _isUpdatingFromText = false;
+    }
   }
 
   _NearestPlayers _findNearestPlayers(List<Player> players, int target) {

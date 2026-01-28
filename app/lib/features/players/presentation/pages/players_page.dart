@@ -21,17 +21,25 @@ class PlayersPage extends ConsumerStatefulWidget {
 
 class _PlayersPageState extends ConsumerState<PlayersPage> {
   List<Player>? players;
+  late final TextEditingController _searchController;
   String _searchQuery = '';
   _PlayerSortOption _sortOption = _PlayerSortOption.scoreDesc;
 
   @override
   void initState() {
     super.initState();
+    _searchController = TextEditingController();
     Future.microtask(
       () => ref
           .read(playersNotifierProvider.notifier)
           .loadPlayers(squadId: widget.squadId),
     );
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _showCreatePlayerDialog() async {
@@ -52,7 +60,14 @@ class _PlayersPageState extends ConsumerState<PlayersPage> {
         final visiblePlayers = _applySearchAndSort(players);
         return Column(
           children: [
-            _buildSearchControls(),
+            _SearchControls(
+              controller: _searchController,
+              onChanged: (value) => setState(() => _searchQuery = value),
+              onClear: () {
+                _searchController.clear();
+                setState(() => _searchQuery = '');
+              },
+            ),
             Expanded(child: _buildPlayersList(visiblePlayers)),
           ],
         );
@@ -154,23 +169,16 @@ class _PlayersPageState extends ConsumerState<PlayersPage> {
     final visiblePlayers = _applySearchAndSort(cachedPlayers);
     return Column(
       children: [
-        _buildSearchControls(),
+        _SearchControls(
+          controller: _searchController,
+          onChanged: (value) => setState(() => _searchQuery = value),
+          onClear: () {
+            _searchController.clear();
+            setState(() => _searchQuery = '');
+          },
+        ),
         Expanded(child: _buildPlayersList(visiblePlayers)),
       ],
-    );
-  }
-
-  Widget _buildSearchControls() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-      child: TextField(
-        decoration: const InputDecoration(
-          labelText: 'Search',
-          prefixIcon: Icon(Icons.search),
-        ),
-        textCapitalization: TextCapitalization.none,
-        onChanged: (value) => setState(() => _searchQuery = value),
-      ),
     );
   }
 
@@ -219,3 +227,41 @@ class _PlayersPageState extends ConsumerState<PlayersPage> {
 }
 
 enum _PlayerSortOption { scoreDesc, scoreAsc, nameAsc, nameDesc }
+
+class _SearchControls extends StatelessWidget {
+  const _SearchControls({
+    required this.controller,
+    required this.onChanged,
+    required this.onClear,
+  });
+
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+      child: TextField(
+        controller: controller,
+        decoration: InputDecoration(
+          labelText: 'Search',
+          prefixIcon: const Icon(Icons.search),
+          suffixIcon: controller.text.isEmpty
+              ? null
+              : IconButton(
+                  tooltip: 'Clear',
+                  icon: const Icon(Icons.close),
+                  onPressed: onClear,
+                ),
+        ),
+        textCapitalization: TextCapitalization.none,
+        keyboardType: TextInputType.text,
+        textInputAction: TextInputAction.search,
+        onChanged: onChanged,
+        onSubmitted: onChanged,
+      ),
+    );
+  }
+}

@@ -222,7 +222,7 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           homePanel,
-                          SizedBox(width: gap, height: 12),
+                          SizedBox(width: gap),
                           awayPanel,
                         ],
                       );

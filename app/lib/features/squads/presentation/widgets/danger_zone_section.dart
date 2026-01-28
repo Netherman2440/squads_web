@@ -52,36 +52,36 @@ class _DangerZoneSectionState extends State<DangerZoneSection> {
               width: double.infinity,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: theme.colorScheme.errorContainer),
+                border: Border.all(color: theme.colorScheme.error),
               ),
               child: Column(
                 children: [
-                  _DangerRow(
+                  _VisibilityRow(
                     title: 'Visibility',
                     subtitle: widget.visibility == SquadVisibility.private
                         ? 'This squad is currently private.'
                         : 'This squad is currently public.',
+                    isExpanded: _isVisibilityExpanded,
                     actionLabel: 'Change visibility',
-                    onPressed: () {
+                    onToggleExpanded: () {
                       setState(() {
                         _isVisibilityExpanded = !_isVisibilityExpanded;
                       });
                     },
+                    nextLabel: widget.visibility == SquadVisibility.private
+                        ? 'Change to public'
+                        : 'Change to private',
+                    onConfirm: () async {
+                      final next = widget.visibility == SquadVisibility.private
+                          ? SquadVisibility.public
+                          : SquadVisibility.private;
+                      setState(() {
+                        _isVisibilityExpanded = false;
+                      });
+                      await widget.onChangeVisibility(next);
+                    },
                   ),
-                  if (_isVisibilityExpanded)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                      child: _VisibilityOptions(
-                        current: widget.visibility,
-                        onSelect: (next) async {
-                          setState(() {
-                            _isVisibilityExpanded = false;
-                          });
-                          await widget.onChangeVisibility(next);
-                        },
-                      ),
-                    ),
-                  _DividerLine(color: theme.dividerColor),
+                  _DividerLine(color: theme.colorScheme.error),
                   _DangerRow(
                     title: 'Name',
                     subtitle:
@@ -89,7 +89,7 @@ class _DangerZoneSectionState extends State<DangerZoneSection> {
                     actionLabel: 'Change name',
                     onPressed: _showChangeNameDialog,
                   ),
-                  _DividerLine(color: theme.dividerColor),
+                  _DividerLine(color: theme.colorScheme.error),
                   _DangerRow(
                     title: 'Manage ranking updates',
                     subtitle:
@@ -102,7 +102,7 @@ class _DangerZoneSectionState extends State<DangerZoneSection> {
                       );
                     },
                   ),
-                  _DividerLine(color: theme.dividerColor),
+                  _DividerLine(color: theme.colorScheme.error),
                   _DangerRow(
                     title: 'Transfer ownership',
                     subtitle: 'Transfer this squad to another user.',
@@ -115,7 +115,7 @@ class _DangerZoneSectionState extends State<DangerZoneSection> {
                       );
                     },
                   ),
-                  _DividerLine(color: theme.dividerColor),
+                  _DividerLine(color: theme.colorScheme.error),
                   _DangerRow(
                     title: 'Delete squad',
                     subtitle:
@@ -227,31 +227,67 @@ class _DividerLine extends StatelessWidget {
     return Divider(
       height: 1,
       thickness: 1,
-      color: color.withValues(alpha: 0.4),
+      color: color.withValues(alpha: 0.5),
     );
   }
 }
 
-class _VisibilityOptions extends StatelessWidget {
-  const _VisibilityOptions({required this.current, required this.onSelect});
+class _VisibilityRow extends StatelessWidget {
+  const _VisibilityRow({
+    required this.title,
+    required this.subtitle,
+    required this.isExpanded,
+    required this.actionLabel,
+    required this.onToggleExpanded,
+    required this.nextLabel,
+    required this.onConfirm,
+  });
 
-  final SquadVisibility current;
-  final Future<void> Function(SquadVisibility next) onSelect;
+  final String title;
+  final String subtitle;
+  final bool isExpanded;
+  final String actionLabel;
+  final VoidCallback onToggleExpanded;
+  final String nextLabel;
+  final VoidCallback onConfirm;
 
   @override
   Widget build(BuildContext context) {
-    final next = current == SquadVisibility.private
-        ? SquadVisibility.public
-        : SquadVisibility.private;
-
-    final nextLabel = next == SquadVisibility.private ? 'Private' : 'Public';
-
-    return Align(
-      alignment: Alignment.centerRight,
-      child: DangerActionButton(
-        label: 'Change visibility to $nextLabel',
-        minWidth: DangerZoneSection._actionButtonMinWidth,
-        onPressed: () => onSelect(next),
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 4),
+                Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              DangerActionButton(
+                label: actionLabel,
+                minWidth: DangerZoneSection._actionButtonMinWidth,
+                onPressed: onToggleExpanded,
+              ),
+              if (isExpanded) ...[
+                const SizedBox(height: 8),
+                DangerActionButton(
+                  label: nextLabel,
+                  minWidth: DangerZoneSection._actionButtonMinWidth,
+                  onPressed: onConfirm,
+                ),
+              ],
+            ],
+          ),
+        ],
       ),
     );
   }

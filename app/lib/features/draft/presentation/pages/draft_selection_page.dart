@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:app/core/app_config.dart';
 import 'package:app/core/app_router.dart';
 import 'package:app/core/error/failure.dart';
 import 'package:app/features/draft/presentation/controllers/draft_selection_controller.dart';
@@ -95,36 +96,39 @@ class _DraftSelectionPageState extends ConsumerState<DraftSelectionPage> {
             padding: const EdgeInsets.all(16),
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final isWide = constraints.maxWidth >= 900;
+                final isCompact =
+                    constraints.maxWidth < AppConfig.compactWidth;
 
-                final panels = [
-                  Expanded(
-                    child: _AvailablePlayersPanel(
-                      players: available,
-                      selectedCount: data.selectedPlayerIds.length,
-                      searchQuery: data.searchQuery,
-                      onSearchChanged: (value) => ref
-                          .read(draftSelectionControllerProvider.notifier)
-                          .setSearchQuery(value),
-                      onToggle: (playerId) => ref
-                          .read(draftSelectionControllerProvider.notifier)
-                          .togglePlayer(playerId: playerId),
-                    ),
+                final selectedPanel = Expanded(
+                  flex: isCompact ? 5 : 2,
+                  child: _SelectedPlayersPanel(
+                    players: selected,
+                    selectedCount: data.selectedPlayerIds.length,
+                    compact: isCompact,
+                    onToggle: (playerId) => ref
+                        .read(draftSelectionControllerProvider.notifier)
+                        .togglePlayer(playerId: playerId),
+                    onClear: () => ref
+                        .read(draftSelectionControllerProvider.notifier)
+                        .clearSelection(),
                   ),
-                  const SizedBox(width: 12, height: 12),
-                  Expanded(
-                    child: _SelectedPlayersPanel(
-                      players: selected,
-                      selectedCount: data.selectedPlayerIds.length,
-                      onToggle: (playerId) => ref
-                          .read(draftSelectionControllerProvider.notifier)
-                          .togglePlayer(playerId: playerId),
-                      onClear: () => ref
-                          .read(draftSelectionControllerProvider.notifier)
-                          .clearSelection(),
-                    ),
+                );
+
+                final availablePanel = Expanded(
+                  flex: isCompact ? 4 : 3,
+                  child: _AvailablePlayersPanel(
+                    players: available,
+                    selectedCount: data.selectedPlayerIds.length,
+                    searchQuery: data.searchQuery,
+                    compact: isCompact,
+                    onSearchChanged: (value) => ref
+                        .read(draftSelectionControllerProvider.notifier)
+                        .setSearchQuery(value),
+                    onToggle: (playerId) => ref
+                        .read(draftSelectionControllerProvider.notifier)
+                        .togglePlayer(playerId: playerId),
                   ),
-                ];
+                );
 
                 return Column(
                   children: [
@@ -136,12 +140,13 @@ class _DraftSelectionPageState extends ConsumerState<DraftSelectionPage> {
                         ),
                       ),
                     Expanded(
-                      child: isWide
-                          ? Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: panels,
-                            )
-                          : Column(children: panels),
+                      child: Column(
+                        children: [
+                          selectedPanel,
+                          const SizedBox(height: 12),
+                          availablePanel,
+                        ],
+                      ),
                     ),
                   ],
                 );
@@ -159,6 +164,7 @@ class _AvailablePlayersPanel extends StatelessWidget {
     required this.players,
     required this.selectedCount,
     required this.searchQuery,
+    required this.compact,
     required this.onSearchChanged,
     required this.onToggle,
   });
@@ -166,6 +172,7 @@ class _AvailablePlayersPanel extends StatelessWidget {
   final List<Player> players;
   final int selectedCount;
   final String searchQuery;
+  final bool compact;
   final ValueChanged<String> onSearchChanged;
   final ValueChanged<String> onToggle;
 
@@ -204,6 +211,7 @@ class _AvailablePlayersPanel extends StatelessWidget {
                           trailing: const Icon(Icons.add_circle_outline),
                           onTap: () => onToggle(p.playerId),
                           dragData: p.playerId,
+                          compact: compact,
                         );
                       },
                     ),
@@ -219,12 +227,14 @@ class _SelectedPlayersPanel extends StatelessWidget {
   const _SelectedPlayersPanel({
     required this.players,
     required this.selectedCount,
+    required this.compact,
     required this.onToggle,
     required this.onClear,
   });
 
   final List<Player> players;
   final int selectedCount;
+  final bool compact;
   final ValueChanged<String> onToggle;
   final VoidCallback onClear;
 
@@ -262,6 +272,7 @@ class _SelectedPlayersPanel extends StatelessWidget {
                           trailing: const Icon(Icons.remove_circle_outline),
                           onTap: () => onToggle(p.playerId),
                           dragData: p.playerId,
+                          compact: compact,
                         );
                       },
                     ),

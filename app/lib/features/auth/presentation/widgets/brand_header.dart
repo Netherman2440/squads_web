@@ -1,4 +1,8 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+
+import 'package:app/core/app_config.dart';
 
 class BrandHeader extends StatelessWidget {
   const BrandHeader({super.key, required this.maxWidth});
@@ -8,6 +12,7 @@ class BrandHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isNarrow = MediaQuery.sizeOf(context).width < AppConfig.mobileWidth;
     final brandStyle = theme.textTheme.headlineSmall?.copyWith(
       fontWeight: FontWeight.w800,
       fontFamily: theme.textTheme.bodyLarge?.fontFamily,
@@ -30,17 +35,21 @@ class BrandHeader extends StatelessWidget {
       textScaler: MediaQuery.textScalerOf(context),
       maxLines: 1,
     )..layout(maxWidth: maxWidth);
+    final logoWidth = textPainter.size.width > 0
+        ? textPainter.size.width
+        : math.min(maxWidth, 180);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Image.asset(
-          'assets/icons/logo.png',
-          width: textPainter.size.width,
-          fit: BoxFit.contain,
-        ),
-        SizedBox(height: 36),
-
+        if (!isNarrow) ...[
+          Image.asset(
+            'assets/icons/logo.png',
+            width: logoWidth.toDouble(),
+            fit: BoxFit.contain,
+          ),
+          const SizedBox(height: 36),
+        ],
         Text.rich(span, textAlign: TextAlign.center),
       ],
     );

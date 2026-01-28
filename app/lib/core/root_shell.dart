@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:app/core/app_config.dart';
 import 'package:app/features/auth/presentation/providers/auth_notifier.dart';
 import 'package:app/features/squads/presentation/state/squad_detail_notifier.dart';
 
@@ -28,7 +29,7 @@ class _RootShellState extends ConsumerState<RootShell> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isMobile = constraints.maxWidth < 600;
+        final isMobile = constraints.maxWidth < AppConfig.mobileWidth;
         final location = widget.location;
         final squadId = _extractSquadId(location);
 
@@ -77,6 +78,16 @@ class _RootShellState extends ConsumerState<RootShell> {
         );
       },
     );
+  }
+
+  void _collapseSidebar() {
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _isSidebarPinned = false;
+      _isSidebarHovered = false;
+    });
   }
 
   Widget _buildMobileBody({
@@ -128,6 +139,7 @@ class _RootShellState extends ConsumerState<RootShell> {
                             isGuest: isGuest,
                             location: location,
                             squadName: squadName,
+                            onNavigate: _collapseSidebar,
                           ),
                         ),
                       ),
@@ -198,6 +210,7 @@ class _RootShellState extends ConsumerState<RootShell> {
                     isGuest: isGuest,
                     location: location,
                     squadName: squadName,
+                    onNavigate: _collapseSidebar,
                   ),
                 ),
               ),
@@ -234,16 +247,17 @@ class _RootShellState extends ConsumerState<RootShell> {
                   child: Material(
                     elevation: 8,
                     color: theme.colorScheme.surfaceContainerHighest,
-                    child: _SidebarNavigation(
-                      isExpanded: true,
-                      isGuest: isGuest,
-                      location: location,
-                      squadName: squadName,
-                    ),
+                  child: _SidebarNavigation(
+                    isExpanded: true,
+                    isGuest: isGuest,
+                    location: location,
+                    squadName: squadName,
+                    onNavigate: _collapseSidebar,
                   ),
                 ),
               ),
             ),
+          ),
           ),
         ],
       ),
@@ -363,13 +377,7 @@ class _RootShellState extends ConsumerState<RootShell> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const CircleAvatar(child: Icon(Icons.person)),
-                const SizedBox(width: 8),
-                Text(
-                  email,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: Colors.white),
-                ),
+                const SizedBox(width: 4),
                 const Icon(Icons.arrow_drop_down, color: Colors.white),
               ],
             ),
@@ -388,12 +396,14 @@ class _SidebarNavigation extends StatelessWidget {
     required this.isGuest,
     required this.location,
     required this.squadName,
+    required this.onNavigate,
   });
 
   final bool isExpanded;
   final bool isGuest;
   final String location;
   final String? squadName;
+  final VoidCallback onNavigate;
 
   @override
   Widget build(BuildContext context) {
@@ -425,6 +435,7 @@ class _SidebarNavigation extends StatelessWidget {
                   isSelected: item.path == '/squads'
                       ? _isLocationExact(location, item.path)
                       : _isLocationSelected(location, item.path),
+                  onNavigate: onNavigate,
                 ),
               if (hasSquadSection) ...[
                 if (isExpanded)
@@ -450,6 +461,7 @@ class _SidebarNavigation extends StatelessWidget {
                   isExpanded: isExpanded,
                   // Home should be selected only for the exact squad root route.
                   isSelected: _isLocationExact(location, '/squads/$squadId'),
+                  onNavigate: onNavigate,
                 ),
                 _SidebarNavItem(
                   item: _NavItem(
@@ -462,6 +474,7 @@ class _SidebarNavigation extends StatelessWidget {
                     location,
                     '/squads/$squadId/players',
                   ),
+                  onNavigate: onNavigate,
                 ),
                 _SidebarNavItem(
                   item: _NavItem(
@@ -474,6 +487,7 @@ class _SidebarNavigation extends StatelessWidget {
                     location,
                     '/squads/$squadId/matches',
                   ),
+                  onNavigate: onNavigate,
                 ),
                 _SidebarNavItem(
                   item: _NavItem(
@@ -486,6 +500,7 @@ class _SidebarNavigation extends StatelessWidget {
                     location,
                     '/squads/$squadId/stats',
                   ),
+                  onNavigate: onNavigate,
                 ),
               ],
             ],
@@ -501,11 +516,13 @@ class _SidebarNavItem extends StatelessWidget {
     required this.item,
     required this.isExpanded,
     required this.isSelected,
+    required this.onNavigate,
   });
 
   final _NavItem item;
   final bool isExpanded;
   final bool isSelected;
+  final VoidCallback onNavigate;
 
   @override
   Widget build(BuildContext context) {
@@ -519,9 +536,11 @@ class _SidebarNavItem extends StatelessWidget {
       final isRoot = path == '/me' || path == '/squads';
       if (isRoot) {
         context.go(path);
+        onNavigate();
         return;
       }
       context.push(path);
+      onNavigate();
     }
 
     if (!isExpanded) {

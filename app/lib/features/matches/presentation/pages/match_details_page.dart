@@ -14,6 +14,7 @@ import 'package:app/features/players/domain/entities/player.dart';
 import 'package:app/features/squads/domain/entities/user_squad_role.dart';
 import 'package:app/features/squads/presentation/state/squad_detail_notifier.dart';
 import 'package:app/features/matches/presentation/controllers/squad_matches_notifier.dart';
+import 'package:app/core/app_config.dart';
 import 'package:app/core/widgets/probability_slider.dart';
 
 class MatchDetailsPage extends ConsumerStatefulWidget {
@@ -448,16 +449,6 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
                 color: Colors.red,
               ),
               IconButton(
-                icon: const Icon(Icons.refresh),
-                onPressed: () => _onRedraft(matchAsync.value!),
-                tooltip: 'Redraft',
-              ),
-              IconButton(
-                icon: const Icon(Icons.replay),
-                onPressed: _onRematch,
-                tooltip: 'Rematch',
-              ),
-              IconButton(
                 icon: const Icon(Icons.edit),
                 onPressed: () => _enterEditMode(matchAsync.value!),
                 tooltip: 'Edit',
@@ -469,13 +460,16 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
       body: matchAsync.when(
         data: (match) => Stack(
           children: [
-            _buildContent(context, match),
+            _buildContent(context, match, canManage: canManage),
             if (_isEditing && _isDraggingPlayer)
               Positioned(
                 left: 0,
                 right: 0,
                 bottom: 0,
-                child: _RemoveDropZone(onRemove: _removePlayerFromMatch),
+                child: SafeArea(
+                  top: false,
+                  child: _RemoveDropZone(onRemove: _removePlayerFromMatch),
+                ),
               ),
           ],
         ),
@@ -492,16 +486,35 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
     );
   }
 
-  Widget _buildContent(BuildContext context, Match match) {
+  Widget _buildContent(
+    BuildContext context,
+    Match match, {
+    required bool canManage,
+  }) {
     final dateFormat = DateFormat('dd.MM.yyyy HH:mm');
-    final scoreBoard = _isEditing
-        ? _buildEditScoreBoard()
-        : _buildScoreBoard(match);
+    final bottomInset = _isEditing && _isDraggingPlayer ? 84.0 : 0.0;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
+      padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomInset),
       child: Column(
         children: [
+          if (canManage && !_isEditing)
+            Align(
+              alignment: Alignment.centerRight,
+              child: Wrap(
+                spacing: 8,
+                children: [
+                  TextButton(
+                    onPressed: () => _onRedraft(match),
+                    child: const Text('Wylosuj jeszcze raz'),
+                  ),
+                  TextButton(
+                    onPressed: _onRematch,
+                    child: const Text('Rewanż'),
+                  ),
+                ],
+              ),
+            ),
           Text(
             dateFormat.format(match.createdAt.toLocal()),
             style: Theme.of(context).textTheme.titleMedium,
@@ -519,7 +532,10 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
           const SizedBox(height: 24),
           LayoutBuilder(
             builder: (context, constraints) {
-              final isNarrow = constraints.maxWidth < 720;
+              final isCompact = constraints.maxWidth < AppConfig.compactWidth;
+              final scoreBoard = _isEditing
+                  ? _buildEditScoreBoard(compact: isCompact)
+                  : _buildScoreBoard(match, compact: isCompact);
               final homeSection = _buildTeamSection(
                 context,
                 _isEditing ? _homePlayers : (match.homeTeam?.players ?? []),
@@ -531,6 +547,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
                     ? _awayPlayers.length
                     : (match.awayTeam?.players.length ?? 0),
                 nameController: _isEditing ? _homeTeamNameController : null,
+                compact: isCompact,
               );
               final awaySection = _buildTeamSection(
                 context,
@@ -543,16 +560,115 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
                     ? _homePlayers.length
                     : (match.homeTeam?.players.length ?? 0),
                 nameController: _isEditing ? _awayTeamNameController : null,
+                compact: isCompact,
               );
 
-              if (isNarrow) {
+              final gap = isCompact ? 8.0 : 16.0;
+              final scoreBoardWidth = isCompact ? 140.0 : 220.0;
+
+              if (isCompact) {
+                final homePlayers = _isEditing
+                    ? _homePlayers
+                    : (match.homeTeam?.players ?? []);
+                final awayPlayers = _isEditing
+                    ? _awayPlayers
+                    : (match.awayTeam?.players ?? []);
+                final homeOpponentCount =
+                    _isEditing ? _awayPlayers.length : awayPlayers.length;
+                final awayOpponentCount =
+                    _isEditing ? _homePlayers.length : homePlayers.length;
+                final homeRating =
+                    _effectiveTeamRating(homePlayers, homeOpponentCount);
+                final awayRating =
+                    _effectiveTeamRating(awayPlayers, awayOpponentCount);
+
                 return Column(
                   children: [
-                    homeSection,
-                    const SizedBox(height: 16),
-                    Center(child: scoreBoard),
-                    const SizedBox(height: 16),
-                    awaySection,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: _buildCompactTeamHeader(
+                            teamName: match.homeTeam?.name,
+                            fallbackLabel: 'Home',
+                            colorHex: _isEditing
+                                ? _homeTeamColorHex
+                                : match.homeTeam?.color,
+                            nameController:
+                                _isEditing ? _homeTeamNameController : null,
+                            rating: homeRating,
+                            alignEnd: false,
+                            onPickColor: _isEditing
+                                ? () => _pickTeamColor('home')
+                                : null,
+                          ),
+                        ),
+                        SizedBox(
+                          width: scoreBoardWidth,
+                          child: Align(
+                            alignment: Alignment.center,
+                            child: scoreBoard,
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildCompactTeamHeader(
+                            teamName: match.awayTeam?.name,
+                            fallbackLabel: 'Away',
+                            colorHex: _isEditing
+                                ? _awayTeamColorHex
+                                : match.awayTeam?.color,
+                            nameController:
+                                _isEditing ? _awayTeamNameController : null,
+                            rating: awayRating,
+                            alignEnd: true,
+                            onPickColor: _isEditing
+                                ? () => _pickTeamColor('away')
+                                : null,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: _buildTeamSection(
+                            context,
+                            homePlayers,
+                            match.homeTeam?.name,
+                            'Home',
+                            'home',
+                            _isEditing
+                                ? _homeTeamColorHex
+                                : match.homeTeam?.color,
+                            opponentCount: homeOpponentCount,
+                            nameController:
+                                _isEditing ? _homeTeamNameController : null,
+                            compact: true,
+                            showHeader: false,
+                          ),
+                        ),
+                        SizedBox(width: gap),
+                        Expanded(
+                          child: _buildTeamSection(
+                            context,
+                            awayPlayers,
+                            match.awayTeam?.name,
+                            'Away',
+                            'away',
+                            _isEditing
+                                ? _awayTeamColorHex
+                                : match.awayTeam?.color,
+                            opponentCount: awayOpponentCount,
+                            nameController:
+                                _isEditing ? _awayTeamNameController : null,
+                            compact: true,
+                            showHeader: false,
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 );
               }
@@ -561,15 +677,15 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(child: homeSection),
-                  const SizedBox(width: 16),
+                  SizedBox(width: gap),
                   SizedBox(
-                    width: 220,
+                    width: scoreBoardWidth,
                     child: Align(
                       alignment: Alignment.topCenter,
                       child: scoreBoard,
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  SizedBox(width: gap),
                   Expanded(child: awaySection),
                 ],
               );
@@ -592,60 +708,67 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
     );
   }
 
-  Widget _buildScoreBoard(Match match) {
+  Widget _buildScoreBoard(Match match, {required bool compact}) {
     final hasScore = match.homeScore != null && match.awayScore != null;
     final homeScore = hasScore ? match.homeScore.toString() : '-';
     final awayScore = hasScore ? match.awayScore.toString() : '-';
+    final fontSize = compact ? 32.0 : 48.0;
+    final separatorSize = compact ? 32.0 : 48.0;
+    final padding = compact ? 8.0 : 16.0;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
           homeScore,
-          style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.bold),
         ),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16.0),
-          child: Text(':', style: TextStyle(fontSize: 48)),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: padding),
+          child: Text(':', style: TextStyle(fontSize: separatorSize)),
         ),
         Text(
           awayScore,
-          style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.bold),
         ),
       ],
     );
   }
 
-  Widget _buildEditScoreBoard() {
+  Widget _buildEditScoreBoard({required bool compact}) {
+    final fontSize = compact ? 24.0 : 32.0;
+    final width = compact ? 56.0 : 80.0;
+    final padding = compact ? 8.0 : 16.0;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         SizedBox(
-          width: 80,
+          width: width,
           child: TextField(
             controller: _homeScoreController,
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.bold),
             decoration: const InputDecoration(
               border: OutlineInputBorder(),
               labelText: 'Home',
             ),
           ),
         ),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16.0),
-          child: Text(':', style: TextStyle(fontSize: 48)),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: padding),
+          child: Text(':', style: TextStyle(fontSize: fontSize + 8)),
         ),
         SizedBox(
-          width: 80,
+          width: width,
           child: TextField(
             controller: _awayScoreController,
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.bold),
             decoration: const InputDecoration(
               border: OutlineInputBorder(),
               labelText: 'Away',
@@ -653,6 +776,20 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
           ),
         ),
       ],
+    );
+  }
+
+  double _effectiveTeamRating(List<Player> players, int opponentCount) {
+    double totalRanking = 0;
+    for (final p in players) {
+      totalRanking += p.ranking;
+    }
+    final playWithSubstitute = players.length != opponentCount;
+    return effectiveTeamRanking(
+      totalRanking: totalRanking,
+      teamSize: players.length,
+      opponentTeamSize: opponentCount,
+      playWithSubstitute: playWithSubstitute,
     );
   }
 
@@ -665,99 +802,96 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
     String? colorHex, {
     required int opponentCount,
     TextEditingController? nameController,
+    required bool compact,
+    bool showHeader = true,
   }) {
     final teamColor = _parseColor(colorHex);
     final theme = Theme.of(context);
     final sortedPlayers = [...players]
       ..sort((a, b) => b.ranking.compareTo(a.ranking));
 
-    // Compute ranking
-    double totalRanking = 0;
-    for (final p in players) {
-      totalRanking += p.ranking;
-    }
-    // Assume playWithSubstitute=true if sizes differ
-    final playWithSubstitute = players.length != opponentCount;
-
-    final effective = effectiveTeamRanking(
-      totalRanking: totalRanking,
-      teamSize: players.length,
-      opponentTeamSize: opponentCount,
-      playWithSubstitute: playWithSubstitute,
-    );
+    final effective = _effectiveTeamRating(players, opponentCount);
 
     final list = Column(
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _isEditing
-                ? GestureDetector(
-                    onTap: () => _pickTeamColor(side),
-                    child: Tooltip(
-                      message: 'Change color',
-                      child: Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          color: teamColor,
-                          border: Border.all(
-                            color: Colors.grey.withValues(alpha: 0.5),
+        if (showHeader) ...[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _isEditing
+                  ? GestureDetector(
+                      onTap: () => _pickTeamColor(side),
+                      child: Tooltip(
+                        message: 'Change color',
+                        child: Container(
+                          width: compact ? 24 : 32,
+                          height: compact ? 24 : 32,
+                          decoration: BoxDecoration(
+                            color: teamColor,
+                            border: Border.all(
+                              color: Colors.grey.withValues(alpha: 0.5),
+                            ),
+                            borderRadius: BorderRadius.circular(4),
                           ),
-                          borderRadius: BorderRadius.circular(4),
                         ),
                       ),
-                    ),
-                  )
-                : Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: teamColor,
-                      border: Border.all(
-                        color: Colors.grey.withValues(alpha: 0.5),
+                    )
+                  : Container(
+                      width: compact ? 24 : 32,
+                      height: compact ? 24 : 32,
+                      decoration: BoxDecoration(
+                        color: teamColor,
+                        border: Border.all(
+                          color: Colors.grey.withValues(alpha: 0.5),
+                        ),
+                        borderRadius: BorderRadius.circular(4),
                       ),
-                      borderRadius: BorderRadius.circular(4),
+                    ),
+              SizedBox(width: compact ? 6 : 8),
+              if (_isEditing && nameController != null)
+                Flexible(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: compact ? 140 : 200),
+                    child: TextField(
+                      controller: nameController,
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontSize: compact ? 16 : null,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: fallbackLabel,
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                        border: const UnderlineInputBorder(),
+                      ),
                     ),
                   ),
-            const SizedBox(width: 8),
-            if (_isEditing && nameController != null)
-              Flexible(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 200),
-                  child: TextField(
-                    controller: nameController,
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.titleLarge,
-                    decoration: InputDecoration(
-                      hintText: fallbackLabel,
-                      isDense: true,
-                      contentPadding: EdgeInsets.zero,
-                      border: const UnderlineInputBorder(),
-                    ),
+                )
+              else
+                Text(
+                  _displayTeamName(teamName, fallbackLabel),
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontSize: compact ? 16 : null,
                   ),
                 ),
-              )
-            else
-              Text(
-                _displayTeamName(teamName, fallbackLabel),
-                style: theme.textTheme.titleLarge,
-              ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Text(
-          'Rating: ${effective.toStringAsFixed(1)}',
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
+            ],
           ),
-        ),
-        const Divider(),
+          SizedBox(height: compact ? 4 : 6),
+          Text(
+            'Rating: ${effective.toStringAsFixed(1)}',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontSize: compact ? 11 : null,
+            ),
+          ),
+          const Divider(),
+        ],
         ...sortedPlayers.map(
           (player) => MatchPlayerTile(
             player: player,
             trailing: const SizedBox.shrink(),
             dragData: _isEditing ? player.playerId : null,
+            compact: compact,
             onDragStarted: _isEditing
                 ? () => setState(() => _isDraggingPlayer = true)
                 : null,
@@ -779,7 +913,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
         ),
         if (_isEditing && players.isEmpty)
           Container(
-            height: 60,
+            height: compact ? 48 : 60,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               border: Border.all(color: Colors.grey.withValues(alpha: 0.5)),
@@ -808,6 +942,97 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
     }
 
     return list;
+  }
+
+  Widget _buildCompactTeamHeader({
+    required String fallbackLabel,
+    required String? teamName,
+    required String? colorHex,
+    required TextEditingController? nameController,
+    required double rating,
+    required bool alignEnd,
+    VoidCallback? onPickColor,
+  }) {
+    final theme = Theme.of(context);
+    final teamColor = _parseColor(colorHex);
+    final nameWidget = _isEditing && nameController != null
+        ? SizedBox(
+            width: 120,
+            child: TextField(
+              controller: nameController,
+              textAlign: alignEnd ? TextAlign.right : TextAlign.left,
+              style: theme.textTheme.titleMedium,
+              decoration: InputDecoration(
+                hintText: fallbackLabel,
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
+                border: const UnderlineInputBorder(),
+              ),
+            ),
+          )
+        : Text(
+            _displayTeamName(teamName, fallbackLabel),
+            style: theme.textTheme.titleMedium,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          );
+
+    final colorBox = Container(
+      width: 18,
+      height: 18,
+      decoration: BoxDecoration(
+        color: teamColor,
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.5)),
+        borderRadius: BorderRadius.circular(4),
+      ),
+    );
+
+    return Column(
+      crossAxisAlignment:
+          alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment:
+              alignEnd ? MainAxisAlignment.end : MainAxisAlignment.start,
+          children: [
+            if (!alignEnd) ...[
+              if (onPickColor != null)
+                GestureDetector(
+                  onTap: onPickColor,
+                  child: Tooltip(
+                    message: 'Change color',
+                    child: colorBox,
+                  ),
+                )
+              else
+                colorBox,
+              const SizedBox(width: 6),
+            ],
+            Flexible(child: nameWidget),
+            if (alignEnd) ...[
+              const SizedBox(width: 6),
+              if (onPickColor != null)
+                GestureDetector(
+                  onTap: onPickColor,
+                  child: Tooltip(
+                    message: 'Change color',
+                    child: colorBox,
+                  ),
+                )
+              else
+                colorBox,
+            ],
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Rating: ${rating.toStringAsFixed(1)}',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
   }
 
   List<Player> _availableSquadPlayers() {
@@ -880,6 +1105,7 @@ class _AddPlayerPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isCompact = MediaQuery.sizeOf(context).width < AppConfig.compactWidth;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -910,6 +1136,7 @@ class _AddPlayerPanel extends StatelessWidget {
                           player: p,
                           trailing: const Icon(Icons.drag_indicator),
                           dragData: p.playerId,
+                          compact: isCompact,
                           onDragStarted: onDragStarted,
                           onDragEnd: onDragEnd,
                         );

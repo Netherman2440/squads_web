@@ -133,6 +133,7 @@ class _QuickActionsFab extends StatelessWidget {
         showModalBottomSheet<void>(
           context: context,
           showDragHandle: true,
+          isScrollControlled: true,
           builder: (context) => _QuickActionsSheet(squad: squad),
         );
       },
@@ -150,7 +151,7 @@ class _QuickActionsSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           mainAxisSize: MainAxisSize.min,

@@ -8,12 +8,14 @@ class DraftDraggablePlayerTile extends StatelessWidget {
     super.key,
     required this.player,
     required this.trailing,
+    this.compact = false,
     this.onTap,
     this.dragData,
   });
 
   final Player player;
   final Widget trailing;
+  final bool compact;
   final VoidCallback? onTap;
   final Object? dragData;
 
@@ -21,45 +23,83 @@ class DraftDraggablePlayerTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final difference = player.ranking - player.baseRanking;
+    final positionText = player.position?.trim();
+    final hasPosition = positionText != null &&
+        positionText.isNotEmpty &&
+        positionText.toLowerCase() != 'none';
 
     final tile = Card(
       child: ListTile(
+        dense: compact,
+        visualDensity: compact ? VisualDensity.compact : VisualDensity.standard,
+        contentPadding: compact
+            ? const EdgeInsets.symmetric(horizontal: 8)
+            : null,
         leading: CircleAvatar(
+          radius: compact ? 14 : null,
           child: Text(
             player.name.isNotEmpty ? player.name[0].toUpperCase() : '?',
+            style: compact ? theme.textTheme.labelSmall : null,
           ),
         ),
-        title: Text(player.name),
-        subtitle: Row(
-          children: [
-            if (player.position != null &&
-                player.position!.trim().isNotEmpty) ...[
-              Icon(
-                Icons.sports_soccer,
-                size: 16,
-                color: theme.colorScheme.primary,
-              ),
-              const SizedBox(width: 4),
-              Text(player.position!),
-              const SizedBox(width: 12),
-            ],
-            Icon(
-              Icons.star_border,
-              size: 16,
-              color: theme.colorScheme.secondary,
-            ),
-            const SizedBox(width: 4),
-            Text('Base: ${player.baseRanking}'),
-            const SizedBox(width: 12),
-            Icon(Icons.insights, size: 16, color: theme.colorScheme.tertiary),
-            const SizedBox(width: 4),
-            Text('Ranking: ${player.ranking.toStringAsFixed(2)}'),
-            if (difference.abs() > 0) ...[
-              const SizedBox(width: 12),
-              _RankingDifference(difference: difference),
-            ],
-          ],
+        title: Text(
+          player.name,
+          maxLines: compact ? 2 : 1,
+          overflow: TextOverflow.ellipsis,
+          style: compact ? theme.textTheme.bodyMedium : null,
         ),
+        subtitle: compact
+            ? Text(
+                'Ranking: ${player.ranking.toStringAsFixed(2)}',
+                style: theme.textTheme.bodySmall,
+              )
+            : Wrap(
+                spacing: 12,
+                runSpacing: 4,
+                children: [
+                  if (hasPosition) ...[
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.sports_soccer,
+                          size: 16,
+                          color: theme.colorScheme.primary,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(positionText!),
+                      ],
+                    ),
+                  ],
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.star_border,
+                        size: 16,
+                        color: theme.colorScheme.secondary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text('Base: ${player.baseRanking}'),
+                    ],
+                  ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.insights,
+                        size: 16,
+                        color: theme.colorScheme.tertiary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text('Ranking: ${player.ranking.toStringAsFixed(2)}'),
+                    ],
+                  ),
+                  if (difference.abs() > 0) ...[
+                    _RankingDifference(difference: difference),
+                  ],
+                ],
+              ),
         trailing: trailing,
         onTap: onTap,
       ),
@@ -71,7 +111,7 @@ class DraftDraggablePlayerTile extends StatelessWidget {
     }
 
     final feedback = ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 520),
+      constraints: BoxConstraints(maxWidth: compact ? 320 : 520),
       child: Material(
         color: Colors.transparent,
         child: Opacity(opacity: 0.9, child: tile),

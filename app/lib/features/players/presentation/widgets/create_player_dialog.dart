@@ -141,110 +141,116 @@ class _CreatePlayerDialogState extends ConsumerState<CreatePlayerDialog> {
     final nearest = _findNearestPlayers(players, _sliderValue);
     final lowerPlayer = nearest.lower;
     final higherPlayer = nearest.higher;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final contentWidth = (screenWidth - 48).clamp(0.0, 420.0);
 
     return AlertDialog(
       title: const Text('Add player'),
       content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Name',
-                border: OutlineInputBorder(),
-              ),
-              textInputAction: TextInputAction.next,
-              textCapitalization: TextCapitalization.words,
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _positionController,
-              decoration: const InputDecoration(
-                labelText: 'Position (optional)',
-                border: OutlineInputBorder(),
-              ),
-              textInputAction: TextInputAction.next,
-              textCapitalization: TextCapitalization.words,
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _baseRankingController,
-              decoration: const InputDecoration(
-                labelText: 'Base ranking',
-                border: OutlineInputBorder(),
-              ),
-              keyboardType: TextInputType.number,
-              textInputAction: TextInputAction.done,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              onChanged: _handleBaseRankingTextChanged,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Selected ranking: $_sliderValue',
-              style: theme.textTheme.bodyMedium,
-            ),
-            Slider(
-              value: _sliderValue.toDouble(),
-              min: 1,
-              max: 100,
-              divisions: 99,
-              label: '$_sliderValue',
-              onChanged: (value) {
-                final rounded = value.round();
-                setState(() {
-                  _sliderValue = rounded;
-                  _isUpdatingFromSlider = true;
-                  _baseRankingController.text = rounded.toString();
-                  _isUpdatingFromSlider = false;
-                });
-              },
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 250),
-                    transitionBuilder: (child, animation) =>
-                        FadeTransition(opacity: animation, child: child),
-                    child: _NearestPlayerProfile(
-                      key: ValueKey(lowerPlayer?.playerId ?? 'lower-null'),
-                      label: 'Weaker player',
-                      player: lowerPlayer,
-                      placeholderText: 'No weaker player',
-                    ),
-                  ),
+        child: SizedBox(
+          width: contentWidth,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Name',
+                  border: OutlineInputBorder(),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 250),
-                    transitionBuilder: (child, animation) =>
-                        FadeTransition(opacity: animation, child: child),
-                    child: _NearestPlayerProfile(
-                      key: ValueKey(higherPlayer?.playerId ?? 'higher-null'),
-                      label: 'Stronger player',
-                      player: higherPlayer,
-                      placeholderText: 'No stronger player',
+                textInputAction: TextInputAction.next,
+                textCapitalization: TextCapitalization.words,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _positionController,
+                decoration: const InputDecoration(
+                  labelText: 'Position (optional)',
+                  border: OutlineInputBorder(),
+                ),
+                textInputAction: TextInputAction.next,
+                textCapitalization: TextCapitalization.words,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _baseRankingController,
+                decoration: const InputDecoration(
+                  labelText: 'Base ranking',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.done,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                onChanged: _handleBaseRankingTextChanged,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Selected ranking: $_sliderValue',
+                style: theme.textTheme.bodyMedium,
+              ),
+              Slider(
+                value: _sliderValue.toDouble(),
+                min: 1,
+                max: 100,
+                divisions: 99,
+                label: '$_sliderValue',
+                onChanged: (value) {
+                  final rounded = value.round();
+                  setState(() {
+                    _sliderValue = rounded;
+                    _isUpdatingFromSlider = true;
+                    _baseRankingController.text = rounded.toString();
+                    _isUpdatingFromSlider = false;
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 250),
+                      transitionBuilder: (child, animation) =>
+                          FadeTransition(opacity: animation, child: child),
+                      child: _NearestPlayerProfile(
+                        key: ValueKey(lowerPlayer?.playerId ?? 'lower-null'),
+                        label: 'Weaker player',
+                        player: lowerPlayer,
+                        placeholderText: 'No weaker player',
+                      ),
                     ),
                   ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 250),
+                      transitionBuilder: (child, animation) =>
+                          FadeTransition(opacity: animation, child: child),
+                      child: _NearestPlayerProfile(
+                        key: ValueKey(higherPlayer?.playerId ?? 'higher-null'),
+                        label: 'Stronger player',
+                        player: higherPlayer,
+                        placeholderText: 'No stronger player',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (_errorText != null) ...[
+                const SizedBox(height: 12),
+                SelectableText.rich(
+                  TextSpan(
+                    text: _errorText,
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                  textAlign: TextAlign.center,
                 ),
               ],
-            ),
-            if (_errorText != null) ...[
-              const SizedBox(height: 12),
-              SelectableText.rich(
-                TextSpan(
-                  text: _errorText,
-                  style: const TextStyle(color: Colors.red),
-                ),
-                textAlign: TextAlign.center,
-              ),
             ],
-          ],
+          ),
         ),
       ),
+
       actions: [
         TextButton(
           onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
@@ -292,51 +298,69 @@ class _NearestPlayerProfile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final nameStyle = theme.textTheme.bodyMedium?.copyWith(
+      fontWeight: FontWeight.w600,
+    );
+    final nameFontSize = nameStyle?.fontSize ?? 14;
+    final nameLineHeight = (nameStyle?.height ?? 1.2) * nameFontSize;
+    final nameBoxHeight = nameLineHeight * 2;
+    final bodyStyle = theme.textTheme.bodySmall;
+    final bodyFontSize = bodyStyle?.fontSize ?? 12;
+    final bodyLineHeight = (bodyStyle?.height ?? 1.2) * bodyFontSize;
+    final cardHeight = 24 + 6 + nameBoxHeight + 2 + bodyLineHeight + 24 + 4;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: theme.textTheme.labelSmall),
         const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: theme.colorScheme.outline),
+        SizedBox(
+          width: double.infinity,
+          height: cardHeight,
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: theme.colorScheme.outline),
+            ),
+            child: player == null
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.person_outline,
+                        color: theme.colorScheme.outline,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(placeholderText, style: theme.textTheme.bodySmall),
+                    ],
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.person, color: theme.colorScheme.primary),
+                      const SizedBox(height: 6),
+                      SizedBox(
+                        height: nameBoxHeight,
+                        child: Text(
+                          player!.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          softWrap: true,
+                          style: nameStyle,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Ranking: ${player!.ranking.toStringAsFixed(2)}',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
           ),
-          child: player == null
-              ? Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      Icons.person_outline,
-                      color: theme.colorScheme.outline,
-                    ),
-                    const SizedBox(height: 6),
-                    Text(placeholderText, style: theme.textTheme.bodySmall),
-                  ],
-                )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.person, color: theme.colorScheme.primary),
-                    const SizedBox(height: 6),
-                    Text(
-                      player!.name,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Ranking: ${player!.ranking.toStringAsFixed(2)}',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
         ),
       ],
     );

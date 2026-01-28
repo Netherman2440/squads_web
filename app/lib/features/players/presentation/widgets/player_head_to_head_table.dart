@@ -1,5 +1,7 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
+import 'package:app/core/app_config.dart';
 import 'package:app/features/players/domain/entities/player_head_to_head_stat.dart';
 
 enum HeadToHeadColumn {
@@ -18,7 +20,7 @@ enum HeadToHeadColumn {
   vsGoalsAgainst,
 }
 
-class PlayerHeadToHeadTable extends StatelessWidget {
+class PlayerHeadToHeadTable extends StatefulWidget {
   const PlayerHeadToHeadTable({
     super.key,
     required this.stats,
@@ -33,155 +35,246 @@ class PlayerHeadToHeadTable extends StatelessWidget {
   final void Function(HeadToHeadColumn column, bool ascending) onSort;
 
   @override
+  State<PlayerHeadToHeadTable> createState() => _PlayerHeadToHeadTableState();
+}
+
+class _PlayerHeadToHeadTableState extends State<PlayerHeadToHeadTable> {
+  final ScrollController _headerHorizontalController = ScrollController();
+  final ScrollController _bodyHorizontalController = ScrollController();
+  final ScrollController _leftVerticalController = ScrollController();
+  final ScrollController _bodyVerticalController = ScrollController();
+
+  bool _isSyncingHorizontal = false;
+  bool _isSyncingVertical = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _headerHorizontalController.addListener(
+      () => _syncHorizontal(_headerHorizontalController, _bodyHorizontalController),
+    );
+    _bodyHorizontalController.addListener(
+      () => _syncHorizontal(_bodyHorizontalController, _headerHorizontalController),
+    );
+    _leftVerticalController.addListener(
+      () => _syncVertical(_leftVerticalController, _bodyVerticalController),
+    );
+    _bodyVerticalController.addListener(
+      () => _syncVertical(_bodyVerticalController, _leftVerticalController),
+    );
+  }
+
+  @override
+  void dispose() {
+    _headerHorizontalController.dispose();
+    _bodyHorizontalController.dispose();
+    _leftVerticalController.dispose();
+    _bodyVerticalController.dispose();
+    super.dispose();
+  }
+
+  void _syncHorizontal(ScrollController source, ScrollController target) {
+    if (_isSyncingHorizontal || !source.hasClients || !target.hasClients) {
+      return;
+    }
+
+    _isSyncingHorizontal = true;
+    final max = target.position.maxScrollExtent;
+    final next = source.offset.clamp(0.0, max);
+    if ((target.offset - next).abs() > 0.5) {
+      target.jumpTo(next);
+    }
+    _isSyncingHorizontal = false;
+  }
+
+  void _syncVertical(ScrollController source, ScrollController target) {
+    if (_isSyncingVertical || !source.hasClients || !target.hasClients) {
+      return;
+    }
+
+    _isSyncingVertical = true;
+    final max = target.position.maxScrollExtent;
+    final next = source.offset.clamp(0.0, max);
+    if ((target.offset - next).abs() > 0.5) {
+      target.jumpTo(next);
+    }
+    _isSyncingVertical = false;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (stats.isEmpty) {
+    if (widget.stats.isEmpty) {
       return const Text('No head-to-head stats yet.');
     }
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isWide = constraints.maxWidth >= 900;
-        final highlightColor = Theme.of(
-          context,
-        ).colorScheme.primary.withValues(alpha: 0.22);
-
+        final theme = Theme.of(context);
+        final highlightColor = theme.colorScheme.primary.withValues(alpha: 0.22);
+        final isCompact = constraints.maxWidth < AppConfig.compactWidth;
+        final rowHeight = isCompact ? 44.0 : 48.0;
+        final playerColumnWidth = isCompact ? 140.0 : 180.0;
+        final statColumnWidth = isCompact ? 120.0 : 140.0;
         final columns = _orderedColumns();
-        final sorted = [...stats]..sort(
-            (a, b) =>
-                _compare(a, b, column: sortColumn, ascending: sortAscending),
+        final statColumns = columns
+            .where((column) => column != HeadToHeadColumn.player)
+            .toList(growable: false);
+
+        final sorted = [...widget.stats]
+          ..sort(
+            (a, b) => _compare(
+              a,
+              b,
+              column: widget.sortColumn,
+              ascending: widget.sortAscending,
+            ),
           );
 
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minWidth: constraints.maxWidth),
-            child: DataTable(
-              columnSpacing: 16,
-              sortAscending: sortAscending,
-              sortColumnIndex: columns.indexOf(sortColumn),
-              columns: columns
-                  .map(
-                    (column) => DataColumn(
-                      label: _cellWrapper(
-                        column,
-                        _columnLabel(column, isWide: isWide),
-                        highlightColor,
+        final tableHeight = _tableHeight(
+          context,
+          rowHeight: rowHeight,
+          rowCount: sorted.length,
+        );
+
+        return SizedBox(
+          height: tableHeight,
+          child: Column(
+            children: [
+              SizedBox(
+                height: rowHeight,
+                child: Row(
+                  children: [
+                    _HeaderCell(
+                      width: playerColumnWidth,
+                      label: _columnLabel(HeadToHeadColumn.player),
+                      isSelected: widget.sortColumn == HeadToHeadColumn.player,
+                      isAscending: widget.sortAscending,
+                      highlightColor: highlightColor,
+                      onTap: () => _handleSort(HeadToHeadColumn.player),
+                    ),
+                    Expanded(
+                      child: ScrollConfiguration(
+                        behavior: const _TableScrollBehavior(),
+                        child: SingleChildScrollView(
+                          controller: _headerHorizontalController,
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              for (final column in statColumns)
+                                _HeaderCell(
+                                  width: statColumnWidth,
+                                  label: _columnLabel(column),
+                                  isSelected: widget.sortColumn == column,
+                                  isAscending: widget.sortAscending,
+                                  highlightColor: highlightColor,
+                                  onTap: () => _handleSort(column),
+                                ),
+                            ],
+                          ),
+                        ),
                       ),
-                      onSort: (_, _) => _handleSort(column),
                     ),
-                  )
-                  .toList(growable: false),
-              rows: sorted
-                  .map(
-                    (stat) => DataRow(
-                      cells: [
-                        DataCell(
-                          _cellWrapper(
-                            HeadToHeadColumn.player,
-                            Text(stat.otherName),
-                            highlightColor,
-                          ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: playerColumnWidth,
+                      child: ScrollConfiguration(
+                        behavior: const _TableScrollBehavior(),
+                        child: ListView.builder(
+                          controller: _leftVerticalController,
+                          itemExtent: rowHeight,
+                          itemCount: sorted.length,
+                          itemBuilder: (context, index) {
+                            final stat = sorted[index];
+                            return _BodyCell(
+                              width: playerColumnWidth,
+                              value: stat.otherName,
+                              isSelected:
+                                  widget.sortColumn == HeadToHeadColumn.player,
+                              highlightColor: highlightColor,
+                              alignStart: true,
+                            );
+                          },
                         ),
-                        DataCell(
-                          _cellWrapper(
-                            HeadToHeadColumn.togetherMatches,
-                            Text(stat.togetherMatches.toString()),
-                            highlightColor,
-                          ),
-                        ),
-                        DataCell(
-                          _cellWrapper(
-                            HeadToHeadColumn.togetherWins,
-                            Text(stat.togetherWins.toString()),
-                            highlightColor,
-                          ),
-                        ),
-                        DataCell(
-                          _cellWrapper(
-                            HeadToHeadColumn.togetherDraws,
-                            Text(stat.togetherDraws.toString()),
-                            highlightColor,
-                          ),
-                        ),
-                        DataCell(
-                          _cellWrapper(
-                            HeadToHeadColumn.togetherLosses,
-                            Text(stat.togetherLosses.toString()),
-                            highlightColor,
-                          ),
-                        ),
-                        DataCell(
-                          _cellWrapper(
-                            HeadToHeadColumn.togetherGoalsFor,
-                            Text(stat.togetherGoalsFor.toString()),
-                            highlightColor,
-                          ),
-                        ),
-                        DataCell(
-                          _cellWrapper(
-                            HeadToHeadColumn.togetherGoalsAgainst,
-                            Text(stat.togetherGoalsAgainst.toString()),
-                            highlightColor,
-                          ),
-                        ),
-                        DataCell(
-                          _cellWrapper(
-                            HeadToHeadColumn.vsMatches,
-                            Text(stat.vsMatches.toString()),
-                            highlightColor,
-                          ),
-                        ),
-                        DataCell(
-                          _cellWrapper(
-                            HeadToHeadColumn.vsWins,
-                            Text(stat.vsWins.toString()),
-                            highlightColor,
-                          ),
-                        ),
-                        DataCell(
-                          _cellWrapper(
-                            HeadToHeadColumn.vsDraws,
-                            Text(stat.vsDraws.toString()),
-                            highlightColor,
-                          ),
-                        ),
-                        DataCell(
-                          _cellWrapper(
-                            HeadToHeadColumn.vsLosses,
-                            Text(stat.vsLosses.toString()),
-                            highlightColor,
-                          ),
-                        ),
-                        DataCell(
-                          _cellWrapper(
-                            HeadToHeadColumn.vsGoalsFor,
-                            Text(stat.vsGoalsFor.toString()),
-                            highlightColor,
-                          ),
-                        ),
-                        DataCell(
-                          _cellWrapper(
-                            HeadToHeadColumn.vsGoalsAgainst,
-                            Text(stat.vsGoalsAgainst.toString()),
-                            highlightColor,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  )
-                  .toList(growable: false),
-            ),
+                    Expanded(
+                      child: Scrollbar(
+                        controller: _bodyHorizontalController,
+                        thumbVisibility: true,
+                        child: ScrollConfiguration(
+                          behavior: const _TableScrollBehavior(),
+                          child: SingleChildScrollView(
+                            controller: _bodyHorizontalController,
+                            scrollDirection: Axis.horizontal,
+                            child: SizedBox(
+                              width: statColumns.length * statColumnWidth,
+                              child: Scrollbar(
+                                controller: _bodyVerticalController,
+                                thumbVisibility: true,
+                                child: ScrollConfiguration(
+                                  behavior: const _TableScrollBehavior(),
+                                  child: ListView.builder(
+                                    controller: _bodyVerticalController,
+                                    itemExtent: rowHeight,
+                                    itemCount: sorted.length,
+                                    itemBuilder: (context, index) {
+                                      final stat = sorted[index];
+                                      return Row(
+                                        children: [
+                                          for (final column in statColumns)
+                                            _BodyCell(
+                                              width: statColumnWidth,
+                                              value: _valueFor(stat, column),
+                                              isSelected:
+                                                  widget.sortColumn == column,
+                                              highlightColor: highlightColor,
+                                            ),
+                                        ],
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         );
       },
     );
   }
 
+  double _tableHeight(
+    BuildContext context, {
+    required double rowHeight,
+    required int rowCount,
+  }) {
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final maxHeight = screenHeight * 0.6;
+    const minHeight = 240.0;
+    final upperBound = maxHeight < minHeight ? minHeight : maxHeight;
+    final target = rowHeight * (rowCount + 1) + 12;
+    final clamped = target.clamp(minHeight, upperBound);
+    return (clamped as num).toDouble();
+  }
+
   void _handleSort(HeadToHeadColumn column) {
-    if (column == sortColumn) {
-      onSort(column, !sortAscending);
+    if (column == widget.sortColumn) {
+      widget.onSort(column, !widget.sortAscending);
     } else {
-      onSort(column, false);
+      widget.onSort(column, false);
     }
   }
 
@@ -203,75 +296,66 @@ class PlayerHeadToHeadTable extends StatelessWidget {
     ];
   }
 
-  Widget _columnLabel(HeadToHeadColumn column, {required bool isWide}) {
+  String _columnLabel(HeadToHeadColumn column) {
     switch (column) {
       case HeadToHeadColumn.player:
-        return const Text('Gracz');
+        return 'Gracz';
       case HeadToHeadColumn.togetherMatches:
-        return _label(short: 'R M', full: 'Razem mecze', isWide: isWide);
+        return 'Razem mecze';
       case HeadToHeadColumn.togetherWins:
-        return _label(short: 'R W', full: 'Razem wygrane', isWide: isWide);
+        return 'Razem wygrane';
       case HeadToHeadColumn.togetherDraws:
-        return _label(short: 'R D', full: 'Razem remisy', isWide: isWide);
+        return 'Razem remisy';
       case HeadToHeadColumn.togetherLosses:
-        return _label(short: 'R L', full: 'Razem porażki', isWide: isWide);
+        return 'Razem porażki';
       case HeadToHeadColumn.togetherGoalsFor:
-        return _label(
-          short: 'R GS',
-          full: 'Razem gole strzelone',
-          isWide: isWide,
-        );
+        return 'Razem gole strzelone';
       case HeadToHeadColumn.togetherGoalsAgainst:
-        return _label(
-          short: 'R GA',
-          full: 'Razem gole stracone',
-          isWide: isWide,
-        );
+        return 'Razem gole stracone';
       case HeadToHeadColumn.vsMatches:
-        return _label(short: 'VS M', full: 'Przeciwko mecze', isWide: isWide);
+        return 'Przeciwko mecze';
       case HeadToHeadColumn.vsWins:
-        return _label(short: 'VS W', full: 'Przeciwko wygrane', isWide: isWide);
+        return 'Przeciwko wygrane';
       case HeadToHeadColumn.vsDraws:
-        return _label(short: 'VS D', full: 'Przeciwko remisy', isWide: isWide);
+        return 'Przeciwko remisy';
       case HeadToHeadColumn.vsLosses:
-        return _label(short: 'VS L', full: 'Przeciwko porażki', isWide: isWide);
+        return 'Przeciwko porażki';
       case HeadToHeadColumn.vsGoalsFor:
-        return _label(
-          short: 'VS GS',
-          full: 'Przeciwko gole strzelone',
-          isWide: isWide,
-        );
+        return 'Przeciwko gole strzelone';
       case HeadToHeadColumn.vsGoalsAgainst:
-        return _label(
-          short: 'VS GA',
-          full: 'Przeciwko gole stracone',
-          isWide: isWide,
-        );
+        return 'Przeciwko gole stracone';
     }
   }
 
-  Widget _label({
-    required String short,
-    required String full,
-    required bool isWide,
-  }) {
-    if (isWide) {
-      return Text(full);
+  String _valueFor(PlayerHeadToHeadStat stat, HeadToHeadColumn column) {
+    switch (column) {
+      case HeadToHeadColumn.togetherMatches:
+        return stat.togetherMatches.toString();
+      case HeadToHeadColumn.togetherWins:
+        return stat.togetherWins.toString();
+      case HeadToHeadColumn.togetherDraws:
+        return stat.togetherDraws.toString();
+      case HeadToHeadColumn.togetherLosses:
+        return stat.togetherLosses.toString();
+      case HeadToHeadColumn.togetherGoalsFor:
+        return stat.togetherGoalsFor.toString();
+      case HeadToHeadColumn.togetherGoalsAgainst:
+        return stat.togetherGoalsAgainst.toString();
+      case HeadToHeadColumn.vsMatches:
+        return stat.vsMatches.toString();
+      case HeadToHeadColumn.vsWins:
+        return stat.vsWins.toString();
+      case HeadToHeadColumn.vsDraws:
+        return stat.vsDraws.toString();
+      case HeadToHeadColumn.vsLosses:
+        return stat.vsLosses.toString();
+      case HeadToHeadColumn.vsGoalsFor:
+        return stat.vsGoalsFor.toString();
+      case HeadToHeadColumn.vsGoalsAgainst:
+        return stat.vsGoalsAgainst.toString();
+      case HeadToHeadColumn.player:
+        return stat.otherName;
     }
-    return Tooltip(message: full, child: Text(short));
-  }
-
-  Widget _cellWrapper(
-    HeadToHeadColumn column,
-    Widget child,
-    Color highlightColor,
-  ) {
-    final isSelected = column == sortColumn;
-    return Container(
-      color: isSelected ? highlightColor : Colors.transparent,
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-      child: child,
-    );
   }
 
   int _compare(
@@ -335,8 +419,7 @@ class PlayerHeadToHeadTable extends StatelessWidget {
       return result;
     }
 
-    if (_isTogetherColumn(column) &&
-        column != HeadToHeadColumn.togetherMatches) {
+    if (_isTogetherColumn(column) && column != HeadToHeadColumn.togetherMatches) {
       result = compareNum(a.togetherMatches, b.togetherMatches);
     } else if (_isVsColumn(column) && column != HeadToHeadColumn.vsMatches) {
       result = compareNum(a.vsMatches, b.vsMatches);
@@ -366,4 +449,104 @@ class PlayerHeadToHeadTable extends StatelessWidget {
         column == HeadToHeadColumn.vsGoalsFor ||
         column == HeadToHeadColumn.vsGoalsAgainst;
   }
+}
+
+class _HeaderCell extends StatelessWidget {
+  const _HeaderCell({
+    required this.width,
+    required this.label,
+    required this.isSelected,
+    required this.isAscending,
+    required this.highlightColor,
+    required this.onTap,
+  });
+
+  final double width;
+  final String label;
+  final bool isSelected;
+  final bool isAscending;
+  final Color highlightColor;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final icon = isSelected
+        ? Icon(
+            isAscending ? Icons.arrow_drop_up : Icons.arrow_drop_down,
+            size: 18,
+          )
+        : null;
+
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        width: width,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        color: isSelected ? highlightColor : Colors.transparent,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            if (icon != null) icon,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BodyCell extends StatelessWidget {
+  const _BodyCell({
+    required this.width,
+    required this.value,
+    required this.isSelected,
+    required this.highlightColor,
+    this.alignStart = false,
+  });
+
+  final double width;
+  final String value;
+  final bool isSelected;
+  final Color highlightColor;
+  final bool alignStart;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      alignment: alignStart ? Alignment.centerLeft : Alignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      color: isSelected ? highlightColor : Colors.transparent,
+      child: Text(
+        value,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        textAlign: alignStart ? TextAlign.left : TextAlign.center,
+      ),
+    );
+  }
+}
+
+class _TableScrollBehavior extends MaterialScrollBehavior {
+  const _TableScrollBehavior();
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.trackpad,
+        PointerDeviceKind.stylus,
+        PointerDeviceKind.unknown,
+      };
 }

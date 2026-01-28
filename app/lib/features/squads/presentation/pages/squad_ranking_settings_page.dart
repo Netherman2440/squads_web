@@ -46,7 +46,7 @@ class _SquadRankingSettingsPageState
     return Scaffold(
       appBar: AppBar(title: const Text('Ranking settings')),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: squadState.when(
             loading: () => const Center(child: CircularProgressIndicator()),
@@ -92,8 +92,8 @@ class _SquadRankingSettingsPageState
                           });
                         },
                         optionLabel: rankingUpdateDraft
-                            ? 'Disable ranking updates'
-                            : 'Enable ranking updates',
+                            ? 'Disable updates'
+                            : 'Enable updates',
                         onOptionPressed: () async {
                           setState(() {
                             _rankingUpdateDraft = !rankingUpdateDraft;
@@ -371,6 +371,8 @@ class _TestMatchPreviewState extends State<_TestMatchPreview> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final isCompact =
+        MediaQuery.sizeOf(context).width < AppConfig.compactWidth;
 
     final homeScore = _tryParseInt(_homeScoreController.text);
     final awayScore = _tryParseInt(_awayScoreController.text);
@@ -425,20 +427,27 @@ class _TestMatchPreviewState extends State<_TestMatchPreview> {
                 Expanded(
                   child: _TestPlayerCard(
                     title: widget.useExperienceFactor
-                        ? 'New player (1 match)'
+                        ? 'New player'
                         : 'Equal player',
+                    detailLine:
+                        widget.useExperienceFactor ? '1 match' : null,
                     sideLabel: 'Home',
                     delta: homeDelta,
+                    compact: isCompact,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: _TestPlayerCard(
                     title: widget.useExperienceFactor
-                        ? 'Experienced player (${AppConfig.maxMatchesPlayed} matches)'
+                        ? 'Experienced player'
                         : 'Equal player',
+                    detailLine: widget.useExperienceFactor
+                        ? '${AppConfig.maxMatchesPlayed} matches'
+                        : null,
                     sideLabel: 'Away',
                     delta: awayDelta,
+                    compact: isCompact,
                   ),
                 ),
               ],
@@ -542,13 +551,17 @@ class _MatchScoreInputRow extends StatelessWidget {
 class _TestPlayerCard extends StatelessWidget {
   const _TestPlayerCard({
     required this.title,
+    required this.detailLine,
     required this.sideLabel,
     required this.delta,
+    required this.compact,
   });
 
   final String title;
+  final String? detailLine;
   final String sideLabel;
   final double? delta;
+  final bool compact;
 
   String _formatDelta(double value) {
     final sign = value > 0 ? '+' : '';
@@ -582,60 +595,113 @@ class _TestPlayerCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: colorScheme.outlineVariant),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 10,
-                height: 10,
-                decoration: BoxDecoration(
-                  color: sideLabel == 'Home'
-                      ? colorScheme.primary
-                      : colorScheme.tertiary,
-                  borderRadius: BorderRadius.circular(3),
+      child: compact
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: sideLabel == 'Home'
+                            ? colorScheme.primary
+                            : colorScheme.tertiary,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: theme.textTheme.titleMedium,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  title,
-                  style: theme.textTheme.titleMedium,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                if (detailLine != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    detailLine!,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 8),
+                Text(
+                  'Ranking',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 2),
-          Text(
-            sideLabel,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurfaceVariant,
+                const SizedBox(height: 4),
+                Text(
+                  deltaText,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: deltaColor,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: sideLabel == 'Home'
+                            ? colorScheme.primary
+                            : colorScheme.tertiary,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: theme.textTheme.titleMedium,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  sideLabel,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Δ ranking',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    Text(
+                      deltaText,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: deltaColor,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Δ ranking',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-              Text(
-                deltaText,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: deltaColor,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
     );
   }
 }

@@ -52,7 +52,7 @@ class _PlayersPageState extends ConsumerState<PlayersPage> {
         final visiblePlayers = _applySearchAndSort(players);
         return Column(
           children: [
-            _buildSearchAndSortControls(),
+            _buildSearchControls(),
             Expanded(child: _buildPlayersList(visiblePlayers)),
           ],
         );
@@ -82,7 +82,29 @@ class _PlayersPageState extends ConsumerState<PlayersPage> {
     });
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Players')),
+      appBar: AppBar(
+        title: const Text('Players'),
+        actions: [
+          PopupMenuButton<_PlayerSortOption>(
+            tooltip: 'Sort',
+            icon: const Icon(Icons.filter_alt),
+            initialValue: _sortOption,
+            onSelected: (value) {
+              setState(() {
+                _sortOption = value;
+              });
+            },
+            itemBuilder: (context) => _PlayerSortOption.values
+                .map(
+                  (option) => PopupMenuItem<_PlayerSortOption>(
+                    value: option,
+                    child: Text(_sortLabel(option)),
+                  ),
+                )
+                .toList(growable: false),
+          ),
+        ],
+      ),
       body: _buildBody(state),
       floatingActionButton: canAdd
           ? FloatingActionButton.extended(
@@ -132,62 +154,22 @@ class _PlayersPageState extends ConsumerState<PlayersPage> {
     final visiblePlayers = _applySearchAndSort(cachedPlayers);
     return Column(
       children: [
-        _buildSearchAndSortControls(),
+        _buildSearchControls(),
         Expanded(child: _buildPlayersList(visiblePlayers)),
       ],
     );
   }
 
-  Widget _buildSearchAndSortControls() {
+  Widget _buildSearchControls() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final isNarrow = constraints.maxWidth < 600;
-
-          final searchField = TextField(
-            decoration: const InputDecoration(
-              labelText: 'Search',
-              prefixIcon: Icon(Icons.search),
-            ),
-            textCapitalization: TextCapitalization.none,
-            onChanged: (value) => setState(() => _searchQuery = value),
-          );
-
-          final sortDropdown = DropdownButtonFormField<_PlayerSortOption>(
-            initialValue: _sortOption,
-            decoration: const InputDecoration(
-              labelText: 'Sort',
-              prefixIcon: Icon(Icons.sort),
-            ),
-            items: _PlayerSortOption.values
-                .map(
-                  (option) => DropdownMenuItem(
-                    value: option,
-                    child: Text(_sortLabel(option)),
-                  ),
-                )
-                .toList(growable: false),
-            onChanged: (value) {
-              if (value == null) return;
-              setState(() => _sortOption = value);
-            },
-          );
-
-          if (isNarrow) {
-            return Column(
-              children: [searchField, const SizedBox(height: 12), sortDropdown],
-            );
-          }
-
-          return Row(
-            children: [
-              Expanded(child: searchField),
-              const SizedBox(width: 12),
-              SizedBox(width: 240, child: sortDropdown),
-            ],
-          );
-        },
+      child: TextField(
+        decoration: const InputDecoration(
+          labelText: 'Search',
+          prefixIcon: Icon(Icons.search),
+        ),
+        textCapitalization: TextCapitalization.none,
+        onChanged: (value) => setState(() => _searchQuery = value),
       ),
     );
   }

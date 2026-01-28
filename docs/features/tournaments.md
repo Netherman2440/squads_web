@@ -28,3 +28,73 @@
 - Uzytkownik wpisuje wynik meczu (home/away + opcjonalne metadane).
 - Mecz pojawia sie w historii turnieju, a tabela wynikow aktualizuje sie po zapisie.
 - Wynik turniejowy wplywa tylko na zawodnikow bioracych udzial w danym meczu.
+
+---
+
+DB:
+### 1.6. `tournaments`
+
+Turnieje i ich akceptowany zestaw draftu.
+
+| Kolumna                | Typ         | Ograniczenia                                        |
+| ---------------------- | ----------- | --------------------------------------------------- |
+| `tournament_id`        | UUID        | PK                                                  |
+| `squad_id`             | UUID        | NOT NULL; FK → `squads(squad_id)` ON DELETE CASCADE |
+| `name`                 | TEXT        | NULLABLE                                            |
+[usunąćy kolumnę expectedteamscount]
+| `created_at`           | TIMESTAMPTZ | NOT NULL DEFAULT now()                              |
+
+### 1.7. `tournament_teams`
+
+Tożsamości drużyn turniejowych (edytowalne nazwy/kolory).
+
+| Kolumna              | Typ         | Ograniczenia                                                  |
+| -------------------- | ----------- | ------------------------------------------------------------- |
+| `tournament_team_id` | UUID        | PK          |
+| `tournament_id`      | UUID        | NOT NULL; FK → `tournaments(tournament_id)` ON DELETE CASCADE |
+| `name`               | TEXT        | NULLABLE                                                      |
+| `color`              | TEXT        | NULLABLE                                                      |
+| `created_at`         | TIMESTAMPTZ | NOT NULL DEFAULT now()                                        |
+
+
+### 1.8. `tournament_team_players`
+
+Składy drużyn turniejowych.
+
+| Kolumna              | Typ  | Ograniczenia                                                                                                                               |
+| -------------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `tournament_team_id` | UUID | NOT NULL; FK → `tournament_teams(tournament_team_id)` ON DELETE CASCADE                                                                    |
+| `tournament_id`      | UUID | NOT NULL;  FK → `tournaments(tournament_id)` ON DELETE CASCADE |
+| `player_id`          | UUID | NOT NULL; FK → `players(player_id)` ON DELETE CASCADE        
+
+# Domain:
+## draftRepository:
+createDraft(nowy parametr liczba drużyn) minimum dwie max 4
+Przystosowanie greedy algorytmu do wielu drużyn. 
+W przyszłości wejdą tutaj też relacje czyli zestawy predefiniowanych pakietów zawodników (np. że tych 3 musi być razem - możemy to wziąć pod uwagę)
+
+
+class tournament
+id
+squad_id
+created_at
+list<Team>? tournamentTeams  (używamy zwyczajnego team, ale parsujemy dane z tablicy tournament_teams i tournament_team_players )
+list<Match>? tournamentMatches 
+
+tournamentsRepository:
+getTournaments(squadId) 
+
+createTournament(CreateTournament data)
+updateTournament(name)
+deleteTournament(tournamentId)
+updateTournamentTeams(list<Team> teams) 
+
+playerRepository
+getTournamentPlayers()
+matchRepository
+getTournamentMatches()
+Infra:
+supabase calls, ważne żeby zadbać o filtrowanie meczy, drużyn i team_players po tournament id to dużo urpości 
+
+
+Application

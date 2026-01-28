@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app/core/app_router.dart';
+import 'package:app/core/app_config.dart';
 
 import 'package:app/features/players/domain/entities/player.dart';
 
@@ -17,6 +18,7 @@ class PlayersListWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isNarrow = MediaQuery.sizeOf(context).width < AppConfig.mobileWidth;
 
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -24,6 +26,11 @@ class PlayersListWidget extends StatelessWidget {
       itemBuilder: (context, index) {
         final player = players[index];
         final difference = player.ranking - player.baseRanking;
+        final positionText = player.position?.trim();
+        final hasPosition =
+            positionText != null &&
+            positionText.isNotEmpty &&
+            positionText.toLowerCase() != 'none';
 
         return Card(
           child: ListTile(
@@ -42,36 +49,51 @@ class PlayersListWidget extends StatelessWidget {
               ),
             ),
             title: Text(player.name),
-            subtitle: Row(
+            subtitle: Wrap(
+              spacing: 12,
+              runSpacing: 4,
               children: [
-                if (player.position != null &&
-                    player.position!.trim().isNotEmpty) ...[
-                  Icon(
-                    Icons.sports_soccer,
-                    size: 16,
-                    color: theme.colorScheme.primary,
+                if (hasPosition) ...[
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.sports_soccer,
+                        size: 16,
+                        color: theme.colorScheme.primary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(positionText),
+                    ],
                   ),
-                  const SizedBox(width: 4),
-                  Text(player.position!),
-                  const SizedBox(width: 12),
                 ],
-                Icon(
-                  Icons.star_border,
-                  size: 16,
-                  color: theme.colorScheme.secondary,
+                if (!isNarrow) ...[
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.star_border,
+                        size: 16,
+                        color: theme.colorScheme.secondary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text('Base: ${player.baseRanking}'),
+                    ],
+                  ),
+                ],
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.insights,
+                      size: 16,
+                      color: theme.colorScheme.tertiary,
+                    ),
+                    const SizedBox(width: 4),
+                    Text('Ranking: ${player.ranking.toStringAsFixed(2)}'),
+                  ],
                 ),
-                const SizedBox(width: 4),
-                Text('Base: ${player.baseRanking}'),
-                const SizedBox(width: 12),
-                Icon(
-                  Icons.insights,
-                  size: 16,
-                  color: theme.colorScheme.tertiary,
-                ),
-                const SizedBox(width: 4),
-                Text('Ranking: ${player.ranking.toStringAsFixed(2)}'),
                 if (difference.abs() > 0) ...[
-                  const SizedBox(width: 12),
                   _RankingDifference(difference: difference),
                 ],
               ],

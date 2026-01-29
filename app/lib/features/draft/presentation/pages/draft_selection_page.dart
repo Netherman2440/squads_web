@@ -159,7 +159,7 @@ class _DraftSelectionPageState extends ConsumerState<DraftSelectionPage> {
   }
 }
 
-class _AvailablePlayersPanel extends StatelessWidget {
+class _AvailablePlayersPanel extends StatefulWidget {
   const _AvailablePlayersPanel({
     required this.players,
     required this.selectedCount,
@@ -175,6 +175,25 @@ class _AvailablePlayersPanel extends StatelessWidget {
   final bool compact;
   final ValueChanged<String> onSearchChanged;
   final ValueChanged<String> onToggle;
+
+  @override
+  State<_AvailablePlayersPanel> createState() => _AvailablePlayersPanelState();
+}
+
+class _AvailablePlayersPanelState extends State<_AvailablePlayersPanel> {
+  late final ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -195,25 +214,29 @@ class _AvailablePlayersPanel extends StatelessWidget {
                 prefixIcon: Icon(Icons.search),
               ),
               textCapitalization: TextCapitalization.none,
-              onChanged: onSearchChanged,
+              onChanged: widget.onSearchChanged,
             ),
             const SizedBox(height: 8),
             const SizedBox(height: 8),
             Expanded(
-              child: players.isEmpty
+              child: widget.players.isEmpty
                   ? const Center(child: Text('No available players.'))
-                  : ListView.builder(
-                      itemCount: players.length,
-                      itemBuilder: (context, index) {
-                        final p = players[index];
-                        return DraftDraggablePlayerTile(
-                          player: p,
-                          trailing: const Icon(Icons.add_circle_outline),
-                          onTap: () => onToggle(p.playerId),
-                          dragData: p.playerId,
-                          compact: compact,
-                        );
-                      },
+                  : Scrollbar(
+                      controller: _scrollController,
+                      child: ListView.builder(
+                        controller: _scrollController,
+                        itemCount: widget.players.length,
+                        itemBuilder: (context, index) {
+                          final p = widget.players[index];
+                          return DraftDraggablePlayerTile(
+                            player: p,
+                            trailing: const Icon(Icons.add_circle_outline),
+                            onTap: () => widget.onToggle(p.playerId),
+                            dragData: p.playerId,
+                            compact: widget.compact,
+                          );
+                        },
+                      ),
                     ),
             ),
           ],
@@ -223,7 +246,7 @@ class _AvailablePlayersPanel extends StatelessWidget {
   }
 }
 
-class _SelectedPlayersPanel extends StatelessWidget {
+class _SelectedPlayersPanel extends StatefulWidget {
   const _SelectedPlayersPanel({
     required this.players,
     required this.selectedCount,
@@ -239,6 +262,25 @@ class _SelectedPlayersPanel extends StatelessWidget {
   final VoidCallback onClear;
 
   @override
+  State<_SelectedPlayersPanel> createState() => _SelectedPlayersPanelState();
+}
+
+class _SelectedPlayersPanelState extends State<_SelectedPlayersPanel> {
+  late final ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
@@ -250,31 +292,35 @@ class _SelectedPlayersPanel extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Selected players ($selectedCount)',
+                  'Selected players (${widget.selectedCount})',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 TextButton(
-                  onPressed: selectedCount == 0 ? null : onClear,
+                  onPressed: widget.selectedCount == 0 ? null : widget.onClear,
                   child: const Text('Clear'),
                 ),
               ],
             ),
             const SizedBox(height: 8),
             Expanded(
-              child: players.isEmpty
+              child: widget.players.isEmpty
                   ? const Center(child: Text('No players selected yet.'))
-                  : ListView.builder(
-                      itemCount: players.length,
-                      itemBuilder: (context, index) {
-                        final p = players[index];
-                        return DraftDraggablePlayerTile(
-                          player: p,
-                          trailing: const Icon(Icons.remove_circle_outline),
-                          onTap: () => onToggle(p.playerId),
-                          dragData: p.playerId,
-                          compact: compact,
-                        );
-                      },
+                  : Scrollbar(
+                      controller: _scrollController,
+                      child: ListView.builder(
+                        controller: _scrollController,
+                        itemCount: widget.players.length,
+                        itemBuilder: (context, index) {
+                          final p = widget.players[index];
+                          return DraftDraggablePlayerTile(
+                            player: p,
+                            trailing: const Icon(Icons.remove_circle_outline),
+                            onTap: () => widget.onToggle(p.playerId),
+                            dragData: p.playerId,
+                            compact: widget.compact,
+                          );
+                        },
+                      ),
                     ),
             ),
           ],

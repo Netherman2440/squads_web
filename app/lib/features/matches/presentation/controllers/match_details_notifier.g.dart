@@ -13,7 +13,8 @@ part of 'match_details_notifier.dart';
 const matchDetailsProvider = MatchDetailsNotifierFamily._();
 
 final class MatchDetailsNotifierProvider
-    extends $NotifierProvider<MatchDetailsNotifier, AsyncValue<Match>> {
+    extends
+        $NotifierProvider<MatchDetailsNotifier, AsyncValue<MatchDetailsDto>> {
   const MatchDetailsNotifierProvider._({
     required MatchDetailsNotifierFamily super.from,
     required String super.argument,
@@ -40,10 +41,10 @@ final class MatchDetailsNotifierProvider
   MatchDetailsNotifier create() => MatchDetailsNotifier();
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(AsyncValue<Match> value) {
+  Override overrideWithValue(AsyncValue<MatchDetailsDto> value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<AsyncValue<Match>>(value),
+      providerOverride: $SyncValueProvider<AsyncValue<MatchDetailsDto>>(value),
     );
   }
 
@@ -65,9 +66,9 @@ final class MatchDetailsNotifierFamily extends $Family
     with
         $ClassFamilyOverride<
           MatchDetailsNotifier,
-          AsyncValue<Match>,
-          AsyncValue<Match>,
-          AsyncValue<Match>,
+          AsyncValue<MatchDetailsDto>,
+          AsyncValue<MatchDetailsDto>,
+          AsyncValue<MatchDetailsDto>,
           String
         > {
   const MatchDetailsNotifierFamily._()
@@ -86,21 +87,27 @@ final class MatchDetailsNotifierFamily extends $Family
   String toString() => r'matchDetailsProvider';
 }
 
-abstract class _$MatchDetailsNotifier extends $Notifier<AsyncValue<Match>> {
+abstract class _$MatchDetailsNotifier
+    extends $Notifier<AsyncValue<MatchDetailsDto>> {
   late final _$args = ref.$arg as String;
   String get matchId => _$args;
 
-  AsyncValue<Match> build(String matchId);
+  AsyncValue<MatchDetailsDto> build(String matchId);
   @$mustCallSuper
   @override
   void runBuild() {
     final created = build(_$args);
-    final ref = this.ref as $Ref<AsyncValue<Match>, AsyncValue<Match>>;
+    final ref =
+        this.ref
+            as $Ref<AsyncValue<MatchDetailsDto>, AsyncValue<MatchDetailsDto>>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<AsyncValue<Match>, AsyncValue<Match>>,
-              AsyncValue<Match>,
+              AnyNotifier<
+                AsyncValue<MatchDetailsDto>,
+                AsyncValue<MatchDetailsDto>
+              >,
+              AsyncValue<MatchDetailsDto>,
               Object?,
               Object?
             >;

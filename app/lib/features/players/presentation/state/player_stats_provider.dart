@@ -9,24 +9,22 @@ class PlayerStatsViewState {
   final PlayerStats stats;
   final List<PlayerHeadToHeadStat> headToHead;
 
-  const PlayerStatsViewState({
-    required this.stats,
-    required this.headToHead,
-  });
+  const PlayerStatsViewState({required this.stats, required this.headToHead});
 }
 
-final playerStatsProvider =
-    FutureProvider.family<PlayerStatsViewState, String>((ref, playerId) async {
-  final statsUseCase = ref.read(getPlayerStatsUseCaseProvider);
-  final headToHeadUseCase = ref.read(getPlayerHeadToHeadStatsUseCaseProvider);
+final playerStatsProvider = FutureProvider.family<PlayerStatsViewState, String>(
+  (ref, playerId) async {
+    final statsUseCase = ref.read(getPlayerStatsUseCaseProvider);
+    final headToHeadUseCase = ref.read(getPlayerHeadToHeadStatsUseCaseProvider);
 
-  final results = await Future.wait([
-    statsUseCase.execute(playerId: playerId),
-    headToHeadUseCase.execute(playerId: playerId),
-  ]);
+    final results = await Future.wait([
+      statsUseCase.execute(playerId: playerId),
+      headToHeadUseCase.execute(playerId: playerId),
+    ]);
 
-  return PlayerStatsViewState(
-    stats: results[0] as PlayerStats,
-    headToHead: results[1] as List<PlayerHeadToHeadStat>,
-  );
-});
+    return PlayerStatsViewState(
+      stats: results[0] as PlayerStats,
+      headToHead: results[1] as List<PlayerHeadToHeadStat>,
+    );
+  },
+);

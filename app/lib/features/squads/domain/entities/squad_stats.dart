@@ -43,8 +43,7 @@ class SquadStats {
       totalGoals: (map['total_goals'] as num?)?.toInt() ?? 0,
       totalHomeGoals: (map['total_home_goals'] as num?)?.toInt() ?? 0,
       totalAwayGoals: (map['total_away_goals'] as num?)?.toInt() ?? 0,
-      avgGoalsPerMatch:
-          (map['avg_goals_per_match'] as num?)?.toDouble() ?? 0,
+      avgGoalsPerMatch: (map['avg_goals_per_match'] as num?)?.toDouble() ?? 0,
       avgHomeGoals: (map['avg_home_goals'] as num?)?.toDouble() ?? 0,
       avgAwayGoals: (map['avg_away_goals'] as num?)?.toDouble() ?? 0,
       playersCount: (map['players_count'] as num?)?.toInt() ?? 0,

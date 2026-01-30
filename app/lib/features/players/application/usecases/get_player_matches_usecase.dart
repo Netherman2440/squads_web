@@ -31,7 +31,9 @@ class GetPlayerMatchesUseCase {
   }
 }
 
-final getPlayerMatchesUseCaseProvider = Provider<GetPlayerMatchesUseCase>((ref) {
+final getPlayerMatchesUseCaseProvider = Provider<GetPlayerMatchesUseCase>((
+  ref,
+) {
   return GetPlayerMatchesUseCase(
     ref.read(rankingRepositoryProvider),
     ref.read(matchRepositoryProvider),

@@ -3,7 +3,7 @@ import 'package:app/features/auth/domain/entities/auth_entity.dart';
 import 'package:app/features/auth/presentation/providers/auth_notifier.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/core/error/failure.dart';
-import 'package:app/features/matches/domain/entities/match.dart';
+import 'package:app/features/matches/application/dto/match_details_dto.dart';
 import 'package:app/features/matches/domain/repositories/match_repository.dart';
 import 'package:app/features/matches/domain/repositories/team_repository.dart';
 import 'package:app/features/matches/matches_providers.dart';
@@ -32,7 +32,7 @@ class UpdateMatchScoreUseCase {
     this._authEntity,
   );
 
-  Future<Match> execute({
+  Future<MatchDetailsDto> execute({
     required String matchId,
     required String squadId,
     required int homeScore,

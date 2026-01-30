@@ -398,10 +398,7 @@ class _InviteSectionState extends ConsumerState<_InviteSection> {
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            validityText,
-                            style: theme.textTheme.bodySmall,
-                          ),
+                          Text(validityText, style: theme.textTheme.bodySmall),
                           const SizedBox(height: 8),
                           Wrap(
                             spacing: 12,
@@ -418,10 +415,7 @@ class _InviteSectionState extends ConsumerState<_InviteSection> {
                         const SizedBox(width: 12),
                         regenerateButton,
                         const Spacer(),
-                        Text(
-                          validityText,
-                          style: theme.textTheme.bodySmall,
-                        ),
+                        Text(validityText, style: theme.textTheme.bodySmall),
                       ],
                     );
                   },

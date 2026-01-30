@@ -96,8 +96,7 @@ class _DraftSelectionPageState extends ConsumerState<DraftSelectionPage> {
             padding: const EdgeInsets.all(16),
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final isCompact =
-                    constraints.maxWidth < AppConfig.compactWidth;
+                final isCompact = constraints.maxWidth < AppConfig.compactWidth;
 
                 final selectedPanel = Expanded(
                   flex: isCompact ? 5 : 2,

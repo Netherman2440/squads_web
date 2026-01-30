@@ -58,7 +58,11 @@ class AuthNotifier extends Notifier<AsyncValue<AuthEntity?>> {
         try {
           await tokenRepository.clearTokens();
         } catch (error, stackTrace) {
-          _logger.severe('Failed to clear tokens on sign out.', error, stackTrace);
+          _logger.severe(
+            'Failed to clear tokens on sign out.',
+            error,
+            stackTrace,
+          );
         }
         state = const AsyncValue.data(null);
         return;

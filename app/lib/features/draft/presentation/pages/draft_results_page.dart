@@ -10,7 +10,7 @@ import 'package:app/core/utils/team_ranking.dart';
 import 'package:app/core/widgets/probability_slider.dart';
 import 'package:app/features/draft/presentation/controllers/draft_session_notifier.dart';
 import 'package:app/features/draft/presentation/widgets/draft_draggable_player_tile.dart';
-import 'package:app/features/matches/domain/entities/match.dart';
+import 'package:app/features/matches/application/dto/match_details_dto.dart';
 import 'package:app/features/matches/presentation/controllers/create_match_controller.dart';
 import 'package:app/features/matches/presentation/controllers/squad_matches_notifier.dart';
 import 'package:app/features/players/domain/entities/player.dart';
@@ -160,9 +160,7 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
                                 players: data.home,
                                 compact: isCompact,
                                 onAcceptPlayerId: (playerId) => ref
-                                    .read(
-                                      draftSessionNotifierProvider.notifier,
-                                    )
+                                    .read(draftSessionNotifierProvider.notifier)
                                     .movePlayer(
                                       playerId: playerId,
                                       toHome: true,
@@ -175,9 +173,7 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
                                 players: data.home,
                                 compact: isCompact,
                                 onAcceptPlayerId: (playerId) => ref
-                                    .read(
-                                      draftSessionNotifierProvider.notifier,
-                                    )
+                                    .read(draftSessionNotifierProvider.notifier)
                                     .movePlayer(
                                       playerId: playerId,
                                       toHome: true,
@@ -193,9 +189,7 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
                                 players: data.away,
                                 compact: isCompact,
                                 onAcceptPlayerId: (playerId) => ref
-                                    .read(
-                                      draftSessionNotifierProvider.notifier,
-                                    )
+                                    .read(draftSessionNotifierProvider.notifier)
                                     .movePlayer(
                                       playerId: playerId,
                                       toHome: false,
@@ -208,9 +202,7 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
                                 players: data.away,
                                 compact: isCompact,
                                 onAcceptPlayerId: (playerId) => ref
-                                    .read(
-                                      draftSessionNotifierProvider.notifier,
-                                    )
+                                    .read(draftSessionNotifierProvider.notifier)
                                     .movePlayer(
                                       playerId: playerId,
                                       toHome: false,
@@ -230,8 +222,9 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
                         return SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
                           child: ConstrainedBox(
-                            constraints:
-                                BoxConstraints(minWidth: constraints.maxWidth),
+                            constraints: BoxConstraints(
+                              minWidth: constraints.maxWidth,
+                            ),
                             child: content,
                           ),
                         );
@@ -322,7 +315,7 @@ class _CreateMatchButton extends ConsumerWidget {
               final draftData = draftState.asData?.value;
               if (draftData == null) return;
 
-              Match? match;
+              MatchDetailsDto? match;
               if (matchId != null) {
                 match = await ref
                     .read(createMatchControllerProvider.notifier)
@@ -552,8 +545,8 @@ class _RosterPanel extends StatelessWidget {
                 Text(
                   title,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontSize: compact ? 14 : null,
-                      ),
+                    fontSize: compact ? 14 : null,
+                  ),
                 ),
                 SizedBox(height: compact ? 6 : 8),
                 Expanded(

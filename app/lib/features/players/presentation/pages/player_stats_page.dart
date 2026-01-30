@@ -35,9 +35,8 @@ class _PlayerStatsPageState extends ConsumerState<PlayerStatsPage> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => _StatsErrorView(message: _errorMessage(error)),
         data: (state) => RefreshIndicator(
-          onRefresh: () => ref.refresh(
-            playerStatsProvider(widget.playerId).future,
-          ),
+          onRefresh: () =>
+              ref.refresh(playerStatsProvider(widget.playerId).future),
           child: ListView(
             padding: const EdgeInsets.all(16),
             physics: const AlwaysScrollableScrollPhysics(),
@@ -101,7 +100,10 @@ class _PlayerStatsPageState extends ConsumerState<PlayerStatsPage> {
         label: 'Średnio strzelonych goli na mecz',
         value: stats.avgGoalsPerMatch,
       ),
-      StatTile(label: 'Średni wynik (strzelone : stracone)', value: avgScoreText),
+      StatTile(
+        label: 'Średni wynik (strzelone : stracone)',
+        value: avgScoreText,
+      ),
     ];
   }
 

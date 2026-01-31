@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/features/matches/application/dto/match_details_dto.dart';
 import 'package:app/features/matches/application/usecases/create_match_usecase.dart';
 import 'package:app/features/matches/application/usecases/get_match_usecase.dart';
-import 'package:app/features/matches/matches_providers.dart';
 
 class RematchUseCase {
   final CreateMatchUseCase _createMatchUseCase;

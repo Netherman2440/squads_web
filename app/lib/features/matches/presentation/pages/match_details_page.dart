@@ -251,6 +251,25 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
   }
 
   Future<void> _onRematch() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Utworzyć rewanż?'),
+        content: const Text('Czy chcesz utworzyć rewanż?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Anuluj'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Utwórz rewanż'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
     final newMatch = await ref
         .read(matchDetailsProvider(widget.matchId).notifier)
         .rematch();
@@ -267,6 +286,25 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
 
   Future<void> _onRedraft(MatchDetailsDto match) async {
     if (match.homeTeam == null || match.awayTeam == null) return;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Wylosować składy ponownie?'),
+        content: const Text('Czy chcesz jeszcze raz wylosować składy?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Anuluj'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Wylosuj'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
     final allPlayers = [...match.homeTeam!.players, ...match.awayTeam!.players];
     final selectedIds = allPlayers.map((p) => p.playerId).toList();
 
@@ -493,6 +531,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
   }) {
     final dateFormat = DateFormat('dd.MM.yyyy HH:mm');
     final bottomInset = _isEditing && _isDraggingPlayer ? 84.0 : 0.0;
+    final hasScore = match.homeScore != null && match.awayScore != null;
 
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomInset),
@@ -504,10 +543,11 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
               child: Wrap(
                 spacing: 8,
                 children: [
-                  TextButton(
-                    onPressed: () => _onRedraft(match),
-                    child: const Text('Wylosuj jeszcze raz'),
-                  ),
+                  if (!hasScore)
+                    TextButton(
+                      onPressed: () => _onRedraft(match),
+                      child: const Text('Wylosuj jeszcze raz'),
+                    ),
                   TextButton(
                     onPressed: _onRematch,
                     child: const Text('Rewanż'),

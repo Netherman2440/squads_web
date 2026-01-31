@@ -12,6 +12,7 @@ import 'package:app/features/draft/presentation/controllers/draft_session_notifi
 import 'package:app/features/draft/presentation/widgets/draft_draggable_player_tile.dart';
 import 'package:app/features/matches/application/dto/match_details_dto.dart';
 import 'package:app/features/matches/presentation/controllers/create_match_controller.dart';
+import 'package:app/features/matches/presentation/controllers/match_details_notifier.dart';
 import 'package:app/features/matches/presentation/controllers/squad_matches_notifier.dart';
 import 'package:app/features/players/domain/entities/player.dart';
 
@@ -336,6 +337,9 @@ class _CreateMatchButton extends ConsumerWidget {
               }
 
               if (context.mounted && match != null) {
+                if (matchId != null) {
+                  ref.invalidate(matchDetailsProvider(matchId!));
+                }
                 ref.invalidate(squadMatchesProvider(squadId));
                 context.goNamed(
                   AppRoute.matchDetails.name,

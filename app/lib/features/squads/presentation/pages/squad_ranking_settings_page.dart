@@ -371,7 +371,8 @@ class _TestMatchPreviewState extends State<_TestMatchPreview> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final isCompact = MediaQuery.sizeOf(context).width < AppConfig.compactWidth;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isCompact = screenWidth < AppConfig.compactWidth;
 
     final homeScore = _tryParseInt(_homeScoreController.text);
     final awayScore = _tryParseInt(_awayScoreController.text);

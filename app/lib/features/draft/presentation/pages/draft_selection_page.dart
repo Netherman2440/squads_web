@@ -216,7 +216,6 @@ class _AvailablePlayersPanelState extends State<_AvailablePlayersPanel> {
               onChanged: widget.onSearchChanged,
             ),
             const SizedBox(height: 8),
-            const SizedBox(height: 8),
             Expanded(
               child: widget.players.isEmpty
                   ? const Center(child: Text('No available players.'))

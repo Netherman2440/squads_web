@@ -78,9 +78,11 @@ class _EditPlayerRankingDialogState
           ),
           if (_error != null) ...[
             const SizedBox(height: 8),
-            Text(
-              _error!,
-              style: TextStyle(color: theme.colorScheme.error),
+            SelectableText.rich(
+              TextSpan(
+                text: _error!,
+                style: TextStyle(color: theme.colorScheme.error),
+              ),
             ),
           ],
         ],

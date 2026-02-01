@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app/core/app_router.dart';
-import 'package:app/core/app_config.dart';
 
 import 'package:app/features/players/domain/entities/player.dart';
 
@@ -18,8 +17,6 @@ class PlayersListWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isNarrow = MediaQuery.sizeOf(context).width < AppConfig.mobileWidth;
-
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       itemCount: players.length,

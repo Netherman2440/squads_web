@@ -304,6 +304,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
       ),
     );
     if (confirm != true) return;
+    if (!mounted) return;
 
     final allPlayers = [...match.homeTeam!.players, ...match.awayTeam!.players];
     final selectedIds = allPlayers.map((p) => p.playerId).toList();

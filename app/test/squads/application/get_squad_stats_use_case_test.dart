@@ -58,9 +58,6 @@ void main() {
       () => squadRepository.getSquadStats('squad-123'),
     ).thenThrow(Exception('boom'));
 
-    await expectLater(
-      useCase.execute(squadId: 'squad-123'),
-      throwsException,
-    );
+    await expectLater(useCase.execute(squadId: 'squad-123'), throwsException);
   });
 }

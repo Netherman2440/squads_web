@@ -13,7 +13,8 @@ part of 'create_match_controller.dart';
 const createMatchControllerProvider = CreateMatchControllerProvider._();
 
 final class CreateMatchControllerProvider
-    extends $NotifierProvider<CreateMatchController, AsyncValue<Match?>> {
+    extends
+        $NotifierProvider<CreateMatchController, AsyncValue<MatchDetailsDto?>> {
   const CreateMatchControllerProvider._()
     : super(
         from: null,
@@ -33,10 +34,10 @@ final class CreateMatchControllerProvider
   CreateMatchController create() => CreateMatchController();
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(AsyncValue<Match?> value) {
+  Override overrideWithValue(AsyncValue<MatchDetailsDto?> value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<AsyncValue<Match?>>(value),
+      providerOverride: $SyncValueProvider<AsyncValue<MatchDetailsDto?>>(value),
     );
   }
 }
@@ -44,18 +45,24 @@ final class CreateMatchControllerProvider
 String _$createMatchControllerHash() =>
     r'55cf00c2f1578e532800c543157ddfc48fa5df50';
 
-abstract class _$CreateMatchController extends $Notifier<AsyncValue<Match?>> {
-  AsyncValue<Match?> build();
+abstract class _$CreateMatchController
+    extends $Notifier<AsyncValue<MatchDetailsDto?>> {
+  AsyncValue<MatchDetailsDto?> build();
   @$mustCallSuper
   @override
   void runBuild() {
     final created = build();
-    final ref = this.ref as $Ref<AsyncValue<Match?>, AsyncValue<Match?>>;
+    final ref =
+        this.ref
+            as $Ref<AsyncValue<MatchDetailsDto?>, AsyncValue<MatchDetailsDto?>>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<AsyncValue<Match?>, AsyncValue<Match?>>,
-              AsyncValue<Match?>,
+              AnyNotifier<
+                AsyncValue<MatchDetailsDto?>,
+                AsyncValue<MatchDetailsDto?>
+              >,
+              AsyncValue<MatchDetailsDto?>,
               Object?,
               Object?
             >;

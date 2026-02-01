@@ -1,11 +1,11 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:app/features/matches/application/dto/match_details_dto.dart';
 import 'package:app/features/matches/application/usecases/get_match_usecase.dart';
 import 'package:app/features/matches/application/usecases/update_match_score_usecase.dart';
 import 'package:app/features/matches/application/usecases/delete_match_usecase.dart';
 import 'package:app/features/matches/application/usecases/update_match_team_usecase.dart';
 import 'package:app/features/matches/application/usecases/update_match_teams_usecase.dart';
 import 'package:app/features/matches/application/usecases/rematch_usecase.dart';
-import 'package:app/features/matches/domain/entities/match.dart';
 import 'package:app/features/players/presentation/controllers/player_details_controller.dart';
 
 part 'match_details_notifier.g.dart';
@@ -13,7 +13,7 @@ part 'match_details_notifier.g.dart';
 @riverpod
 class MatchDetailsNotifier extends _$MatchDetailsNotifier {
   @override
-  AsyncValue<Match> build(String matchId) {
+  AsyncValue<MatchDetailsDto> build(String matchId) {
     _loadMatch();
     return const AsyncValue.loading();
   }
@@ -82,7 +82,9 @@ class MatchDetailsNotifier extends _$MatchDetailsNotifier {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       if (homeName != null || homeColor != null) {
-        await ref.read(updateMatchTeamUseCaseProvider).execute(
+        await ref
+            .read(updateMatchTeamUseCaseProvider)
+            .execute(
               matchId: matchId,
               teamId: homeTeamId,
               name: homeName,
@@ -90,7 +92,9 @@ class MatchDetailsNotifier extends _$MatchDetailsNotifier {
             );
       }
       if (awayName != null || awayColor != null) {
-        await ref.read(updateMatchTeamUseCaseProvider).execute(
+        await ref
+            .read(updateMatchTeamUseCaseProvider)
+            .execute(
               matchId: matchId,
               teamId: awayTeamId,
               name: awayName,
@@ -101,7 +105,7 @@ class MatchDetailsNotifier extends _$MatchDetailsNotifier {
     });
   }
 
-  Future<Match> rematch() async {
+  Future<MatchDetailsDto> rematch() async {
     // Returns the new match. UI handles navigation.
     final newMatch = await ref
         .read(rematchUseCaseProvider)

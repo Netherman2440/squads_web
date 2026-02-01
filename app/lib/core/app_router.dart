@@ -136,10 +136,7 @@ final appRouter = () {
               final squadId = state.pathParameters['squadId'] ?? '';
               final playerId = state.pathParameters['playerId'] ?? '';
               return NoTransitionPage(
-                child: PlayerMatchesPage(
-                  squadId: squadId,
-                  playerId: playerId,
-                ),
+                child: PlayerMatchesPage(squadId: squadId, playerId: playerId),
               );
             },
           ),
@@ -150,10 +147,7 @@ final appRouter = () {
               final squadId = state.pathParameters['squadId'] ?? '';
               final playerId = state.pathParameters['playerId'] ?? '';
               return NoTransitionPage(
-                child: PlayerStatsPage(
-                  squadId: squadId,
-                  playerId: playerId,
-                ),
+                child: PlayerStatsPage(squadId: squadId, playerId: playerId),
               );
             },
           ),
@@ -172,9 +166,7 @@ final appRouter = () {
             name: AppRoute.squadStats.name,
             pageBuilder: (context, state) {
               final squadId = state.pathParameters['squadId'] ?? '';
-              return NoTransitionPage(
-                child: SquadStatsPage(squadId: squadId),
-              );
+              return NoTransitionPage(child: SquadStatsPage(squadId: squadId));
             },
           ),
           GoRoute(

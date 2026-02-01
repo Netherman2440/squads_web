@@ -47,10 +47,7 @@ class ProbabilitySlider extends StatelessWidget {
             ),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('$homePercent%'),
-                Text('$awayPercent%'),
-              ],
+              children: [Text('$homePercent%'), Text('$awayPercent%')],
             ),
             const SizedBox(height: 8),
             _AnimatedBar(

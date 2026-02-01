@@ -6,11 +6,11 @@ import 'package:intl/intl.dart';
 
 import 'package:app/core/app_router.dart';
 import 'package:app/core/utils/team_ranking.dart';
-import 'package:app/features/matches/domain/entities/match.dart';
+import 'package:app/features/matches/application/dto/match_details_dto.dart';
+import 'package:app/features/matches/application/dto/player_dto.dart';
 import 'package:app/features/matches/presentation/controllers/match_details_notifier.dart';
 import 'package:app/features/matches/presentation/widgets/match_player_tile.dart';
 import 'package:app/features/players/application/usecases/get_squad_players_usecase.dart';
-import 'package:app/features/players/domain/entities/player.dart';
 import 'package:app/features/squads/domain/entities/user_squad_role.dart';
 import 'package:app/features/squads/presentation/state/squad_detail_notifier.dart';
 import 'package:app/features/matches/presentation/controllers/squad_matches_notifier.dart';
@@ -38,13 +38,13 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
   final TextEditingController _homeTeamNameController = TextEditingController();
   final TextEditingController _awayTeamNameController = TextEditingController();
 
-  List<Player> _homePlayers = [];
-  List<Player> _awayPlayers = [];
+  List<PlayerDto> _homePlayers = [];
+  List<PlayerDto> _awayPlayers = [];
   bool _isDraggingPlayer = false;
 
   bool _isAddPlayerOpen = false;
   final TextEditingController _playerSearchController = TextEditingController();
-  List<Player> _squadPlayers = [];
+  List<PlayerDto> _squadPlayers = [];
   String? _homeTeamColorHex;
   String? _awayTeamColorHex;
   String? _initialHomeTeamName;
@@ -99,7 +99,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
     }
   }
 
-  void _enterEditMode(Match match) {
+  void _enterEditMode(MatchDetailsDto match) {
     if (match.homeTeam == null || match.awayTeam == null) return;
     setState(() {
       _isEditing = true;
@@ -136,7 +136,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
     });
   }
 
-  Future<void> _saveChanges(Match match) async {
+  Future<void> _saveChanges(MatchDetailsDto match) async {
     final homeTeam = match.homeTeam;
     final awayTeam = match.awayTeam;
     if (homeTeam == null || awayTeam == null) return;
@@ -251,6 +251,25 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
   }
 
   Future<void> _onRematch() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Utworzyć rewanż?'),
+        content: const Text('Czy chcesz utworzyć rewanż?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Anuluj'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Utwórz rewanż'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
     final newMatch = await ref
         .read(matchDetailsProvider(widget.matchId).notifier)
         .rematch();
@@ -265,8 +284,28 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
     }
   }
 
-  Future<void> _onRedraft(Match match) async {
+  Future<void> _onRedraft(MatchDetailsDto match) async {
     if (match.homeTeam == null || match.awayTeam == null) return;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Wylosować składy ponownie?'),
+        content: const Text('Czy chcesz jeszcze raz wylosować składy?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Anuluj'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Wylosuj'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    if (!mounted) return;
+
     final allPlayers = [...match.homeTeam!.players, ...match.awayTeam!.players];
     final selectedIds = allPlayers.map((p) => p.playerId).toList();
 
@@ -282,7 +321,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
     final playerId = data;
 
     // Find player in current lists
-    Player player;
+    PlayerDto player;
     try {
       player = _homePlayers.firstWhere((p) => p.playerId == playerId);
     } catch (_) {
@@ -332,7 +371,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
         .execute(squadId: widget.squadId);
     if (!mounted) return;
     setState(() {
-      _squadPlayers = players;
+      _squadPlayers = players.map(PlayerDto.fromDomain).toList();
     });
   }
 
@@ -351,7 +390,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
     return trimmed.isEmpty ? fallback : trimmed;
   }
 
-  bool _arePlayerIdsEqual(List<Player> a, List<Player> b) {
+  bool _arePlayerIdsEqual(List<PlayerDto> a, List<PlayerDto> b) {
     if (a.length != b.length) return false;
     final aIds = {for (final p in a) p.playerId};
     final bIds = {for (final p in b) p.playerId};
@@ -488,11 +527,12 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
 
   Widget _buildContent(
     BuildContext context,
-    Match match, {
+    MatchDetailsDto match, {
     required bool canManage,
   }) {
     final dateFormat = DateFormat('dd.MM.yyyy HH:mm');
     final bottomInset = _isEditing && _isDraggingPlayer ? 84.0 : 0.0;
+    final hasScore = match.homeScore != null && match.awayScore != null;
 
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomInset),
@@ -504,10 +544,11 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
               child: Wrap(
                 spacing: 8,
                 children: [
-                  TextButton(
-                    onPressed: () => _onRedraft(match),
-                    child: const Text('Wylosuj jeszcze raz'),
-                  ),
+                  if (!hasScore)
+                    TextButton(
+                      onPressed: () => _onRedraft(match),
+                      child: const Text('Wylosuj jeszcze raz'),
+                    ),
                   TextButton(
                     onPressed: _onRematch,
                     child: const Text('Rewanż'),
@@ -538,7 +579,9 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
                   : _buildScoreBoard(match, compact: isCompact);
               final homeSection = _buildTeamSection(
                 context,
-                _isEditing ? _homePlayers : (match.homeTeam?.players ?? []),
+                _isEditing
+                    ? _homePlayers
+                    : (match.homeTeam?.players ?? const <PlayerDto>[]),
                 match.homeTeam?.name,
                 'Home',
                 'home',
@@ -551,7 +594,9 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
               );
               final awaySection = _buildTeamSection(
                 context,
-                _isEditing ? _awayPlayers : (match.awayTeam?.players ?? []),
+                _isEditing
+                    ? _awayPlayers
+                    : (match.awayTeam?.players ?? const <PlayerDto>[]),
                 match.awayTeam?.name,
                 'Away',
                 'away',
@@ -569,18 +614,24 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
               if (isCompact) {
                 final homePlayers = _isEditing
                     ? _homePlayers
-                    : (match.homeTeam?.players ?? []);
+                    : (match.homeTeam?.players ?? const <PlayerDto>[]);
                 final awayPlayers = _isEditing
                     ? _awayPlayers
-                    : (match.awayTeam?.players ?? []);
-                final homeOpponentCount =
-                    _isEditing ? _awayPlayers.length : awayPlayers.length;
-                final awayOpponentCount =
-                    _isEditing ? _homePlayers.length : homePlayers.length;
-                final homeRating =
-                    _effectiveTeamRating(homePlayers, homeOpponentCount);
-                final awayRating =
-                    _effectiveTeamRating(awayPlayers, awayOpponentCount);
+                    : (match.awayTeam?.players ?? const <PlayerDto>[]);
+                final homeOpponentCount = _isEditing
+                    ? _awayPlayers.length
+                    : awayPlayers.length;
+                final awayOpponentCount = _isEditing
+                    ? _homePlayers.length
+                    : homePlayers.length;
+                final homeRating = _effectiveTeamRating(
+                  homePlayers,
+                  homeOpponentCount,
+                );
+                final awayRating = _effectiveTeamRating(
+                  awayPlayers,
+                  awayOpponentCount,
+                );
 
                 return Column(
                   children: [
@@ -594,8 +645,9 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
                             colorHex: _isEditing
                                 ? _homeTeamColorHex
                                 : match.homeTeam?.color,
-                            nameController:
-                                _isEditing ? _homeTeamNameController : null,
+                            nameController: _isEditing
+                                ? _homeTeamNameController
+                                : null,
                             rating: homeRating,
                             alignEnd: false,
                             onPickColor: _isEditing
@@ -617,8 +669,9 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
                             colorHex: _isEditing
                                 ? _awayTeamColorHex
                                 : match.awayTeam?.color,
-                            nameController:
-                                _isEditing ? _awayTeamNameController : null,
+                            nameController: _isEditing
+                                ? _awayTeamNameController
+                                : null,
                             rating: awayRating,
                             alignEnd: true,
                             onPickColor: _isEditing
@@ -643,8 +696,9 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
                                 ? _homeTeamColorHex
                                 : match.homeTeam?.color,
                             opponentCount: homeOpponentCount,
-                            nameController:
-                                _isEditing ? _homeTeamNameController : null,
+                            nameController: _isEditing
+                                ? _homeTeamNameController
+                                : null,
                             compact: true,
                             showHeader: false,
                           ),
@@ -661,8 +715,9 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
                                 ? _awayTeamColorHex
                                 : match.awayTeam?.color,
                             opponentCount: awayOpponentCount,
-                            nameController:
-                                _isEditing ? _awayTeamNameController : null,
+                            nameController: _isEditing
+                                ? _awayTeamNameController
+                                : null,
                             compact: true,
                             showHeader: false,
                           ),
@@ -708,7 +763,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
     );
   }
 
-  Widget _buildScoreBoard(Match match, {required bool compact}) {
+  Widget _buildScoreBoard(MatchDetailsDto match, {required bool compact}) {
     final hasScore = match.homeScore != null && match.awayScore != null;
     final homeScore = hasScore ? match.homeScore.toString() : '-';
     final awayScore = hasScore ? match.awayScore.toString() : '-';
@@ -779,7 +834,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
     );
   }
 
-  double _effectiveTeamRating(List<Player> players, int opponentCount) {
+  double _effectiveTeamRating(List<PlayerDto> players, int opponentCount) {
     double totalRanking = 0;
     for (final p in players) {
       totalRanking += p.ranking;
@@ -795,7 +850,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
 
   Widget _buildTeamSection(
     BuildContext context,
-    List<Player> players,
+    List<PlayerDto> players,
     String? teamName,
     String fallbackLabel,
     String side,
@@ -988,21 +1043,20 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
     );
 
     return Column(
-      crossAxisAlignment:
-          alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      crossAxisAlignment: alignEnd
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
       children: [
         Row(
-          mainAxisAlignment:
-              alignEnd ? MainAxisAlignment.end : MainAxisAlignment.start,
+          mainAxisAlignment: alignEnd
+              ? MainAxisAlignment.end
+              : MainAxisAlignment.start,
           children: [
             if (!alignEnd) ...[
               if (onPickColor != null)
                 GestureDetector(
                   onTap: onPickColor,
-                  child: Tooltip(
-                    message: 'Change color',
-                    child: colorBox,
-                  ),
+                  child: Tooltip(message: 'Change color', child: colorBox),
                 )
               else
                 colorBox,
@@ -1014,10 +1068,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
               if (onPickColor != null)
                 GestureDetector(
                   onTap: onPickColor,
-                  child: Tooltip(
-                    message: 'Change color',
-                    child: colorBox,
-                  ),
+                  child: Tooltip(message: 'Change color', child: colorBox),
                 )
               else
                 colorBox,
@@ -1035,7 +1086,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
     );
   }
 
-  List<Player> _availableSquadPlayers() {
+  List<PlayerDto> _availableSquadPlayers() {
     final existingIds = <String>{
       for (final p in _homePlayers) p.playerId,
       for (final p in _awayPlayers) p.playerId,
@@ -1096,7 +1147,7 @@ class _AddPlayerPanel extends StatelessWidget {
     required this.onDragEnd,
   });
 
-  final List<Player> players;
+  final List<PlayerDto> players;
   final TextEditingController searchController;
   final ValueChanged<String> onQueryChanged;
   final VoidCallback onDragStarted;

@@ -16,5 +16,7 @@ class GetPlayerHeadToHeadStatsUseCase {
 
 final getPlayerHeadToHeadStatsUseCaseProvider =
     Provider<GetPlayerHeadToHeadStatsUseCase>((ref) {
-  return GetPlayerHeadToHeadStatsUseCase(ref.read(playerRepositoryProvider));
-});
+      return GetPlayerHeadToHeadStatsUseCase(
+        ref.read(playerRepositoryProvider),
+      );
+    });

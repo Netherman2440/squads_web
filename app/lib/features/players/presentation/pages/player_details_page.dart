@@ -298,10 +298,7 @@ class _PlayerTabs extends StatelessWidget {
               icon: Icons.sports_soccer,
               onPressed: () => context.pushNamed(
                 AppRoute.playerMatches.name,
-                pathParameters: {
-                  'squadId': squadId,
-                  'playerId': playerId,
-                },
+                pathParameters: {'squadId': squadId, 'playerId': playerId},
               ),
             ),
             _TabButton(
@@ -314,10 +311,7 @@ class _PlayerTabs extends StatelessWidget {
               icon: Icons.analytics,
               onPressed: () => context.pushNamed(
                 AppRoute.playerStats.name,
-                pathParameters: {
-                  'squadId': squadId,
-                  'playerId': playerId,
-                },
+                pathParameters: {'squadId': squadId, 'playerId': playerId},
               ),
             ),
           ],

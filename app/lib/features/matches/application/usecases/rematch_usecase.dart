@@ -1,17 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:app/features/matches/application/dto/match_details_dto.dart';
 import 'package:app/features/matches/application/usecases/create_match_usecase.dart';
-import 'package:app/features/matches/domain/entities/match.dart';
-import 'package:app/features/matches/domain/repositories/match_repository.dart';
-import 'package:app/features/matches/matches_providers.dart';
+import 'package:app/features/matches/application/usecases/get_match_usecase.dart';
 
 class RematchUseCase {
-  final MatchRepository _matchRepository;
   final CreateMatchUseCase _createMatchUseCase;
+  final GetMatchUseCase _getMatchUseCase;
 
-  RematchUseCase(this._matchRepository, this._createMatchUseCase);
+  RematchUseCase(this._createMatchUseCase, this._getMatchUseCase);
 
-  Future<Match> execute({required String matchId}) async {
-    final match = await _matchRepository.getMatch(matchId: matchId);
+  Future<MatchDetailsDto> execute({required String matchId}) async {
+    final match = await _getMatchUseCase.execute(matchId: matchId);
 
     if (match.homeTeam == null || match.awayTeam == null) {
       throw Exception('Match teams are missing');
@@ -25,7 +24,7 @@ class RematchUseCase {
         .map((p) => p.playerId)
         .toList();
 
-    return _createMatchUseCase.execute(
+    final createdMatch = await _createMatchUseCase.execute(
       squadId: match.squadId,
       tournamentId: match.tournamentId,
       homePlayerIds: newHomePlayerIds,
@@ -36,12 +35,14 @@ class RematchUseCase {
       awayTeamName: match.homeTeam!.name,
       awayTeamColor: match.homeTeam!.color,
     );
+
+    return _getMatchUseCase.execute(matchId: createdMatch.matchId);
   }
 }
 
 final rematchUseCaseProvider = Provider<RematchUseCase>((ref) {
   return RematchUseCase(
-    ref.read(matchRepositoryProvider),
     ref.read(createMatchUseCaseProvider),
+    ref.read(getMatchUseCaseProvider),
   );
 });

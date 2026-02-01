@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:app/features/matches/domain/entities/match.dart';
+import 'package:app/features/matches/application/dto/match_details_dto.dart';
+import 'package:app/features/matches/application/dto/team_dto.dart';
 import 'package:app/features/matches/domain/repositories/match_repository.dart';
 import 'package:app/features/matches/domain/repositories/team_repository.dart';
 import 'package:app/features/matches/matches_providers.dart';
@@ -10,9 +11,9 @@ class GetMatchUseCase {
 
   GetMatchUseCase(this._matchRepository, this._teamRepository);
 
-  Future<Match> execute({required String matchId}) async {
+  Future<MatchDetailsDto> execute({required String matchId}) async {
     // 1. Fetch Basic Match Info
-    var match = await _matchRepository.getMatch(matchId: matchId);
+    final match = await _matchRepository.getMatch(matchId: matchId);
 
     // 2. Fetch Teams using TeamRepository
     // This will fetch teams, players, and resolve historical ranking snapshots
@@ -30,7 +31,11 @@ class GetMatchUseCase {
       orElse: () => throw Exception('Away team missing'),
     );
 
-    return match.copyWith(homeTeam: homeTeam, awayTeam: awayTeam);
+    return MatchDetailsDto.fromDomain(
+      match: match,
+      homeTeam: TeamDto.fromDomain(homeTeam),
+      awayTeam: TeamDto.fromDomain(awayTeam),
+    );
   }
 }
 

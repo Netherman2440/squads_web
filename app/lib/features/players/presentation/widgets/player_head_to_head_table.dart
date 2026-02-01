@@ -51,10 +51,16 @@ class _PlayerHeadToHeadTableState extends State<PlayerHeadToHeadTable> {
   void initState() {
     super.initState();
     _headerHorizontalController.addListener(
-      () => _syncHorizontal(_headerHorizontalController, _bodyHorizontalController),
+      () => _syncHorizontal(
+        _headerHorizontalController,
+        _bodyHorizontalController,
+      ),
     );
     _bodyHorizontalController.addListener(
-      () => _syncHorizontal(_bodyHorizontalController, _headerHorizontalController),
+      () => _syncHorizontal(
+        _bodyHorizontalController,
+        _headerHorizontalController,
+      ),
     );
     _leftVerticalController.addListener(
       () => _syncVertical(_leftVerticalController, _bodyVerticalController),
@@ -110,7 +116,9 @@ class _PlayerHeadToHeadTableState extends State<PlayerHeadToHeadTable> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final theme = Theme.of(context);
-        final highlightColor = theme.colorScheme.primary.withValues(alpha: 0.22);
+        final highlightColor = theme.colorScheme.primary.withValues(
+          alpha: 0.22,
+        );
         final isCompact = constraints.maxWidth < AppConfig.compactWidth;
         final rowHeight = isCompact ? 44.0 : 48.0;
         final playerColumnWidth = isCompact ? 140.0 : 180.0;
@@ -419,7 +427,8 @@ class _PlayerHeadToHeadTableState extends State<PlayerHeadToHeadTable> {
       return result;
     }
 
-    if (_isTogetherColumn(column) && column != HeadToHeadColumn.togetherMatches) {
+    if (_isTogetherColumn(column) &&
+        column != HeadToHeadColumn.togetherMatches) {
       result = compareNum(a.togetherMatches, b.togetherMatches);
     } else if (_isVsColumn(column) && column != HeadToHeadColumn.vsMatches) {
       result = compareNum(a.vsMatches, b.vsMatches);
@@ -477,6 +486,7 @@ class _HeaderCell extends StatelessWidget {
             size: 18,
           )
         : null;
+    final iconWidgets = icon == null ? null : <Widget>[icon];
 
     return InkWell(
       onTap: onTap,
@@ -498,7 +508,7 @@ class _HeaderCell extends StatelessWidget {
                 ),
               ),
             ),
-            if (icon != null) icon,
+            ...?iconWidgets,
           ],
         ),
       ),
@@ -543,10 +553,10 @@ class _TableScrollBehavior extends MaterialScrollBehavior {
 
   @override
   Set<PointerDeviceKind> get dragDevices => {
-        PointerDeviceKind.touch,
-        PointerDeviceKind.mouse,
-        PointerDeviceKind.trackpad,
-        PointerDeviceKind.stylus,
-        PointerDeviceKind.unknown,
-      };
+    PointerDeviceKind.touch,
+    PointerDeviceKind.mouse,
+    PointerDeviceKind.trackpad,
+    PointerDeviceKind.stylus,
+    PointerDeviceKind.unknown,
+  };
 }

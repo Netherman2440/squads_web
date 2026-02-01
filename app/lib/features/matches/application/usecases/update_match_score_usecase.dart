@@ -3,7 +3,7 @@ import 'package:app/features/auth/domain/entities/auth_entity.dart';
 import 'package:app/features/auth/presentation/providers/auth_notifier.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/core/error/failure.dart';
-import 'package:app/features/matches/domain/entities/match.dart';
+import 'package:app/features/matches/application/dto/match_details_dto.dart';
 import 'package:app/features/matches/domain/repositories/match_repository.dart';
 import 'package:app/features/matches/domain/repositories/team_repository.dart';
 import 'package:app/features/matches/matches_providers.dart';
@@ -32,7 +32,7 @@ class UpdateMatchScoreUseCase {
     this._authEntity,
   );
 
-  Future<Match> execute({
+  Future<MatchDetailsDto> execute({
     required String matchId,
     required String squadId,
     required int homeScore,
@@ -114,19 +114,36 @@ class UpdateMatchScoreUseCase {
       newDelta /= matchesPlayed;
     }
 
-    // 1. Update ranking history and get the difference
-    final diff = await _rankingRepository.updateMatchRankingChange(
-      playerId: playerId,
+    final entry = await _rankingRepository.getRankingHistoryEntryByMatch(
       matchId: matchId,
-      newDelta: newDelta,
+      playerId: playerId,
     );
+    if (entry == null) {
+      throw const ServerFailure('Ranking history entry not found.');
+    }
 
-    // 2. Update player score if there is a difference
-    if (diff != 0) {
-      final current = await _playerRepository.getPlayer(playerId: playerId);
+    final oldDelta = entry.change ?? 0.0;
+    final current = await _playerRepository.getPlayer(playerId: playerId);
+    final desiredDiff = newDelta - oldDelta;
+    if (desiredDiff == 0) return;
+
+    final desiredRanking = current.ranking + desiredDiff;
+    final clampedRanking = desiredRanking.clamp(0.0, 100.0).toDouble();
+    final adjustedDiff = clampedRanking - current.ranking;
+    final adjustedNewDelta = oldDelta + adjustedDiff;
+
+    if (adjustedNewDelta != oldDelta) {
+      await _rankingRepository.updateMatchRankingChange(
+        playerId: playerId,
+        matchId: matchId,
+        newDelta: adjustedNewDelta,
+      );
+    }
+
+    if (adjustedDiff != 0) {
       await _playerRepository.updatePlayerRanking(
         playerId: playerId,
-        newRanking: current.ranking + diff,
+        newRanking: clampedRanking,
       );
     }
   }

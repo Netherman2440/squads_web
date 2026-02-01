@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:app/features/players/domain/entities/player.dart';
+import 'package:app/features/matches/application/dto/player_dto.dart';
 
 class MatchPlayerTile extends StatelessWidget {
   const MatchPlayerTile({
@@ -15,7 +15,7 @@ class MatchPlayerTile extends StatelessWidget {
     this.onDragEnd,
   });
 
-  final Player player;
+  final PlayerDto player;
   final Widget trailing;
   final bool compact;
   final VoidCallback? onTap;
@@ -52,9 +52,7 @@ class MatchPlayerTile extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: compact ? theme.textTheme.bodyMedium : null,
         ),
-        subtitle: compact
-            ? null
-            : Text(displayRanking.toStringAsFixed(2)),
+        subtitle: compact ? null : Text(displayRanking.toStringAsFixed(2)),
         trailing: trailing,
         onTap: onTap,
       ),

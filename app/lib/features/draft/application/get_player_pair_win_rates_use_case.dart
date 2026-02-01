@@ -9,16 +9,14 @@ class GetPlayerPairWinRatesUseCase {
 
   GetPlayerPairWinRatesUseCase(this._repository);
 
-  Future<List<HeadToHeadWinRate>> execute({
-    required List<String> playerIds,
-  }) {
+  Future<List<HeadToHeadWinRate>> execute({required List<String> playerIds}) {
     return _repository.getPlayerPairWinRates(playerIds: playerIds);
   }
 }
 
 final getPlayerPairWinRatesUseCaseProvider =
     Provider<GetPlayerPairWinRatesUseCase>((ref) {
-  return GetPlayerPairWinRatesUseCase(
-    ref.read(draftStatsRepositoryProvider),
-  );
-});
+      return GetPlayerPairWinRatesUseCase(
+        ref.read(draftStatsRepositoryProvider),
+      );
+    });

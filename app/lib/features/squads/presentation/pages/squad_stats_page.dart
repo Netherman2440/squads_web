@@ -42,7 +42,6 @@ class SquadStatsPage extends ConsumerWidget {
 
     return [
       StatTile(label: 'Top player', value: stats.topPlayer),
-      StatTile(label: 'Worst player', value: stats.worstPlayer),
       StatTile(label: 'Rising star', value: stats.topRisingStar),
       const Divider(),
       StatTile(label: 'Matches', value: stats.matchesCount),

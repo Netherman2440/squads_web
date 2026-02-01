@@ -11,6 +11,7 @@ import 'package:app/features/auth/presentation/pages/register_page.dart';
 import 'package:app/features/auth/presentation/pages/reset_password_page.dart';
 import 'package:app/features/draft/presentation/pages/draft_results_page.dart';
 import 'package:app/features/draft/presentation/pages/draft_selection_page.dart';
+import 'package:app/features/landing/presentation/pages/landing_page.dart';
 import 'package:app/features/squads/presentation/pages/invite_page.dart';
 import 'package:app/features/matches/presentation/pages/match_details_page.dart';
 import 'package:app/features/matches/presentation/pages/squad_matches_page.dart';
@@ -23,6 +24,7 @@ import 'package:app/features/users/presentation/pages/user_page.dart';
 import 'package:app/features/squads/presentation/pages/squad_shell_page.dart';
 
 enum AppRoute {
+  landing,
   auth,
   authRegister,
   authConfirm,
@@ -50,8 +52,14 @@ final appRouter = () {
   GoRouter.optionURLReflectsImperativeAPIs = true;
 
   return GoRouter(
-    initialLocation: '/auth',
+    initialLocation: '/',
     routes: [
+      GoRoute(
+        path: '/',
+        name: AppRoute.landing.name,
+        pageBuilder: (context, state) =>
+            const NoTransitionPage(child: LandingPage()),
+      ),
       GoRoute(
         path: '/auth',
         name: AppRoute.auth.name,

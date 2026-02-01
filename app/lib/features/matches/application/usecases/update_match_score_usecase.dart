@@ -114,19 +114,36 @@ class UpdateMatchScoreUseCase {
       newDelta /= matchesPlayed;
     }
 
-    // 1. Update ranking history and get the difference
-    final diff = await _rankingRepository.updateMatchRankingChange(
-      playerId: playerId,
+    final entry = await _rankingRepository.getRankingHistoryEntryByMatch(
       matchId: matchId,
-      newDelta: newDelta,
+      playerId: playerId,
     );
+    if (entry == null) {
+      throw const ServerFailure('Ranking history entry not found.');
+    }
 
-    // 2. Update player score if there is a difference
-    if (diff != 0) {
-      final current = await _playerRepository.getPlayer(playerId: playerId);
+    final oldDelta = entry.change ?? 0.0;
+    final current = await _playerRepository.getPlayer(playerId: playerId);
+    final desiredDiff = newDelta - oldDelta;
+    if (desiredDiff == 0) return;
+
+    final desiredRanking = current.ranking + desiredDiff;
+    final clampedRanking = desiredRanking.clamp(0.0, 100.0).toDouble();
+    final adjustedDiff = clampedRanking - current.ranking;
+    final adjustedNewDelta = oldDelta + adjustedDiff;
+
+    if (adjustedNewDelta != oldDelta) {
+      await _rankingRepository.updateMatchRankingChange(
+        playerId: playerId,
+        matchId: matchId,
+        newDelta: adjustedNewDelta,
+      );
+    }
+
+    if (adjustedDiff != 0) {
       await _playerRepository.updatePlayerRanking(
         playerId: playerId,
-        newRanking: current.ranking + diff,
+        newRanking: clampedRanking,
       );
     }
   }

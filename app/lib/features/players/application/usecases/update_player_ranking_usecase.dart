@@ -11,10 +11,11 @@ class UpdatePlayerRankingUseCase {
     required String playerId,
     required double newRanking,
   }) async {
+    final clampedRanking = newRanking.clamp(0.0, 100.0).toDouble();
     // Creates manual adjustment (matchId = null)
     await _rankingRepository.updatePlayerRanking(
       playerId: playerId,
-      newRanking: newRanking,
+      newRanking: clampedRanking,
       matchId: null,
     );
   }

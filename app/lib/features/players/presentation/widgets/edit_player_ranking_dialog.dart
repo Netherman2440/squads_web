@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../application/usecases/update_player_ranking_usecase.dart';
 
@@ -20,31 +19,17 @@ class EditPlayerRankingDialog extends ConsumerStatefulWidget {
 
 class _EditPlayerRankingDialogState
     extends ConsumerState<EditPlayerRankingDialog> {
-  late final TextEditingController _controller;
+  late double _rankingValue;
   bool _isLoading = false;
   String? _error;
 
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(
-      text: widget.currentRanking.toStringAsFixed(2),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+    _rankingValue = widget.currentRanking.clamp(0.0, 100.0).toDouble();
   }
 
   Future<void> _submit() async {
-    final value = double.tryParse(_controller.text);
-    if (value == null) {
-      setState(() => _error = 'Invalid number');
-      return;
-    }
-
     setState(() {
       _isLoading = true;
       _error = null;
@@ -53,7 +38,7 @@ class _EditPlayerRankingDialogState
     try {
       await ref
           .read(updatePlayerRankingUseCaseProvider)
-          .execute(playerId: widget.playerId, newRanking: value);
+          .execute(playerId: widget.playerId, newRanking: _rankingValue);
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       if (mounted) {
@@ -67,24 +52,37 @@ class _EditPlayerRankingDialogState
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return AlertDialog(
       title: const Text('Edit Ranking'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          TextField(
-            controller: _controller,
-            decoration: InputDecoration(
-              labelText: 'New Ranking',
-              errorText: _error,
-            ),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
-            ],
-            autofocus: true,
-            onSubmitted: (_) => _submit(),
+          Text(
+            'Ranking: ${_rankingValue.toStringAsFixed(2)}',
+            style: theme.textTheme.titleMedium,
           ),
+          Slider(
+            value: _rankingValue,
+            min: 0,
+            max: 100,
+            label: _rankingValue.toStringAsFixed(2),
+            onChanged: _isLoading
+                ? null
+                : (value) {
+                    final rounded = (value * 100).round() / 100;
+                    setState(() {
+                      _rankingValue = rounded;
+                    });
+                  },
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              _error!,
+              style: TextStyle(color: theme.colorScheme.error),
+            ),
+          ],
         ],
       ),
       actions: [

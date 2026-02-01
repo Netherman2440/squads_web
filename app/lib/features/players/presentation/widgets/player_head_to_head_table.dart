@@ -486,6 +486,7 @@ class _HeaderCell extends StatelessWidget {
             size: 18,
           )
         : null;
+    final iconWidgets = icon == null ? null : <Widget>[icon];
 
     return InkWell(
       onTap: onTap,
@@ -507,7 +508,7 @@ class _HeaderCell extends StatelessWidget {
                 ),
               ),
             ),
-            if (icon != null) icon,
+            ...?iconWidgets,
           ],
         ),
       ),

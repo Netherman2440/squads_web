@@ -228,9 +228,9 @@ class _LandingPageState extends State<LandingPage> {
                       ),
                       const TextSpan(
                         text:
-                            ' to apka która pomoże ci wybrać drużyny na meczu '
-                            'sportowym. Dodajesz graczy, ustawiasz ranking i '
-                            'tworzysz mecz. Dostajesz ',
+                            ' to narzędzie dla organizatorów amatorskich meczów, '
+                            'lig firmowych i ekip z orlika. Dodajesz graczy, '
+                            'ustawiasz ich ranking i tworzysz mecz. Dostajesz ',
                       ),
                       TextSpan(
                         text: '20 zestawów',
@@ -248,7 +248,9 @@ class _LandingPageState extends State<LandingPage> {
                         ),
                       ),
                       const TextSpan(
-                        text: ' układów, a po meczu algorytm uczy się dalej.',
+                        text:
+                            ' układów, a po meczu algorytm uczy się dalej. '
+                            'Wpisujesz wynik, a rankingi zawodników aktualizują się same.',
                       ),
                     ],
                   ),
@@ -263,7 +265,7 @@ class _LandingPageState extends State<LandingPage> {
                       onTap: () => context.go('/auth/register'),
                     ),
                     _secondaryButton(
-                      label: 'Zobacz jak działa',
+                      label: 'Zobacz jak to działa',
                       onTap: () => _scrollTo(_howKey),
                     ),
                   ],
@@ -298,7 +300,6 @@ class _LandingPageState extends State<LandingPage> {
   Widget _buildValueProps(TextStyle display, TextStyle body) {
     return _revealSection(
       child: _section(
-        background: _bgAlt,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -321,59 +322,72 @@ class _LandingPageState extends State<LandingPage> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Wybieranie składów zabiera czas. '
-              'Tutaj decyzje podejmuje algorytm, a Ty dostajesz uczciwy mecz.',
+              'Szkoda czasu na ręczne układanie. Chcesz mieć równe składy, '
+              'szybki zapis wyników i ranking, który aktualizuje się sam.',
               style: body.copyWith(fontSize: 18, color: _muted),
             ),
             const SizedBox(height: 28),
             LayoutBuilder(
               builder: (context, constraints) {
-                final isWide = constraints.maxWidth >= 960;
-                final cards = const [
+                final isWide = constraints.maxWidth >= 1000;
+                const cards = [
                   _ValueCard(
-                    title: 'Bez stresu i losowości',
+                    title: 'Jeden zespół - wiele zastosowań',
                     description:
-                        'System wybiera składy szybciej niż człowiek i nie opiera się na emocjach.',
-                    icon: Icons.balance_outlined,
+                        'Orlik, liga firmowa czy trening - wszystko w jednym miejscu.',
+                    icon: Icons.groups_outlined,
                   ),
                   _ValueCard(
-                    title: '20 najlepszych opcji',
+                    title: 'Uczciwsze mecze, mniej sporów',
                     description:
-                        'Z ponad 50 tysięcy kombinacji dostajesz gotowe propozycje.',
-                    icon: Icons.timeline_outlined,
+                        'Algorytm wyrównuje składy, a Ty oszczędzasz czas i nerwy.',
+                    icon: Icons.handshake_outlined,
                   ),
                   _ValueCard(
-                    title: 'Rankingi, które się uczą',
+                    title: 'Wpisujesz wynik, ranking się aktualizuje',
                     description:
-                        'Po każdym meczu algorytm aktualizuje oceny, by kolejne '
-                        'składy były jeszcze równiejsze.',
-                    icon: Icons.lock_outline,
+                        'Po meczu zapisujesz rezultat i system koryguje oceny zawodników.',
+                    icon: Icons.edit_note_outlined,
                   ),
                 ];
+
+                final benefitTiles = cards.map((card) {
+                  final tile = Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: card,
+                  );
+                  if (!isWide) {
+                    return tile;
+                  }
+                  return Align(
+                    alignment: Alignment.centerRight,
+                    child: SizedBox(width: 360, child: tile),
+                  );
+                }).toList();
+
+                final benefitsColumn = Column(
+                  crossAxisAlignment: isWide
+                      ? CrossAxisAlignment.end
+                      : CrossAxisAlignment.start,
+                  children: benefitTiles,
+                );
+
                 return isWide
                     ? Row(
-                        children:
-                            cards
-                                .map(
-                                  (card) => Expanded(
-                                    child: Padding(
-                                      padding: const EdgeInsets.only(right: 16),
-                                      child: card,
-                                    ),
-                                  ),
-                                )
-                                .toList()
-                              ..removeLast(),
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Expanded(child: _MatchHistoryPreview()),
+                          const SizedBox(width: 28),
+                          Expanded(child: benefitsColumn),
+                        ],
                       )
                     : Column(
-                        children: cards
-                            .map(
-                              (card) => Padding(
-                                padding: const EdgeInsets.only(bottom: 16),
-                                child: card,
-                              ),
-                            )
-                            .toList(),
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const _MatchHistoryPreview(),
+                          const SizedBox(height: 24),
+                          benefitsColumn,
+                        ],
                       );
               },
             ),
@@ -662,8 +676,8 @@ class _LandingPageState extends State<LandingPage> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Stworz sklad, zapros znajomych i zacznij prowadzic '
-                    'mecze z historia wynikow.',
+                    'Stwórz skład, zapros znajomych i zacznij prowadzić '
+                    'mecze z historią wyników.',
                     style: body.copyWith(fontSize: 18, color: _muted),
                   ),
                   const SizedBox(height: 24),
@@ -672,7 +686,7 @@ class _LandingPageState extends State<LandingPage> {
                     runSpacing: 12,
                     children: [
                       _primaryButton(
-                        label: 'Zaloz konto',
+                        label: 'Załóż konto',
                         onTap: () => context.go('/auth/register'),
                       ),
                       _secondaryButton(
@@ -1080,6 +1094,309 @@ class _ValueCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _MatchHistoryPreview extends StatelessWidget {
+  const _MatchHistoryPreview();
+
+  @override
+  Widget build(BuildContext context) {
+    const entries = [
+      _MatchHistoryEntry(
+        homeTeam: 'Fc Biali',
+        awayTeam: 'Czarni United',
+        homeColor: Color(0xFFFFFFFF),
+        awayColor: Color(0xFF000000),
+        subtitle: 'Dzisiejszy mecz',
+        highlight: true,
+      ),
+      _MatchHistoryEntry(
+        homeTeam: 'Orły Północy',
+        awayTeam: 'Fc Biali',
+        homeColor: Color(0xFF4FC3F7),
+        awayColor: Color(0xFFFFFFFF),
+        homeScore: 5,
+        awayScore: 4,
+        rankingDelta: -1.8,
+      ),
+      _MatchHistoryEntry(
+        homeTeam: 'Fc Biali',
+        awayTeam: 'City Strikers',
+        homeColor: Color(0xFFFFFFFF),
+        awayColor: Color(0xFF81B64C),
+        homeScore: 6,
+        awayScore: 2,
+        rankingDelta: 2.7,
+      ),
+      _MatchHistoryEntry(
+        homeTeam: 'Fc Biali',
+        awayTeam: 'Niebiescy FC',
+        homeColor: Color(0xFFFFFFFF),
+        awayColor: Color(0xFF4FC3F7),
+        homeScore: 3,
+        awayScore: 3,
+        rankingDelta: 0.4,
+      ),
+    ];
+
+    final tiles = List<Widget>.generate(
+      entries.length,
+      (index) => Padding(
+        padding: EdgeInsets.only(bottom: index == entries.length - 1 ? 0 : 12),
+        child: _MatchHistoryTile(entry: entries[index]),
+      ),
+    );
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: _LandingPageState._surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 16,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Twoje mecze',
+            style: GoogleFonts.spaceGrotesk(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: _LandingPageState._text,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Lista spotkań i zmiany w rankingu po każdym wyniku.',
+            style: GoogleFonts.manrope(
+              fontSize: 12,
+              color: _LandingPageState._muted,
+            ),
+          ),
+          const SizedBox(height: 16),
+          ...tiles,
+        ],
+      ),
+    );
+  }
+}
+
+class _MatchHistoryEntry {
+  const _MatchHistoryEntry({
+    required this.homeTeam,
+    required this.awayTeam,
+    required this.homeColor,
+    required this.awayColor,
+    this.homeScore,
+    this.awayScore,
+    this.rankingDelta,
+    this.subtitle,
+    this.highlight = false,
+  });
+
+  final String homeTeam;
+  final String awayTeam;
+  final Color homeColor;
+  final Color awayColor;
+  final int? homeScore;
+  final int? awayScore;
+  final double? rankingDelta;
+  final String? subtitle;
+  final bool highlight;
+}
+
+class _MatchHistoryTile extends StatelessWidget {
+  const _MatchHistoryTile({required this.entry});
+
+  final _MatchHistoryEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasScore = entry.homeScore != null && entry.awayScore != null;
+    final delta = entry.rankingDelta;
+    final deltaText = delta == null
+        ? '--'
+        : '${delta >= 0 ? '+' : ''}${delta.toStringAsFixed(1)}';
+    final deltaColor = delta == null
+        ? _LandingPageState._muted
+        : (delta >= 0
+              ? _LandingPageState._accentSoft
+              : const Color(0xFFE06C5B));
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: entry.highlight
+            ? _LandingPageState._surfaceStrong
+            : _LandingPageState._surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: entry.highlight
+              ? _LandingPageState._accent.withValues(alpha: 0.4)
+              : Colors.white.withValues(alpha: 0.06),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: _InlineTeamLabel(
+                        color: entry.homeColor,
+                        name: entry.homeTeam,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '-',
+                      style: GoogleFonts.manrope(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: _LandingPageState._muted,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: _InlineTeamLabel(
+                        color: entry.awayColor,
+                        name: entry.awayTeam,
+                      ),
+                    ),
+                  ],
+                ),
+                if (entry.subtitle != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    entry.subtitle!,
+                    style: GoogleFonts.manrope(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: _LandingPageState._accentSoft,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _MatchScoreBox(
+                    score: hasScore ? '${entry.homeScore}' : '--',
+                    highlight: entry.highlight,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    ':',
+                    style: GoogleFonts.manrope(
+                      fontSize: 12,
+                      color: _LandingPageState._muted,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  _MatchScoreBox(
+                    score: hasScore ? '${entry.awayScore}' : '--',
+                    highlight: entry.highlight,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                hasScore ? 'Ranking $deltaText' : 'Wpisz wynik',
+                style: GoogleFonts.manrope(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: hasScore ? deltaColor : _LandingPageState._accentSoft,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InlineTeamLabel extends StatelessWidget {
+  const _InlineTeamLabel({required this.color, required this.name});
+
+  final Color color;
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            name,
+            style: GoogleFonts.manrope(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: _LandingPageState._text,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MatchScoreBox extends StatelessWidget {
+  const _MatchScoreBox({required this.score, required this.highlight});
+
+  final String score;
+  final bool highlight;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 26,
+      height: 26,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: highlight
+            ? _LandingPageState._surfaceStrong
+            : _LandingPageState._surface,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: highlight ? 0.2 : 0.12),
+        ),
+      ),
+      child: Text(
+        score,
+        style: GoogleFonts.manrope(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: _LandingPageState._text,
+        ),
       ),
     );
   }

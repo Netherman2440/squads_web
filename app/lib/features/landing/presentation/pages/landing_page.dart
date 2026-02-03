@@ -116,6 +116,7 @@ class _LandingPageState extends State<LandingPage> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isWide = constraints.maxWidth >= 920;
+        final isCompact = constraints.maxWidth < 420;
         final items = [
           _NavLink(label: 'Funkcje', onTap: () => _scrollTo(_featuresKey)),
           _NavLink(label: 'Jak działa', onTap: () => _scrollTo(_howKey)),
@@ -150,22 +151,54 @@ class _LandingPageState extends State<LandingPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _brandMark(),
-                    const SizedBox(height: 16),
-                    Wrap(spacing: 16, runSpacing: 8, children: items),
-                    const SizedBox(height: 16),
-                    Wrap(
-                      spacing: 12,
-                      children: [
-                        _secondaryButton(
-                          label: 'Zaloguj',
-                          onTap: () => context.go('/auth'),
-                        ),
-                        _primaryButton(
-                          label: 'Załóż konto',
-                          onTap: () => context.go('/auth/register'),
-                        ),
-                      ],
+                    const SizedBox(height: 12),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: items
+                            .map(
+                              (item) => Padding(
+                                padding: const EdgeInsets.only(right: 12),
+                                child: item,
+                              ),
+                            )
+                            .toList(),
+                      ),
                     ),
+                    const SizedBox(height: 16),
+                    if (isCompact)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _secondaryButton(
+                            label: 'Zaloguj',
+                            onTap: () => context.go('/auth'),
+                          ),
+                          const SizedBox(height: 12),
+                          _primaryButton(
+                            label: 'Załóż konto',
+                            onTap: () => context.go('/auth/register'),
+                          ),
+                        ],
+                      )
+                    else
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _secondaryButton(
+                              label: 'Zaloguj',
+                              onTap: () => context.go('/auth'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _primaryButton(
+                              label: 'Załóż konto',
+                              onTap: () => context.go('/auth/register'),
+                            ),
+                          ),
+                        ],
+                      ),
                   ],
                 ),
         );
@@ -300,6 +333,7 @@ class _LandingPageState extends State<LandingPage> {
   Widget _buildValueProps(TextStyle display, TextStyle body) {
     return _revealSection(
       child: _section(
+        background: _bgAlt,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -357,7 +391,7 @@ class _LandingPageState extends State<LandingPage> {
                     child: card,
                   );
                   if (!isWide) {
-                    return tile;
+                    return SizedBox(width: double.infinity, child: tile);
                   }
                   return Align(
                     alignment: Alignment.centerRight,
@@ -516,34 +550,46 @@ class _LandingPageState extends State<LandingPage> {
               style: body.copyWith(fontSize: 18, color: _muted),
             ),
             const SizedBox(height: 28),
-            Wrap(
-              spacing: 16,
-              runSpacing: 16,
-              children: const [
-                _FeatureCard(
-                  title: 'Draft wielu zestawów meczy',
-                  description: 'Top 20 propozycji gotowych do wybrania.',
-                  icon: Icons.auto_fix_high_outlined,
-                ),
-                _FeatureCard(
-                  title: 'Zrównoważone składy',
-                  description:
-                      'Balance score, rozkład siły i prawdopodobieństwo zwycięstwa zamiast czystej sumy.',
-                  icon: Icons.balance_outlined,
-                ),
-                _FeatureCard(
-                  title: 'Aktualizowane rankingi zawodnikow',
-                  description:
-                      'Po każdym meczu system uczy się nowych wyników.',
-                  icon: Icons.trending_up_outlined,
-                ),
-                _FeatureCard(
-                  title: 'Śledzenie wyników i statystyk',
-                  description:
-                      'Historia meczów, bilans i trend w jednym miejscu.',
-                  icon: Icons.query_stats_outlined,
-                ),
-              ],
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final isNarrow = constraints.maxWidth < 600;
+                final cardWidth =
+                    isNarrow ? constraints.maxWidth : _FeatureCard.defaultWidth;
+                return Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 16,
+                  runSpacing: 16,
+                  children: [
+                    _FeatureCard(
+                      width: cardWidth,
+                      title: 'Draft wielu zestawów meczy',
+                      description: 'Top 20 propozycji gotowych do wybrania.',
+                      icon: Icons.auto_fix_high_outlined,
+                    ),
+                    _FeatureCard(
+                      width: cardWidth,
+                      title: 'Zrównoważone składy',
+                      description:
+                          'Balance score, rozkład siły i prawdopodobieństwo zwycięstwa zamiast czystej sumy.',
+                      icon: Icons.balance_outlined,
+                    ),
+                    _FeatureCard(
+                      width: cardWidth,
+                      title: 'Aktualizowane rankingi zawodnikow',
+                      description:
+                          'Po każdym meczu system uczy się nowych wyników.',
+                      icon: Icons.trending_up_outlined,
+                    ),
+                    _FeatureCard(
+                      width: cardWidth,
+                      title: 'Śledzenie wyników i statystyk',
+                      description:
+                          'Historia meczów, bilans i trend w jednym miejscu.',
+                      icon: Icons.query_stats_outlined,
+                    ),
+                  ],
+                );
+              },
             ),
           ],
         ),
@@ -591,6 +637,14 @@ class _LandingPageState extends State<LandingPage> {
                 ),
               ),
             );
+            final mobileTiles = stats
+                .map(
+                  (stat) => Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: SizedBox(width: double.infinity, child: stat),
+                  ),
+                )
+                .toList();
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -620,14 +674,8 @@ class _LandingPageState extends State<LandingPage> {
                 isWide
                     ? Row(children: tiles)
                     : Column(
-                        children: stats
-                            .map(
-                              (stat) => Padding(
-                                padding: const EdgeInsets.only(bottom: 16),
-                                child: stat,
-                              ),
-                            )
-                            .toList(),
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: mobileTiles,
                       ),
               ],
             );
@@ -1463,16 +1511,20 @@ class _FeatureCard extends StatelessWidget {
     required this.title,
     required this.description,
     required this.icon,
+    this.width = defaultWidth,
   });
+
+  static const defaultWidth = 260.0;
 
   final String title;
   final String description;
   final IconData icon;
+  final double width;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 260,
+      width: width,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: _LandingPageState._surface,
@@ -1908,7 +1960,6 @@ class _PlayerTile extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                'Base: ${player.base.toStringAsFixed(0)}  ·  '
                 'Ranking: ${player.ranking.toStringAsFixed(2)}',
                 style: GoogleFonts.manrope(
                   fontSize: 11,

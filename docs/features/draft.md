@@ -228,3 +228,58 @@ Opcjonalnie (nie MVP):
   - Edycja nazw/kolorów dopiero później w match view (US-013).
 
 
+
+
+-----
+
+DRAFT REFACTOR:
+
+Musimy dostosować draft do zwiększonych potrzeb:
+
+1. Użytkownik chce dzielić daną pulę graczy na więcej równych drużyn niż tylko dwie .
+
+2. Użytkownik chce aby przy wyborze były brane pod uwagę pozycje zawodników.
+
+3. Użytkownik chce móc zdecydować że jacyś zawodnicy muszą być razem w składzie a inni muszą być przeciwko sobie
+
+// NEwton + Gosper
+//todo: gosper hack (iterowanie przez symbole newtonowskie zamiast przez 2^N)
+
+Żeby ograniczyć ilość przeglądanych opcji w combinatory service chcemy ograniczyć się do gosper hack.
+
+Mając wszystkie kombinacje następnym krokiem jest ocena składów.
+
+Definicje
+team score - sumaryczny ranking wszystkich graczy w danej drużynie (z uwzględnieniem rezerwy)
+
+avg team score - ranking "idealnej drużyny " czyli all players score / 2 
+
+avg player - średni ranking w danym meczu
+
+waga drużyny:
+To dzięki niej będziemy w stanie wziąć pod uwagę pkt. 2 i 3 w user stories.
+Obliczana jest na podstawie doboru wszystkich zawodników do danej drużyny.
+Na wejściu do algorytmu otrzymujemy dwie listy z zasadami:
+- lista z grupami zawodników którzy muszą być RAZEM
+- lista z grupami zawodników którzy muszą być PRZECIWKO SOBIE
+
+Każdy zawodnik bazowo ma wagę 1.
+Jeśli zasady wynikające z grup podziału nie zostają spełnione dla jakiegoś gracza to do jego wagi dodajemy 100
+
+Rozpatrujemy to zawsze z perspektywy graczy więc myślę sobie tak:
+"Hm jestem graczem A chce być z graczem B, zostałem wybrany do składu białych. Co myślę? 'ok trochę dyskomfort, ale może go jeszcze wybiorą
+
+
+
+Ocena podziału to:
+
+- suma odchyłu team score od średniej  abs( team A score - avg team score) + aabs(team B score - avg team score) + ...
+
+- minimalna sumaryczna waga drużyn
+
+- 
+
+
+Przechowujemy tylko current 20 najlepszych zestawień. 
+
+Jeśli 

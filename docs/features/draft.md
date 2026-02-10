@@ -263,23 +263,38 @@ Na wejściu do algorytmu otrzymujemy dwie listy z zasadami:
 - lista z grupami zawodników którzy muszą być RAZEM
 - lista z grupami zawodników którzy muszą być PRZECIWKO SOBIE
 
+
+
 Każdy zawodnik bazowo ma wagę 1.
-Jeśli zasady wynikające z grup podziału nie zostają spełnione dla jakiegoś gracza to do jego wagi dodajemy 100
+Za każdą niespełnioną regułę durzycaym 100 do wagi całego podziału?
 
-Rozpatrujemy to zawsze z perspektywy graczy więc myślę sobie tak:
-"Hm jestem graczem A chce być z graczem B, zostałem wybrany do składu białych. Co myślę? 'ok trochę dyskomfort, ale może go jeszcze wybiorą
+edge case: mam w regule 3 graczy, wszyscy chcą być przeciwko sobie, a mam tylko dwie drużyny, 
+wtedy dla jednego gracza reguła jest spełniona - jemu się to podoba
 
+Do tego pozycje.
+Jeśli w danej drużynie znajduje się już zawodnik z daną pozycją (również bierzemy pod uwagę 'none' czyli brak pozycji jako pozycję)
+wtedy waga tego zawodnika rośnie o tyle ilu już jest zawodników na takie pozycji
 
+np. pierwszy bramkarz w składzie do waga 1, drugi to 2 trzeci to 3 itd. Podbnie - pierwszy gracz bez pozycji to waga 1, drugi 2 itd.
 
 Ocena podziału to:
 
-- suma odchyłu team score od średniej  abs( team A score - avg team score) + aabs(team B score - avg team score) + ...
+- suma odchyłu team score od średniej [ abs( team A score - avg team score) + aabs(team B score - avg team score) + ... ]
+POMNOŻONA RAZY:
+-  sumaryczna waga wszystkich drużyn
 
-- minimalna sumaryczna waga drużyn
+w przypadku remisów decyduje:
+- suma kwadratów różnic między graczami na poszczególnych pozycjach w rankingu:
+(ranking najlepszego gracza A - ranking najlepszego gracza B)^2 + (ranking drugiego gracza A - ranking drugiego gracza B)^2 + ...
 
-- 
+
+Przechowujemy tylko current 20 najlepszych zestawień. - Jeśli jakieś jest słabe to skip i lecimy dalej
 
 
-Przechowujemy tylko current 20 najlepszych zestawień. 
 
-Jeśli 
+---
+
+W taki sposób jesteśmy gotowi na:
+- więcej drużyn
+- pozycje graczy
+- grupy reguł

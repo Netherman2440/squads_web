@@ -8,8 +8,91 @@ import 'package:app/features/players/domain/entities/player.dart';
 void main() {
   const repository = CombinatoryDraftRepository();
 
+  test('ranking baseline: best first proposal is {1,1,4} vs {2,2,2}', () async {
+    final players = [
+      _player(id: 'p1', ranking: 1),
+      _player(id: 'p2', ranking: 1),
+      _player(id: 'p3', ranking: 4),
+      _player(id: 'p4', ranking: 2),
+      _player(id: 'p5', ranking: 2),
+      _player(id: 'p6', ranking: 2),
+    ];
+
+    final proposals = await repository.createDraft(
+      players: players,
+      teamCount: 2,
+    );
+    expect(proposals, isNotEmpty);
+
+    final first = proposals.first;
+    final teamRankings =
+        first.teams.map(_sortedRankings).toList(growable: false)
+          ..sort((a, b) => _rankingKey(a).compareTo(_rankingKey(b)));
+
+    expect(teamRankings, [
+      [1.0, 1.0, 4.0],
+      [2.0, 2.0, 2.0],
+    ]);
+  });
+
+  test('position weighting: goalkeepers are split in first proposal', () async {
+    final players = [
+      _player(id: 'gk1', ranking: 2, position: 'gk'),
+      _player(id: 'gk2', ranking: 2, position: 'gk'),
+      _player(id: 'p1', ranking: 5.5),
+      _player(id: 'p2', ranking: 1.5),
+    ];
+
+    final proposals = await repository.createDraft(
+      players: players,
+      teamCount: 2,
+    );
+    expect(proposals, isNotEmpty);
+    expect(_sameTeam(proposals.first, 'gk1', 'gk2'), isFalse);
+  });
+
+  test(
+    'together rule: constrained players are together in first result',
+    () async {
+      final players = _players(6, ranking: 100);
+
+      final proposals = await repository.createDraft(
+        players: players,
+        teamCount: 2,
+        rules: const [
+          DraftRule(
+            type: DraftRuleType.together,
+            playerIds: ['p1', 'p2', 'p3'],
+          ),
+        ],
+      );
+
+      expect(proposals, isNotEmpty);
+      expect(_sameTeam(proposals.first, 'p1', 'p2'), isTrue);
+      expect(_sameTeam(proposals.first, 'p2', 'p3'), isTrue);
+    },
+  );
+
+  test(
+    'against rule: constrained players are opposite in first result',
+    () async {
+      final players = _players(6, ranking: 100);
+
+      final proposals = await repository.createDraft(
+        players: players,
+        teamCount: 2,
+        rules: const [
+          DraftRule(type: DraftRuleType.against, playerIds: ['p1', 'p2']),
+        ],
+      );
+
+      expect(proposals, isNotEmpty);
+      expect(_sameTeam(proposals.first, 'p1', 'p2'), isFalse);
+    },
+  );
+
   test('creates deterministic proposals for multiple teams', () async {
-    final players = _players(6);
+    final players = _players(10);
 
     final first = await repository.createDraft(players: players, teamCount: 3);
     final second = await repository.createDraft(players: players, teamCount: 3);
@@ -18,56 +101,64 @@ void main() {
     expect(second, isNotEmpty);
     expect(_draftKey(first.first), _draftKey(second.first));
 
-    final proposal = first.first;
-    expect(proposal.teams.length, 3);
-    expect(_allPlayerIds(proposal).length, 6);
+    for (final proposal in first.take(5)) {
+      expect(proposal.teams.length, 3);
+      expect(_allPlayerIds(proposal).length, 10);
+    }
+
+    final teamSizes =
+        first.first.teams.map((team) => team.players.length).toList()..sort();
+    expect(teamSizes, [3, 3, 4]);
   });
 
-  test('prefers satisfying together rule via soft penalty', () async {
-    final players = _players(4, ranking: 100);
+  test('does not reject more than 16 players', () async {
+    final players = _players(17, ranking: 50);
 
     final proposals = await repository.createDraft(
       players: players,
       teamCount: 2,
-      rules: const [
-        DraftRule(type: DraftRuleType.together, playerIds: ['p1', 'p2']),
-      ],
+      limit: 1,
     );
 
     expect(proposals, isNotEmpty);
-    expect(_sameTeam(proposals.first, 'p1', 'p2'), isTrue);
-  });
-
-  test('prefers satisfying against rule via soft penalty', () async {
-    final players = _players(4, ranking: 100);
-
-    final proposals = await repository.createDraft(
-      players: players,
-      teamCount: 2,
-      rules: const [
-        DraftRule(type: DraftRuleType.against, playerIds: ['p1', 'p2']),
-      ],
-    );
-
-    expect(proposals, isNotEmpty);
-    expect(_sameTeam(proposals.first, 'p1', 'p2'), isFalse);
+    expect(_allPlayerIds(proposals.first).length, 17);
   });
 }
 
 List<Player> _players(int count, {double ranking = 50}) {
   return List<Player>.generate(
     count,
-    (index) => Player(
-      playerId: 'p${index + 1}',
-      squadId: 'squad-1',
-      name: 'Player ${index + 1}',
-      position: index.isEven ? 'gk' : 'fwd',
-      baseRanking: ranking.toInt(),
+    (index) => _player(
+      id: 'p${index + 1}',
       ranking: ranking,
-      createdAt: DateTime(2025, 1, 1),
+      position: index.isEven ? 'gk' : 'fwd',
     ),
   );
 }
+
+Player _player({
+  required String id,
+  required double ranking,
+  String? position,
+}) {
+  return Player(
+    playerId: id,
+    squadId: 'squad-1',
+    name: id,
+    position: position,
+    baseRanking: ranking.toInt(),
+    ranking: ranking,
+    createdAt: DateTime(2025, 1, 1),
+  );
+}
+
+List<double> _sortedRankings(DraftTeam team) {
+  final rankings = team.players.map((p) => p.ranking).toList(growable: false)
+    ..sort();
+  return rankings;
+}
+
+String _rankingKey(List<double> rankings) => rankings.join(',');
 
 String _draftKey(Draft draft) {
   final teams = draft.teams

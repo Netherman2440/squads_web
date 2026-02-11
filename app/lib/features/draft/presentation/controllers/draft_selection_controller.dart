@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:app/core/error/failure.dart';
 import 'package:app/features/draft/presentation/state/draft_selection_state.dart';
 import 'package:app/features/players/application/usecases/get_squad_players_usecase.dart';
 
@@ -46,13 +45,6 @@ class DraftSelectionController
       return;
     }
 
-    if (selected.length >= 16) {
-      state = AsyncValue.data(
-        current.copyWith(validationMessage: 'You can select up to 16 players.'),
-      );
-      return;
-    }
-
     selected.add(playerId);
 
     state = AsyncValue.data(
@@ -84,10 +76,6 @@ class DraftSelectionController
     final current = state.value;
     if (current == null) {
       return;
-    }
-
-    if (current.selectedPlayerIds.length > 16) {
-      throw const ValidationFailure('Draft supports up to 16 players.');
     }
   }
 }

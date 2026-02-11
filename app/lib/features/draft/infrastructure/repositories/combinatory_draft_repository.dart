@@ -1,13 +1,16 @@
 import 'package:app/core/error/failure.dart';
 import 'package:app/features/draft/domain/entities/draft.dart';
+import 'package:app/features/draft/domain/entities/draft_proposal.dart';
 import 'package:app/features/draft/domain/entities/draft_rule.dart';
+import 'package:app/features/draft/domain/entities/normalized_draft_rule.dart';
 import 'package:app/features/draft/domain/repositories/draft_repository.dart';
 import 'package:app/features/players/domain/entities/player.dart';
+import 'package:logging/logging.dart';
 
 class CombinatoryDraftRepository implements DraftRepository {
   const CombinatoryDraftRepository();
 
-  static const int _maxPlayers = 16;
+  static final Logger _logger = Logger('CombinatoryDraftRepository');
   static const int _minTeamCount = 2;
   static const int _maxTeamCount = 4;
   static const double _rulePenalty = 100.0;
@@ -20,6 +23,11 @@ class CombinatoryDraftRepository implements DraftRepository {
     int limit = 20,
     bool playWithSubstitute = true,
   }) async {
+    final startedAt = DateTime.now();
+    _logger.info(
+      'createDraft started: startedAt=${startedAt.toIso8601String()} teamCount=$teamCount players=${players.length} limit=$limit',
+    );
+
     if (players.isEmpty || limit <= 0) {
       return const [];
     }
@@ -36,10 +44,6 @@ class CombinatoryDraftRepository implements DraftRepository {
       );
     }
 
-    if (players.length > _maxPlayers) {
-      throw const ValidationFailure('Draft supports up to 16 players.');
-    }
-
     final sortedPlayers = [...players]
       ..sort((a, b) => a.playerId.compareTo(b.playerId));
 
@@ -53,7 +57,7 @@ class CombinatoryDraftRepository implements DraftRepository {
       teamCount: teamCount,
     );
 
-    final proposals = <_DraftProposal>[];
+    final proposals = <DraftProposal>[];
     final allPlayersMask = (1 << sortedPlayers.length) - 1;
 
     _generatePartitions(
@@ -90,34 +94,20 @@ class CombinatoryDraftRepository implements DraftRepository {
       return a.signature.compareTo(b.signature);
     });
 
-    return proposals.take(limit).map((p) => p.draft).toList(growable: false);
+    final result = proposals
+        .take(limit)
+        .map((p) => p.draft)
+        .toList(growable: false);
+    final finishedAt = DateTime.now();
+    final elapsedMs = finishedAt.difference(startedAt).inMilliseconds;
+    _logger.info(
+      'createDraft completed: finishedAt=${finishedAt.toIso8601String()} elapsedMs=$elapsedMs teamCount=$teamCount players=${players.length} proposals=${proposals.length} returned=${result.length}',
+    );
+    return result;
   }
 }
 
-class _DraftProposal {
-  final Draft draft;
-  final double score;
-  final double rulePenalty;
-  final double tieBreaker;
-  final String signature;
-
-  const _DraftProposal({
-    required this.draft,
-    required this.score,
-    required this.rulePenalty,
-    required this.tieBreaker,
-    required this.signature,
-  });
-}
-
-class _NormalizedRule {
-  final DraftRuleType type;
-  final List<int> playerIndexes;
-
-  const _NormalizedRule({required this.type, required this.playerIndexes});
-}
-
-List<_NormalizedRule> _normalizeRules({
+List<NormalizedDraftRule> _normalizeRules({
   required List<DraftRule> rules,
   required Map<String, Player> playersById,
 }) {
@@ -126,7 +116,7 @@ List<_NormalizedRule> _normalizeRules({
     for (var i = 0; i < byId.length; i++) byId[i]: i,
   };
 
-  final normalized = <_NormalizedRule>[];
+  final normalized = <NormalizedDraftRule>[];
 
   for (final rule in rules) {
     final uniquePlayerIds = <String>{};
@@ -150,7 +140,9 @@ List<_NormalizedRule> _normalizeRules({
     }
 
     indexes.sort();
-    normalized.add(_NormalizedRule(type: rule.type, playerIndexes: indexes));
+    normalized.add(
+      NormalizedDraftRule(type: rule.type, playerIndexes: indexes),
+    );
   }
 
   return normalized;
@@ -289,10 +281,10 @@ List<int> _setBitIndexes(int mask) {
   return indexes;
 }
 
-_DraftProposal _buildProposal({
+DraftProposal _buildProposal({
   required List<Player> sortedPlayers,
   required List<int> teamMasks,
-  required List<_NormalizedRule> rules,
+  required List<NormalizedDraftRule> rules,
   required bool playWithSubstitute,
 }) {
   final teams = <DraftTeam>[];
@@ -345,7 +337,7 @@ _DraftProposal _buildProposal({
   final tieBreaker = _calculateTieBreaker(teams);
   final signature = _buildSignature(teams);
 
-  return _DraftProposal(
+  return DraftProposal(
     draft: Draft(teams: teams),
     score: score,
     rulePenalty: rulePenalty,
@@ -411,7 +403,7 @@ String _normalizePosition(String? position) {
 }
 
 double _calculateRulePenalty({
-  required List<_NormalizedRule> rules,
+  required List<NormalizedDraftRule> rules,
   required Map<int, int> playerTeamIndex,
 }) {
   var penalty = 0.0;

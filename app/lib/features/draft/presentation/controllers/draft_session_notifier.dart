@@ -14,14 +14,12 @@ enum DraftAlgorithm { combinatory, greedy }
 class DraftAlgorithmNotifier extends Notifier<DraftAlgorithm> {
   @override
   DraftAlgorithm build() {
-    return DraftAlgorithm.greedy;
+    return DraftAlgorithm.combinatory;
   }
 
   void setAlgorithm(DraftAlgorithm algorithm) {
-    Logger(
-      'DraftAlgorithmNotifier',
-    ).info('Can\'t change algorithm to $algorithm');
-    state = DraftAlgorithm.greedy;
+    Logger('DraftAlgorithmNotifier').info('Draft algorithm changed to $algorithm');
+    state = algorithm;
   }
 }
 

@@ -270,6 +270,8 @@ Za każdą niespełnioną regułę durzycaym 100 do wagi całego podziału?
 
 edge case: mam w regule 3 graczy, wszyscy chcą być przeciwko sobie, a mam tylko dwie drużyny, 
 wtedy dla jednego gracza reguła jest spełniona - jemu się to podoba
+solution: - blokujemy designem dodawanie takich reguł. Jeśli tworzymy podział na dwie drużyny do reguł 'przeciwko' można dodać maksymalnie 2 graczy.
+Podobnie ograniczamy reguły 'razem' - w jednej regule może być maksymalnie tylko zaowdników ile ostatecznie będzie w jednym składzie - czyli np. jak wybieramy 3 skład y i mamy 15 zawodników to w jednej regule razem może byc tylko 5 graczy.
 
 Do tego pozycje.
 Jeśli w danej drużynie znajduje się już zawodnik z daną pozycją (również bierzemy pod uwagę 'none' czyli brak pozycji jako pozycję)
@@ -298,3 +300,21 @@ W taki sposób jesteśmy gotowi na:
 - więcej drużyn
 - pozycje graczy
 - grupy reguł
+
+
+Chce żebyś zaimplementował ten algorytm w `app/lib/features/draft/infrastructure/repositories/combinatory_draft_repository.dart`
+Potrzeba też dostosować od razu metodę createDraft żeby przyjmowała też parametr liczby drużyn i listę reguł.
+
+co do reguł też potrzebujemy jakiegoś sposobu na przechowywanie ich. 
+
+Proponuję taką strukturę:
+
+enum DraftRuleType:
+- together
+- against
+
+class DraftRule
+DraftRuleType type
+list<player> players
+
+W taki sposób przekazujemy list<Rule>

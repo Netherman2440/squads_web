@@ -318,3 +318,22 @@ DraftRuleType type
 list<player> players
 
 W taki sposób przekazujemy list<Rule>
+
+
+----
+
+Tworzenie skomplikowanych draftów trwa całkiem długo - spróbujmy przenieśc logikę do RPC i zapisywać jego status w db:
+
+drafts:
+draft_id
+squad_id
+status
+proposals (int)
+
+draft_payloads:
+draft_id
+payload 
+
+
+---
+do tego w matches i tournament dodajemy kolumnę draft_id

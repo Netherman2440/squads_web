@@ -333,7 +333,24 @@ proposals (int)
 draft_payloads:
 draft_id
 payload 
-
+tablica z prawdopodobieństwem?
 
 ---
 do tego w matches i tournament dodajemy kolumnę draft_id
+
+create match use case - tworzy mecz,
+tworzy draft z danym match id
+zwracamy od razu mecz bez drużyn
+
+
+UI:
+
+/matches/draft
+
+Po wybraniu zawodników prowadzi do od razu do utworzonego meczu
+
+/matches/id
+
+jeśli brakuje teams zmieniamy widok:
+
+zaraz pod title meczu

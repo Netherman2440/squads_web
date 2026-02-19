@@ -252,7 +252,7 @@ Mając wszystkie kombinacje następnym krokiem jest ocena składów.
 Definicje
 team score - sumaryczny ranking wszystkich graczy w danej drużynie (z uwzględnieniem rezerwy)
 
-avg team score - ranking "idealnej drużyny " czyli all players score / 2 
+avg team score - ranking "idealnej drużyny", czyli all players score / teamCount
 
 avg player - średni ranking w danym meczu
 
@@ -315,42 +315,120 @@ enum DraftRuleType:
 
 class DraftRule
 DraftRuleType type
-list<player> players
+list<playerId> playerIds
 
 W taki sposób przekazujemy list<Rule>
 
 
 ----
 
-Tworzenie skomplikowanych draftów trwa całkiem długo - spróbujmy przenieśc logikę do RPC i zapisywać jego status w db:
+Tworzenie skomplikowanych draftów trwa długo, ale na ten moment **nie przenosimy logiki do RPC**.
 
-drafts:
-draft_id
-squad_id
-status
-proposals (int)
+Zostawiamy algorytm w:
+- `app/lib/features/draft/infrastructure/repositories/combinatory_draft_repository.dart`
 
-draft_payloads:
-draft_id
-payload 
-tablica z prawdopodobieństwem?
+I dokładamy:
+- trwały zapis wyniku draftu do DB (payload 20 propozycji),
+- powiązanie draftu z meczem.
 
 ---
-do tego w matches i tournament dodajemy kolumnę draft_id
+do tego w matches i tournament dodajemy kolumnę `draft_id`
 
-create match use case - tworzy mecz,
-tworzy draft z danym match id
-zwracamy od razu mecz bez drużyn
-
+create match use case:
+- tworzy mecz,
+- tworzy wpis draftu powiązany z `match_id`,
+- liczy combinatory draft lokalnie (jak teraz),
+- zapisuje wynik draftu do DB,
+- zwraca mecz.
 
 UI:
 
-/matches/draft
+/matches/draft -- zmiana adresu na matches/create
 
-Po wybraniu zawodników prowadzi do od razu do utworzonego meczu
+Po wybraniu zawodników prowadzi od razu do utworzonego meczu
 
 /matches/id
 
 jeśli brakuje teams zmieniamy widok:
 
-zaraz pod title meczu
+zaraz pod title meczu dajemy opcję przejrzenia draftu - kliknięcie przenosi nas do
+
+
+/matches/id/draft
+przejście jest możliwe tylko jeśli draft ma wynik zapisany w DB
+możemy tutaj przeglądać gotowe drafty - tutaj wyświetlamy stary ekran matches/create
+
+
+
+## Ustalenia implementacyjne (2026-02-19) - aktualizacja
+
+### 1) Backend
+- Bez RPC dla obliczeń draftu.
+- Algorytm zostaje w `CombinatoryDraftRepository`.
+- Zmieniamy tylko persistence: wynik draftu zapisujemy do DB.
+- `playerIds` zostają formatem w regułach (nie całe obiekty graczy).
+
+### 2) Tryb działania
+- Flow pozostaje synchroniczny z perspektywy aplikacji:
+  - liczymy draft lokalnie,
+  - zapisujemy rezultat,
+  - pokazujemy mecz.
+- Rezygnujemy z jobów async, pollingu i osobnych endpointów statusowych.
+
+### 3) Relacje i nadpisywanie
+- Relacja `match` <-> `draft` to `1:1`.
+- `redraft` dla meczu nadpisuje aktualny draft (ten sam rekord draftu / upsert).
+
+### 4) Zakres domeny match
+- Domena meczu bez zmian (nadal model 2 drużyn: home/away).
+- Obsługa draftu dla >2 drużyn będzie wykorzystana później przy turniejach.
+
+### 5) Walidacje
+- `teamCount` musi być w zakresie `2..4`.
+- `playersCount >= teamCount`.
+
+### 6) Obsługa błędów
+- Jeśli obliczenie lub zapis draftu się nie uda, mecz nadal istnieje.
+- UI pokazuje możliwość ponowienia draftu.
+
+### 7) Payload draftu
+- `payload` przechowuje `json array` 20 propozycji draftów.
+
+### 8) Routing (cutover)
+- Usuwamy stare route'y draftowe.
+- Docelowy flow:
+  - tworzenie draftu startuje z flow tworzenia meczu,
+  - wynik draftu oglądamy pod `/matches/:id/draft`.
+
+---
+
+## TODO: schemat DB (miejsce na Twój input)
+
+Do uzupełnienia przez autora:
+- dokładne kolumny i typy tabel draftowych,
+- indexy i FK,
+- format `payload` (szczegóły JSON),
+- zasady nadpisywania draftu przy `redraft`.
+
+drafts:
+draft_id
+squad_id
+match_id (1:1 z meczem)
+status (opcjonalnie: completed/error)
+proposals (int)
+
+draft_payloads:
+draft_id
+payload
+tablica z prawdopodobieństwem?
+
+## TODO: dodatkowy pomysł DB (miejsce na dopisanie)
+
+Opis pomysłu:
+- przy errorze draftu moglibyśmy stracić informacje o tym jacy gracze są w meczu - trzeba zatem przed stworzeniem draftu utworzyć mecz i dla każdego gracza w meczu dodać ranking history entry (tak jak już się to dzieje w create match use case)
+jednak teraz trzeba to zrobić przed draftem.
+Wpływ na migracje:
+- ... żaden
+
+Wpływ na API:
+- ... żaden

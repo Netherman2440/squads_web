@@ -118,7 +118,7 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
         ],
       ),
       body: state.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const _DraftLoadingBody(),
         error: (error, _) => _ErrorBody(error: error),
         data: (data) {
           if (data.proposals.isEmpty) {
@@ -251,6 +251,24 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _DraftLoadingBody extends StatelessWidget {
+  const _DraftLoadingBody();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CircularProgressIndicator(),
+          SizedBox(height: 12),
+          Text('Trwa generowanie draftu. To może chwilę potrwać.'),
+        ],
       ),
     );
   }

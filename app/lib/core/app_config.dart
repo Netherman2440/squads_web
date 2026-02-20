@@ -4,6 +4,7 @@ class AppConfig {
     'SUPABASE_ANON_KEY',
   );
 
+  static const int maxPlayersPerMatch = 20;
   static const int maxMatchesPlayed = 10;
   static const Duration inviteLinkValidity = Duration(hours: 24);
   static const double mobileWidth = 600;
@@ -11,6 +12,12 @@ class AppConfig {
   static const double wideLayoutWidth = 900;
 
   static void validate() {
+    if (maxPlayersPerMatch < 2) {
+      throw StateError(
+        'MAX_PLAYERS_PER_MATCH must be at least 2, got $maxPlayersPerMatch.',
+      );
+    }
+
     final missing = <String>[];
     if (supabaseUrl.isEmpty) {
       missing.add('SUPABASE_URL');

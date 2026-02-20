@@ -36,21 +36,24 @@ void main() {
     ]);
   });
 
-  test('position weighting: goalkeepers are split in first proposal', () async {
-    final players = [
-      _player(id: 'gk1', ranking: 2, position: 'gk'),
-      _player(id: 'gk2', ranking: 2, position: 'gk'),
-      _player(id: 'p1', ranking: 5.5),
-      _player(id: 'p2', ranking: 1.5),
-    ];
+  test(
+    'position penalty breaks ties by splitting duplicated positions',
+    () async {
+      final players = [
+        _player(id: 'gk1', ranking: 2, position: 'gk'),
+        _player(id: 'gk2', ranking: 2, position: 'gk'),
+        _player(id: 'p1', ranking: 2, position: 'fwd'),
+        _player(id: 'p2', ranking: 2, position: 'fwd'),
+      ];
 
-    final proposals = await repository.createDraft(
-      players: players,
-      teamCount: 2,
-    );
-    expect(proposals, isNotEmpty);
-    expect(_sameTeam(proposals.first, 'gk1', 'gk2'), isFalse);
-  });
+      final proposals = await repository.createDraft(
+        players: players,
+        teamCount: 2,
+      );
+      expect(proposals, isNotEmpty);
+      expect(_sameTeam(proposals.first, 'gk1', 'gk2'), isFalse);
+    },
+  );
 
   test(
     'together rule: constrained players are together in first result',

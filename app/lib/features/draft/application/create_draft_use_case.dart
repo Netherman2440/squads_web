@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:app/core/app_config.dart';
+import 'package:app/core/error/failure.dart';
 import 'package:app/features/draft/domain/entities/draft.dart';
 import 'package:app/features/draft/domain/entities/draft_rule.dart';
 import 'package:app/features/draft/domain/repositories/draft_repository.dart';
@@ -19,6 +21,12 @@ class CreateDraftUseCase {
     int limit = 20,
     bool playWithSubstitute = true,
   }) async {
+    if (players.length > AppConfig.maxPlayersPerMatch) {
+      throw ValidationFailure(
+        'Draft supports up to ${AppConfig.maxPlayersPerMatch} players per match.',
+      );
+    }
+
     return await _draftRepository.createDraft(
       players: players,
       teamCount: teamCount,

@@ -14,6 +14,7 @@ class CombinatoryDraftRepository implements DraftRepository {
   static final Logger _logger = Logger('CombinatoryDraftRepository');
   static const int _minTeamCount = 2;
   static const int _maxTeamCount = 4;
+  static const int _yieldEveryGeneratedProposals = 150;
   static const double _rulePenalty = 100.0;
   static const double _positionPenalty = 100.0;
 
@@ -62,30 +63,33 @@ class CombinatoryDraftRepository implements DraftRepository {
     final proposals = <DraftProposal>[];
     final allPlayersMask = (1 << sortedPlayers.length) - 1;
 
-    _generatePartitions(
+    var generatedProposals = 0;
+    for (final teamMasks in _generatePartitions(
       remainingMask: allPlayersMask,
       remainingTeamSizes: teamSizes,
       currentTeamMasks: <int>[],
-      onPartition: (teamMasks) {
-        final proposal = _buildProposal(
-          sortedPlayers: sortedPlayers,
-          teamMasks: teamMasks,
-          rules: normalizedRules,
-          playWithSubstitute: playWithSubstitute,
-        );
-        proposals.add(proposal);
-      },
-    );
+    )) {
+      final proposal = _buildProposal(
+        sortedPlayers: sortedPlayers,
+        teamMasks: teamMasks,
+        rules: normalizedRules,
+        playWithSubstitute: playWithSubstitute,
+      );
+      proposals.add(proposal);
+      generatedProposals += 1;
 
-    proposals.sort((a, b) {
+      if (generatedProposals % _yieldEveryGeneratedProposals == 0) {
+        // Yield periodically so Flutter can paint loading indicators.
+        await Future<void>.delayed(Duration.zero);
+      }
+    }
+
+    final scoredProposals = _applyEqualWeightScoring(proposals);
+
+    scoredProposals.sort((a, b) {
       final byScore = a.score.compareTo(b.score);
       if (byScore != 0) {
         return byScore;
-      }
-
-      final byRulePenalty = a.rulePenalty.compareTo(b.rulePenalty);
-      if (byRulePenalty != 0) {
-        return byRulePenalty;
       }
 
       final byTieBreaker = a.tieBreaker.compareTo(b.tieBreaker);
@@ -96,7 +100,7 @@ class CombinatoryDraftRepository implements DraftRepository {
       return a.signature.compareTo(b.signature);
     });
 
-    final result = proposals
+    final result = scoredProposals
         .take(limit)
         .map((p) => p.draft)
         .toList(growable: false);
@@ -163,14 +167,13 @@ List<int> _calculateTeamSizes({
   );
 }
 
-void _generatePartitions({
+Iterable<List<int>> _generatePartitions({
   required int remainingMask,
   required List<int> remainingTeamSizes,
   required List<int> currentTeamMasks,
-  required void Function(List<int> teamMasks) onPartition,
-}) {
+}) sync* {
   if (remainingTeamSizes.isEmpty) {
-    onPartition(currentTeamMasks);
+    yield currentTeamMasks;
     return;
   }
 
@@ -178,7 +181,7 @@ void _generatePartitions({
 
   if (remainingTeamSizes.length == 1) {
     if (_popcount(remainingMask) == currentTeamSize) {
-      onPartition([...currentTeamMasks, remainingMask]);
+      yield [...currentTeamMasks, remainingMask];
     }
     return;
   }
@@ -197,11 +200,10 @@ void _generatePartitions({
   final nextTeamSizes = remainingTeamSizes.sublist(1);
 
   for (final teamMask in candidates) {
-    _generatePartitions(
+    yield* _generatePartitions(
       remainingMask: remainingMask & ~teamMask,
       remainingTeamSizes: nextTeamSizes,
       currentTeamMasks: [...currentTeamMasks, teamMask],
-      onPartition: onPartition,
     );
   }
 }
@@ -338,18 +340,62 @@ DraftProposal _buildProposal({
     playerTeamIndex: playerTeamIndex,
   );
 
-  final scoreMultiplier = positionWeight + rulePenalty;
-  final score = deviationScore * scoreMultiplier;
+  final penaltyScore = positionWeight + rulePenalty;
   final tieBreaker = _calculateTieBreaker(teams);
   final signature = _buildSignature(teams);
 
   return DraftProposal(
     draft: Draft(teams: teams),
-    score: score,
+    score: 0.0,
+    deviationScore: deviationScore,
+    penaltyScore: penaltyScore,
     rulePenalty: rulePenalty,
     tieBreaker: tieBreaker,
     signature: signature,
   );
+}
+
+List<DraftProposal> _applyEqualWeightScoring(List<DraftProposal> proposals) {
+  if (proposals.isEmpty) {
+    return const <DraftProposal>[];
+  }
+
+  var minDeviation = proposals.first.deviationScore;
+  var maxDeviation = proposals.first.deviationScore;
+  var minPenalty = proposals.first.penaltyScore;
+  var maxPenalty = proposals.first.penaltyScore;
+
+  for (final proposal in proposals.skip(1)) {
+    if (proposal.deviationScore < minDeviation) {
+      minDeviation = proposal.deviationScore;
+    }
+    if (proposal.deviationScore > maxDeviation) {
+      maxDeviation = proposal.deviationScore;
+    }
+    if (proposal.penaltyScore < minPenalty) {
+      minPenalty = proposal.penaltyScore;
+    }
+    if (proposal.penaltyScore > maxPenalty) {
+      maxPenalty = proposal.penaltyScore;
+    }
+  }
+
+  final deviationRange = maxDeviation - minDeviation;
+  final penaltyRange = maxPenalty - minPenalty;
+
+  return proposals
+      .map((proposal) {
+        final normalizedDeviation = deviationRange == 0
+            ? 0.0
+            : (proposal.deviationScore - minDeviation) / deviationRange;
+        final normalizedPenalty = penaltyRange == 0
+            ? 0.0
+            : (proposal.penaltyScore - minPenalty) / penaltyRange;
+
+        final score = normalizedDeviation + normalizedPenalty;
+        return proposal.copyWith(score: score);
+      })
+      .toList(growable: false);
 }
 
 double _effectiveTeamRanking({

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
+import 'package:app/core/app_config.dart';
 import 'package:app/core/error/failure.dart';
 import 'package:app/features/draft/application/create_draft_use_case.dart';
 import 'package:app/features/draft/application/get_match_draft_use_case.dart';
@@ -47,6 +48,7 @@ class DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>> {
     bool playWithSubstitute = true,
   }) async {
     state = const AsyncValue.loading();
+    await Future<void>.delayed(Duration.zero);
 
     state = await AsyncValue.guard(() async {
       final allPlayers = await ref
@@ -109,11 +111,21 @@ class DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>> {
       if (selectedPlayerIds.length < 2) {
         throw const ValidationFailure('Draft requires at least 2 players.');
       }
+      if (selectedPlayerIds.length > AppConfig.maxPlayersPerMatch) {
+        throw ValidationFailure(
+          'Draft supports up to ${AppConfig.maxPlayersPerMatch} players per match.',
+        );
+      }
 
       final selected = _filterByIds(
         players: allPlayers,
         ids: selectedPlayerIds,
       );
+      if (selected.length > AppConfig.maxPlayersPerMatch) {
+        throw ValidationFailure(
+          'Draft supports up to ${AppConfig.maxPlayersPerMatch} players per match.',
+        );
+      }
 
       final useCase = switch (algorithm) {
         DraftAlgorithm.combinatory => ref.read(

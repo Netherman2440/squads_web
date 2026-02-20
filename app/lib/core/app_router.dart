@@ -39,6 +39,7 @@ enum AppRoute {
   players,
   draftSelection,
   draftCreate,
+  matchDraft,
   playerDetails,
   playerMatches,
   playerStats,
@@ -212,7 +213,6 @@ final appRouter = () {
 
               List<String> selectedIds = const [];
               String? matchId;
-
               if (extra is List<String>) {
                 selectedIds = extra;
               } else if (extra is Map<String, dynamic>) {
@@ -220,6 +220,32 @@ final appRouter = () {
                     (extra['selectedIds'] as List<dynamic>?)?.cast<String>() ??
                     [];
                 matchId = extra['matchId'] as String?;
+              }
+
+              return NoTransitionPage(
+                child: DraftResultsPage(
+                  squadId: squadId,
+                  selectedPlayerIds: selectedIds,
+                  matchId: matchId,
+                ),
+              );
+            },
+          ),
+          GoRoute(
+            path: '/squads/:squadId/matches/:matchId/draft',
+            name: AppRoute.matchDraft.name,
+            pageBuilder: (context, state) {
+              final squadId = state.pathParameters['squadId'] ?? '';
+              final matchId = state.pathParameters['matchId'] ?? '';
+              final extra = state.extra;
+
+              List<String> selectedIds = const [];
+              if (extra is List<String>) {
+                selectedIds = extra;
+              } else if (extra is Map<String, dynamic>) {
+                selectedIds =
+                    (extra['selectedIds'] as List<dynamic>?)?.cast<String>() ??
+                    [];
               }
 
               return NoTransitionPage(

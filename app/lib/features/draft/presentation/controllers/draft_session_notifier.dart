@@ -3,8 +3,11 @@ import 'package:logging/logging.dart';
 
 import 'package:app/core/error/failure.dart';
 import 'package:app/features/draft/application/create_draft_use_case.dart';
+import 'package:app/features/draft/application/get_match_draft_use_case.dart';
 import 'package:app/features/draft/application/get_player_pair_win_rates_use_case.dart';
+import 'package:app/features/draft/domain/entities/draft.dart';
 import 'package:app/features/draft/domain/entities/head_to_head_win_rate.dart';
+import 'package:app/features/draft/domain/entities/stored_draft_payload.dart';
 import 'package:app/features/draft/presentation/state/draft_session_state.dart';
 import 'package:app/features/players/application/usecases/get_squad_players_usecase.dart';
 import 'package:app/features/players/domain/entities/player.dart';
@@ -18,7 +21,9 @@ class DraftAlgorithmNotifier extends Notifier<DraftAlgorithm> {
   }
 
   void setAlgorithm(DraftAlgorithm algorithm) {
-    Logger('DraftAlgorithmNotifier').info('Draft algorithm changed to $algorithm');
+    Logger(
+      'DraftAlgorithmNotifier',
+    ).info('Draft algorithm changed to $algorithm');
     state = algorithm;
   }
 }
@@ -38,18 +43,72 @@ class DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>> {
     required String squadId,
     required List<String> selectedPlayerIds,
     required DraftAlgorithm algorithm,
+    String? matchId,
     bool playWithSubstitute = true,
   }) async {
     state = const AsyncValue.loading();
 
     state = await AsyncValue.guard(() async {
-      if (selectedPlayerIds.length < 2) {
-        throw const ValidationFailure('Draft requires at least 2 players.');
-      }
-
       final allPlayers = await ref
           .read(getSquadPlayersUseCaseProvider)
           .execute(squadId: squadId);
+
+      if (selectedPlayerIds.isEmpty && matchId != null) {
+        final storedDraft = await ref
+            .read(getMatchDraftUseCaseProvider)
+            .execute(matchId: matchId);
+
+        if (storedDraft == null) {
+          throw const NotFoundFailure('Draft not found for this match.');
+        }
+
+        if (storedDraft.status == 'error') {
+          throw ValidationFailure(
+            storedDraft.errorMessage ??
+                'Draft for this match failed previously. Retry redraft.',
+          );
+        }
+
+        final playersById = {
+          for (final player in allPlayers) player.playerId: player,
+        };
+        final proposals = _restoreDraftsFromPayload(
+          proposals: storedDraft.proposals,
+          playersById: playersById,
+        );
+        final winRateMatrix = storedDraft.winRateMatrix;
+
+        if (proposals.isEmpty) {
+          return DraftSessionState(
+            proposals: const [],
+            selectedIndex: 0,
+            home: const [],
+            away: const [],
+            winRateMatrix: winRateMatrix,
+            homeWinProbability: 0.5,
+          );
+        }
+
+        final first = proposals.first;
+        final homeWinProbability = _calculateHomeWinProbability(
+          home: first.homePlayers,
+          away: first.awayPlayers,
+          winRateMatrix: winRateMatrix,
+        );
+
+        return DraftSessionState(
+          proposals: proposals,
+          selectedIndex: 0,
+          home: first.homePlayers,
+          away: first.awayPlayers,
+          winRateMatrix: winRateMatrix,
+          homeWinProbability: homeWinProbability,
+        );
+      }
+
+      if (selectedPlayerIds.length < 2) {
+        throw const ValidationFailure('Draft requires at least 2 players.');
+      }
 
       final selected = _filterByIds(
         players: allPlayers,
@@ -237,4 +296,50 @@ double _calculateHomeWinProbability({
 
   final average = total / count;
   return average.clamp(0.0, 1.0);
+}
+
+List<Draft> _restoreDraftsFromPayload({
+  required List<StoredDraftProposal> proposals,
+  required Map<String, Player> playersById,
+}) {
+  final drafts = <Draft>[];
+
+  for (final proposal in proposals) {
+    final teams = <DraftTeam>[];
+    final usedPlayerIds = <String>{};
+
+    for (var teamIndex = 0; teamIndex < proposal.teams.length; teamIndex++) {
+      final teamPlayerIds = proposal.teams[teamIndex];
+      final players = <Player>[];
+      var totalRanking = 0.0;
+
+      for (final playerId in teamPlayerIds) {
+        if (!usedPlayerIds.add(playerId)) {
+          continue;
+        }
+
+        final player = playersById[playerId];
+        if (player == null) {
+          continue;
+        }
+
+        players.add(player);
+        totalRanking += player.ranking;
+      }
+
+      teams.add(
+        DraftTeam(
+          index: teamIndex,
+          players: players,
+          totalRanking: totalRanking,
+        ),
+      );
+    }
+
+    if (teams.isNotEmpty) {
+      drafts.add(Draft(teams: teams));
+    }
+  }
+
+  return drafts;
 }

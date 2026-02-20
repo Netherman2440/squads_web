@@ -8,6 +8,7 @@ import 'package:app/core/app_router.dart';
 import 'package:app/core/error/failure.dart';
 import 'package:app/core/utils/team_ranking.dart';
 import 'package:app/core/widgets/probability_slider.dart';
+import 'package:app/features/draft/application/save_match_draft_use_case.dart';
 import 'package:app/features/draft/presentation/controllers/draft_session_notifier.dart';
 import 'package:app/features/draft/presentation/widgets/draft_draggable_player_tile.dart';
 import 'package:app/features/matches/application/dto/match_details_dto.dart';
@@ -35,6 +36,14 @@ class DraftResultsPage extends ConsumerStatefulWidget {
 class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
   bool _playWithSubstitute = true;
 
+  String? get _loadMatchId {
+    final value = widget.matchId;
+    if (value == null || value.isEmpty) {
+      return null;
+    }
+    return value;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -45,6 +54,7 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
             squadId: widget.squadId,
             selectedPlayerIds: widget.selectedPlayerIds,
             algorithm: ref.read(draftAlgorithmProvider),
+            matchId: _loadMatchId,
             playWithSubstitute: _playWithSubstitute,
           ),
     );
@@ -56,8 +66,9 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
     final algorithm = ref.watch(draftAlgorithmProvider);
     final settingsVisible = state.when(
       data: (data) =>
+          data.proposals.isNotEmpty &&
           data.proposals[data.selectedIndex].homePlayers.length !=
-          data.proposals[data.selectedIndex].awayPlayers.length,
+              data.proposals[data.selectedIndex].awayPlayers.length,
       error: (error, stackTrace) => false,
       loading: () => false,
     );
@@ -79,6 +90,7 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
                       squadId: widget.squadId,
                       selectedPlayerIds: widget.selectedPlayerIds,
                       algorithm: algorithm,
+                      matchId: _loadMatchId,
                       playWithSubstitute: _playWithSubstitute,
                     );
               },
@@ -91,6 +103,7 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
                       squadId: widget.squadId,
                       selectedPlayerIds: widget.selectedPlayerIds,
                       algorithm: next,
+                      matchId: _loadMatchId,
                       playWithSubstitute: _playWithSubstitute,
                     );
               },
@@ -305,19 +318,20 @@ class _CreateMatchButton extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final draftState = ref.watch(draftSessionNotifierProvider);
     final createMatchState = ref.watch(createMatchControllerProvider);
+    final draftData = draftState.asData?.value;
+
+    final isExistingMatch = matchId != null && matchId!.isNotEmpty;
+    final hasProposals = draftData != null && draftData.proposals.isNotEmpty;
 
     final isLoading = createMatchState.isLoading;
 
     return IconButton(
-      tooltip: matchId != null ? 'Update Match' : 'Create Match',
-      onPressed: isLoading
+      tooltip: isExistingMatch ? 'Update Match' : 'Create Match',
+      onPressed: isLoading || !hasProposals
           ? null
           : () async {
-              final draftData = draftState.asData?.value;
-              if (draftData == null) return;
-
               MatchDetailsDto? match;
-              if (matchId != null) {
+              if (isExistingMatch) {
                 match = await ref
                     .read(createMatchControllerProvider.notifier)
                     .updateMatch(
@@ -336,8 +350,36 @@ class _CreateMatchButton extends ConsumerWidget {
                     );
               }
 
+              final persistedMatchId = isExistingMatch
+                  ? matchId
+                  : match?.matchId;
+              if (persistedMatchId != null) {
+                try {
+                  await ref
+                      .read(saveMatchDraftUseCaseProvider)
+                      .executeCompleted(
+                        squadId: squadId,
+                        matchId: persistedMatchId,
+                        proposals: draftData.proposals,
+                        winRateMatrix: draftData.winRateMatrix,
+                        teamCount: draftData.proposals.first.teams.length,
+                      );
+                } catch (error) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Match saved, but draft payload failed to save: $error',
+                        ),
+                        backgroundColor: Colors.orange,
+                      ),
+                    );
+                  }
+                }
+              }
+
               if (context.mounted && match != null) {
-                if (matchId != null) {
+                if (isExistingMatch) {
                   ref.invalidate(matchDetailsProvider(matchId!));
                 }
                 ref.invalidate(squadMatchesProvider(squadId));
@@ -352,7 +394,7 @@ class _CreateMatchButton extends ConsumerWidget {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
-                      'Failed to ${matchId != null ? 'update' : 'create'} match: ${createMatchState.error}',
+                      'Failed to ${isExistingMatch ? 'update' : 'create'} match: ${createMatchState.error}',
                     ),
                     backgroundColor: Colors.red,
                   ),

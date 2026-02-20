@@ -1,4 +1,5 @@
 import 'package:app/core/error/failure.dart';
+import 'package:app/core/utils/team_ranking.dart';
 import 'package:app/features/draft/domain/entities/draft.dart';
 import 'package:app/features/draft/domain/entities/draft_proposal.dart';
 import 'package:app/features/draft/domain/entities/draft_rule.dart';
@@ -14,6 +15,7 @@ class CombinatoryDraftRepository implements DraftRepository {
   static const int _minTeamCount = 2;
   static const int _maxTeamCount = 4;
   static const double _rulePenalty = 100.0;
+  static const double _positionPenalty = 100.0;
 
   @override
   Future<List<Draft>> createDraft({
@@ -290,8 +292,6 @@ DraftProposal _buildProposal({
   final teams = <DraftTeam>[];
   final playerTeamIndex = <int, int>{};
 
-  var totalPlayersRanking = 0.0;
-
   for (var teamIndex = 0; teamIndex < teamMasks.length; teamIndex++) {
     final mask = teamMasks[teamIndex];
     final players = <Player>[];
@@ -311,18 +311,24 @@ DraftProposal _buildProposal({
     teams.add(
       DraftTeam(index: teamIndex, players: players, totalRanking: totalRanking),
     );
-    totalPlayersRanking += totalRanking;
   }
 
-  final avgTeamRanking = totalPlayersRanking / teams.length;
+  final effectiveTeamRankings = teams
+      .map(
+        (team) => _effectiveTeamRanking(
+          team: team,
+          allTeams: teams,
+          playWithSubstitute: playWithSubstitute,
+        ),
+      )
+      .toList(growable: false);
+
+  final avgTeamRanking =
+      effectiveTeamRankings.reduce((a, b) => a + b) /
+      effectiveTeamRankings.length;
 
   var deviationScore = 0.0;
-  for (final team in teams) {
-    final effectiveRanking = _effectiveTeamRanking(
-      team: team,
-      allTeams: teams,
-      playWithSubstitute: playWithSubstitute,
-    );
+  for (final effectiveRanking in effectiveTeamRankings) {
     deviationScore += (effectiveRanking - avgTeamRanking).abs();
   }
 
@@ -351,30 +357,16 @@ double _effectiveTeamRanking({
   required List<DraftTeam> allTeams,
   required bool playWithSubstitute,
 }) {
-  if (!playWithSubstitute) {
-    return team.totalRanking;
-  }
-
   final minSize = allTeams
       .map((t) => t.players.length)
       .reduce((value, element) => value < element ? value : element);
 
-  if (team.players.length <= minSize) {
-    return team.totalRanking;
-  }
-
-  if (team.players.isEmpty) {
-    return team.totalRanking;
-  }
-
-  var minPlayerRanking = team.players.first.ranking;
-  for (final player in team.players.skip(1)) {
-    if (player.ranking < minPlayerRanking) {
-      minPlayerRanking = player.ranking;
-    }
-  }
-
-  return team.totalRanking - minPlayerRanking;
+  return effectiveTeamRanking(
+    totalRanking: team.totalRanking,
+    teamSize: team.players.length,
+    opponentTeamSize: minSize,
+    playWithSubstitute: playWithSubstitute,
+  );
 }
 
 double _calculatePositionWeight(List<DraftTeam> teams) {
@@ -387,7 +379,7 @@ double _calculatePositionWeight(List<DraftTeam> teams) {
       final key = _normalizePosition(player.position);
       final count = (counts[key] ?? 0) + 1;
       counts[key] = count;
-      totalWeight += count;
+      totalWeight += count * CombinatoryDraftRepository._positionPenalty;
     }
   }
 

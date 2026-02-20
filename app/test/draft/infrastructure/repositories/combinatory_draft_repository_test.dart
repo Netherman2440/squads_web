@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:app/core/utils/team_ranking.dart';
 import 'package:app/features/draft/domain/entities/draft.dart';
 import 'package:app/features/draft/domain/entities/draft_rule.dart';
 import 'package:app/features/draft/infrastructure/repositories/combinatory_draft_repository.dart';
@@ -123,6 +124,63 @@ void main() {
     expect(proposals, isNotEmpty);
     expect(_allPlayerIds(proposals.first).length, 17);
   });
+
+  test(
+    'playWithSubstitute affects odd-team ranking analysis in combinatory draft',
+    () async {
+      final players = [
+        _player(id: 'p1', ranking: 120),
+        _player(id: 'p2', ranking: 100),
+        _player(id: 'p3', ranking: 90),
+        _player(id: 'p4', ranking: 80),
+        _player(id: 'p5', ranking: 60),
+      ];
+
+      final noSubstitute = await repository.createDraft(
+        players: players,
+        teamCount: 2,
+        limit: 1,
+        playWithSubstitute: false,
+      );
+      final withSubstitute = await repository.createDraft(
+        players: players,
+        teamCount: 2,
+        limit: 1,
+        playWithSubstitute: true,
+      );
+
+      expect(noSubstitute, isNotEmpty);
+      expect(withSubstitute, isNotEmpty);
+
+      final noSubFirst = noSubstitute.first;
+      final withSubFirst = withSubstitute.first;
+
+      expect(noSubFirst.homePlayers.length, 3);
+      expect(withSubFirst.homePlayers.length, 3);
+
+      // Without substitute adjustment, the best raw split here is 260 vs 190.
+      expect(noSubFirst.homeTotalRanking, 260);
+
+      // With substitute adjustment, analysis should prefer 270 vs 180
+      // because effective score of larger team becomes 180.
+      expect(withSubFirst.homeTotalRanking, 270);
+
+      final effectiveHome = effectiveTeamRanking(
+        totalRanking: withSubFirst.homeTotalRanking,
+        teamSize: withSubFirst.homePlayers.length,
+        opponentTeamSize: withSubFirst.awayPlayers.length,
+        playWithSubstitute: true,
+      );
+      final effectiveAway = effectiveTeamRanking(
+        totalRanking: withSubFirst.awayTotalRanking,
+        teamSize: withSubFirst.awayPlayers.length,
+        opponentTeamSize: withSubFirst.homePlayers.length,
+        playWithSubstitute: true,
+      );
+
+      expect((effectiveHome - effectiveAway).abs(), closeTo(0, 0.0001));
+    },
+  );
 }
 
 List<Player> _players(int count, {double ranking = 50}) {

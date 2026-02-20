@@ -550,6 +550,18 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
                       child: const Text('Wylosuj jeszcze raz'),
                     ),
                   TextButton(
+                    onPressed: () {
+                      context.pushNamed(
+                        AppRoute.matchDraft.name,
+                        pathParameters: {
+                          'squadId': widget.squadId,
+                          'matchId': widget.matchId,
+                        },
+                      );
+                    },
+                    child: const Text('Podgląd draftu'),
+                  ),
+                  TextButton(
                     onPressed: _onRematch,
                     child: const Text('Rewanż'),
                   ),

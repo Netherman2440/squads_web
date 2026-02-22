@@ -10,12 +10,13 @@ import 'package:app/features/matches/application/dto/match_details_dto.dart';
 import 'package:app/features/matches/application/dto/player_dto.dart';
 import 'package:app/features/matches/presentation/controllers/match_details_notifier.dart';
 import 'package:app/features/matches/presentation/widgets/match_player_tile.dart';
-import 'package:app/features/players/application/usecases/get_squad_players_usecase.dart';
 import 'package:app/features/squads/domain/entities/user_squad_role.dart';
 import 'package:app/features/squads/presentation/state/squad_detail_notifier.dart';
 import 'package:app/features/matches/presentation/controllers/squad_matches_notifier.dart';
 import 'package:app/core/app_config.dart';
 import 'package:app/core/widgets/probability_slider.dart';
+
+enum _MatchDetailsEditMode { none, teams, score }
 
 class MatchDetailsPage extends ConsumerStatefulWidget {
   final String squadId;
@@ -32,7 +33,7 @@ class MatchDetailsPage extends ConsumerStatefulWidget {
 }
 
 class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
-  bool _isEditing = false;
+  _MatchDetailsEditMode _editMode = _MatchDetailsEditMode.none;
   final TextEditingController _homeScoreController = TextEditingController();
   final TextEditingController _awayScoreController = TextEditingController();
   final TextEditingController _homeTeamNameController = TextEditingController();
@@ -41,16 +42,16 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
   List<PlayerDto> _homePlayers = [];
   List<PlayerDto> _awayPlayers = [];
   bool _isDraggingPlayer = false;
-
-  bool _isAddPlayerOpen = false;
-  final TextEditingController _playerSearchController = TextEditingController();
-  List<PlayerDto> _squadPlayers = [];
   String? _homeTeamColorHex;
   String? _awayTeamColorHex;
   String? _initialHomeTeamName;
   String? _initialAwayTeamName;
   String? _initialHomeTeamColorHex;
   String? _initialAwayTeamColorHex;
+
+  bool get _isEditing => _editMode != _MatchDetailsEditMode.none;
+  bool get _isTeamEditing => _editMode == _MatchDetailsEditMode.teams;
+  bool get _isScoreEditing => _editMode == _MatchDetailsEditMode.score;
 
   static const List<String> _teamColorOptions = [
     '#E53935',
@@ -75,7 +76,6 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
     _awayScoreController.dispose();
     _homeTeamNameController.dispose();
     _awayTeamNameController.dispose();
-    _playerSearchController.dispose();
     super.dispose();
   }
 
@@ -83,12 +83,14 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
   void didUpdateWidget(covariant MatchDetailsPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.matchId != widget.matchId) {
-      _isEditing = false;
-      _isAddPlayerOpen = false;
+      _editMode = _MatchDetailsEditMode.none;
       _homePlayers = [];
       _awayPlayers = [];
+      _isDraggingPlayer = false;
       _homeTeamNameController.clear();
       _awayTeamNameController.clear();
+      _homeScoreController.clear();
+      _awayScoreController.clear();
       _homeTeamColorHex = null;
       _awayTeamColorHex = null;
       _initialHomeTeamName = null;
@@ -99,12 +101,10 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
     }
   }
 
-  void _enterEditMode(MatchDetailsDto match) {
+  void _enterTeamEditMode(MatchDetailsDto match) {
     if (match.homeTeam == null || match.awayTeam == null) return;
     setState(() {
-      _isEditing = true;
-      _homeScoreController.text = match.homeScore?.toString() ?? '';
-      _awayScoreController.text = match.awayScore?.toString() ?? '';
+      _editMode = _MatchDetailsEditMode.teams;
       _homePlayers = List.from(match.homeTeam!.players);
       _awayPlayers = List.from(match.awayTeam!.players);
       _homeTeamNameController.text = match.homeTeam?.name ?? '';
@@ -118,15 +118,24 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
     });
   }
 
+  void _enterScoreEditMode(MatchDetailsDto match) {
+    setState(() {
+      _editMode = _MatchDetailsEditMode.score;
+      _homeScoreController.text = match.homeScore?.toString() ?? '';
+      _awayScoreController.text = match.awayScore?.toString() ?? '';
+    });
+  }
+
   void _cancelEdit() {
     setState(() {
-      _isEditing = false;
+      _editMode = _MatchDetailsEditMode.none;
       _homePlayers.clear();
       _awayPlayers.clear();
-      _isAddPlayerOpen = false;
       _isDraggingPlayer = false;
       _homeTeamNameController.clear();
       _awayTeamNameController.clear();
+      _homeScoreController.clear();
+      _awayScoreController.clear();
       _homeTeamColorHex = null;
       _awayTeamColorHex = null;
       _initialHomeTeamName = null;
@@ -137,6 +146,14 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
   }
 
   Future<void> _saveChanges(MatchDetailsDto match) async {
+    if (_isScoreEditing) {
+      await _saveScoreChanges();
+      return;
+    }
+    await _saveTeamChanges(match);
+  }
+
+  Future<void> _saveTeamChanges(MatchDetailsDto match) async {
     final homeTeam = match.homeTeam;
     final awayTeam = match.awayTeam;
     if (homeTeam == null || awayTeam == null) return;
@@ -185,32 +202,47 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
           .updateTeams(homeIds, awayIds);
     }
 
-    // 2. Save Score THEN
+    if (mounted) {
+      setState(() {
+        _editMode = _MatchDetailsEditMode.none;
+      });
+    }
+
+    // Ensure matches list refreshes when user goes back.
+    ref.invalidate(squadMatchesProvider(widget.squadId));
+  }
+
+  Future<void> _saveScoreChanges() async {
     final homeScoreText = _homeScoreController.text.trim();
     final awayScoreText = _awayScoreController.text.trim();
 
-    if (homeScoreText.isNotEmpty && awayScoreText.isNotEmpty) {
-      final home = int.tryParse(homeScoreText);
-      final away = int.tryParse(awayScoreText);
-
-      if (home == null || away == null) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Please enter valid scores')),
-          );
-        }
-        return;
+    if (homeScoreText.isEmpty || awayScoreText.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please enter both scores')),
+        );
       }
-      await ref
-          .read(matchDetailsProvider(widget.matchId).notifier)
-          .updateScore(widget.squadId, home, away);
+      return;
     }
+
+    final home = int.tryParse(homeScoreText);
+    final away = int.tryParse(awayScoreText);
+
+    if (home == null || away == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please enter valid scores')),
+        );
+      }
+      return;
+    }
+    await ref
+        .read(matchDetailsProvider(widget.matchId).notifier)
+        .updateScore(widget.squadId, home, away);
 
     if (mounted) {
       setState(() {
-        _isEditing = false;
-        _isAddPlayerOpen = false;
-        _isDraggingPlayer = false;
+        _editMode = _MatchDetailsEditMode.none;
       });
     }
 
@@ -246,7 +278,10 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
 
     if (mounted) {
       ref.invalidate(squadMatchesProvider(widget.squadId));
-      context.pop(); // Go back to list
+      context.goNamed(
+        AppRoute.matches.name,
+        pathParameters: {'squadId': widget.squadId},
+      );
     }
   }
 
@@ -321,19 +356,10 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
     final playerId = data;
 
     // Find player in current lists
-    PlayerDto player;
-    try {
-      player = _homePlayers.firstWhere((p) => p.playerId == playerId);
-    } catch (_) {
-      try {
-        player = _awayPlayers.firstWhere((p) => p.playerId == playerId);
-      } catch (_) {
-        // If the player is not currently in teams, we might be dragging from add-player panel.
-        final fromPool = _squadPlayers.where((p) => p.playerId == playerId);
-        if (fromPool.isEmpty) return;
-        player = fromPool.first;
-      }
-    }
+    final fromHome = _homePlayers.where((p) => p.playerId == playerId);
+    final fromAway = _awayPlayers.where((p) => p.playerId == playerId);
+    if (fromHome.isEmpty && fromAway.isEmpty) return;
+    final player = fromHome.isNotEmpty ? fromHome.first : fromAway.first;
 
     setState(() {
       _homePlayers.removeWhere((p) => p.playerId == playerId);
@@ -353,25 +379,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
     setState(() {
       _homePlayers.removeWhere((p) => p.playerId == playerId);
       _awayPlayers.removeWhere((p) => p.playerId == playerId);
-    });
-  }
-
-  Future<void> _toggleAddPlayer() async {
-    final next = !_isAddPlayerOpen;
-    setState(() {
-      _isAddPlayerOpen = next;
-      _playerSearchController.clear();
-    });
-
-    if (!next) return;
-    if (_squadPlayers.isNotEmpty) return;
-
-    final players = await ref
-        .read(getSquadPlayersUseCaseProvider)
-        .execute(squadId: widget.squadId);
-    if (!mounted) return;
-    setState(() {
-      _squadPlayers = players.map(PlayerDto.fromDomain).toList();
+      _isDraggingPlayer = false;
     });
   }
 
@@ -476,13 +484,6 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
           if (canManage && matchAsync.hasValue) ...[
             if (_isEditing) ...[
               IconButton(
-                icon: Icon(
-                  _isAddPlayerOpen ? Icons.person_off : Icons.person_add,
-                ),
-                onPressed: _toggleAddPlayer,
-                tooltip: _isAddPlayerOpen ? 'Close add player' : 'Add player',
-              ),
-              IconButton(
                 icon: const Icon(Icons.save),
                 onPressed: () => _saveChanges(matchAsync.value!),
                 tooltip: 'Save',
@@ -501,8 +502,8 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
               ),
               IconButton(
                 icon: const Icon(Icons.edit),
-                onPressed: () => _enterEditMode(matchAsync.value!),
-                tooltip: 'Edit',
+                onPressed: () => _enterTeamEditMode(matchAsync.value!),
+                tooltip: 'Edytuj składy',
               ),
             ],
           ],
@@ -512,7 +513,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
         data: (match) => Stack(
           children: [
             _buildContent(context, match, canManage: canManage),
-            if (_isEditing && _isDraggingPlayer)
+            if (_isTeamEditing && _isDraggingPlayer)
               Positioned(
                 left: 0,
                 right: 0,
@@ -543,7 +544,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
     required bool canManage,
   }) {
     final dateFormat = DateFormat('dd.MM.yyyy HH:mm');
-    final bottomInset = _isEditing && _isDraggingPlayer ? 84.0 : 0.0;
+    final bottomInset = _isTeamEditing && _isDraggingPlayer ? 84.0 : 0.0;
     final hasScore = match.homeScore != null && match.awayScore != null;
     final hasTeamAssignments =
         (match.homeTeam?.players.isNotEmpty ?? false) &&
@@ -592,7 +593,11 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
                         },
                       );
                     },
-                    child: const Text('Podgląd draftu'),
+                    child: const Text('Podgląd propozycji'),
+                  ),
+                  TextButton(
+                    onPressed: () => _enterScoreEditMode(match),
+                    child: const Text('Wprowadź wynik'),
                   ),
                   TextButton(
                     onPressed: _onRematch,
@@ -606,50 +611,41 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 16),
-          if (_isEditing && _isAddPlayerOpen) ...[
-            _AddPlayerPanel(
-              players: _availableSquadPlayers(),
-              searchController: _playerSearchController,
-              onQueryChanged: (_) => setState(() {}),
-              onDragStarted: () => setState(() => _isDraggingPlayer = true),
-              onDragEnd: () => setState(() => _isDraggingPlayer = false),
-            ),
-          ],
           const SizedBox(height: 24),
           LayoutBuilder(
             builder: (context, constraints) {
               final isCompact = constraints.maxWidth < AppConfig.compactWidth;
-              final scoreBoard = _isEditing
+              final scoreBoard = _isScoreEditing
                   ? _buildEditScoreBoard(compact: isCompact)
                   : _buildScoreBoard(match, compact: isCompact);
               final homeSection = _buildTeamSection(
                 context,
-                _isEditing
+                _isTeamEditing
                     ? _homePlayers
                     : (match.homeTeam?.players ?? const <PlayerDto>[]),
                 match.homeTeam?.name,
                 'Home',
                 'home',
-                _isEditing ? _homeTeamColorHex : match.homeTeam?.color,
-                opponentCount: _isEditing
+                _isTeamEditing ? _homeTeamColorHex : match.homeTeam?.color,
+                opponentCount: _isTeamEditing
                     ? _awayPlayers.length
                     : (match.awayTeam?.players.length ?? 0),
-                nameController: _isEditing ? _homeTeamNameController : null,
+                nameController: _isTeamEditing ? _homeTeamNameController : null,
                 compact: isCompact,
               );
               final awaySection = _buildTeamSection(
                 context,
-                _isEditing
+                _isTeamEditing
                     ? _awayPlayers
                     : (match.awayTeam?.players ?? const <PlayerDto>[]),
                 match.awayTeam?.name,
                 'Away',
                 'away',
-                _isEditing ? _awayTeamColorHex : match.awayTeam?.color,
-                opponentCount: _isEditing
+                _isTeamEditing ? _awayTeamColorHex : match.awayTeam?.color,
+                opponentCount: _isTeamEditing
                     ? _homePlayers.length
                     : (match.homeTeam?.players.length ?? 0),
-                nameController: _isEditing ? _awayTeamNameController : null,
+                nameController: _isTeamEditing ? _awayTeamNameController : null,
                 compact: isCompact,
               );
 
@@ -657,16 +653,16 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
               final scoreBoardWidth = isCompact ? 140.0 : 220.0;
 
               if (isCompact) {
-                final homePlayers = _isEditing
+                final homePlayers = _isTeamEditing
                     ? _homePlayers
                     : (match.homeTeam?.players ?? const <PlayerDto>[]);
-                final awayPlayers = _isEditing
+                final awayPlayers = _isTeamEditing
                     ? _awayPlayers
                     : (match.awayTeam?.players ?? const <PlayerDto>[]);
-                final homeOpponentCount = _isEditing
+                final homeOpponentCount = _isTeamEditing
                     ? _awayPlayers.length
                     : awayPlayers.length;
-                final awayOpponentCount = _isEditing
+                final awayOpponentCount = _isTeamEditing
                     ? _homePlayers.length
                     : homePlayers.length;
                 final homeRating = _effectiveTeamRating(
@@ -687,15 +683,15 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
                           child: _buildCompactTeamHeader(
                             teamName: match.homeTeam?.name,
                             fallbackLabel: 'Home',
-                            colorHex: _isEditing
+                            colorHex: _isTeamEditing
                                 ? _homeTeamColorHex
                                 : match.homeTeam?.color,
-                            nameController: _isEditing
+                            nameController: _isTeamEditing
                                 ? _homeTeamNameController
                                 : null,
                             rating: homeRating,
                             alignEnd: false,
-                            onPickColor: _isEditing
+                            onPickColor: _isTeamEditing
                                 ? () => _pickTeamColor('home')
                                 : null,
                           ),
@@ -711,15 +707,15 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
                           child: _buildCompactTeamHeader(
                             teamName: match.awayTeam?.name,
                             fallbackLabel: 'Away',
-                            colorHex: _isEditing
+                            colorHex: _isTeamEditing
                                 ? _awayTeamColorHex
                                 : match.awayTeam?.color,
-                            nameController: _isEditing
+                            nameController: _isTeamEditing
                                 ? _awayTeamNameController
                                 : null,
                             rating: awayRating,
                             alignEnd: true,
-                            onPickColor: _isEditing
+                            onPickColor: _isTeamEditing
                                 ? () => _pickTeamColor('away')
                                 : null,
                           ),
@@ -737,11 +733,11 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
                             match.homeTeam?.name,
                             'Home',
                             'home',
-                            _isEditing
+                            _isTeamEditing
                                 ? _homeTeamColorHex
                                 : match.homeTeam?.color,
                             opponentCount: homeOpponentCount,
-                            nameController: _isEditing
+                            nameController: _isTeamEditing
                                 ? _homeTeamNameController
                                 : null,
                             compact: true,
@@ -756,11 +752,11 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
                             match.awayTeam?.name,
                             'Away',
                             'away',
-                            _isEditing
+                            _isTeamEditing
                                 ? _awayTeamColorHex
                                 : match.awayTeam?.color,
                             opponentCount: awayOpponentCount,
-                            nameController: _isEditing
+                            nameController: _isTeamEditing
                                 ? _awayTeamNameController
                                 : null,
                             compact: true,
@@ -791,6 +787,16 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
               );
             },
           ),
+          if (_isTeamEditing) ...[
+            const SizedBox(height: 12),
+            Text(
+              'Przeciągnij by zmienić drużyny.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
           if (!_isEditing && match.homeWinProbability != null) ...[
             const SizedBox(height: 24),
             ProbabilitySlider(
@@ -893,6 +899,101 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
     );
   }
 
+  Widget _buildTeamColorBox({
+    required BuildContext context,
+    required Color color,
+    required double size,
+    required bool editable,
+  }) {
+    final theme = Theme.of(context);
+    final box = Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: color,
+        border: Border.all(
+          color: editable
+              ? theme.colorScheme.primary
+              : Colors.grey.withValues(alpha: 0.5),
+          width: editable ? 2 : 1,
+        ),
+        borderRadius: BorderRadius.circular(4),
+        boxShadow: editable
+            ? [
+                BoxShadow(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.28),
+                  blurRadius: 8,
+                  spreadRadius: 1,
+                ),
+              ]
+            : null,
+      ),
+    );
+
+    if (!editable) {
+      return box;
+    }
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        box,
+        Positioned(
+          right: -4,
+          bottom: -4,
+          child: Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primaryContainer,
+              shape: BoxShape.circle,
+              border: Border.all(color: theme.colorScheme.primary, width: 1),
+            ),
+            child: Icon(
+              Icons.edit,
+              size: 8,
+              color: theme.colorScheme.onPrimaryContainer,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEditableTeamNameField({
+    required BuildContext context,
+    required TextEditingController controller,
+    required String hintText,
+    required TextAlign textAlign,
+    TextStyle? style,
+    double? maxWidth,
+  }) {
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxWidth ?? double.infinity),
+      child: TextField(
+        controller: controller,
+        textAlign: textAlign,
+        style: style,
+        decoration: InputDecoration(
+          hintText: hintText,
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 8,
+            vertical: 8,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(6),
+            borderSide: const BorderSide(color: Colors.green, width: 2),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(6),
+            borderSide: const BorderSide(color: Colors.green, width: 2.4),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildTeamSection(
     BuildContext context,
     List<PlayerDto> players,
@@ -918,53 +1019,37 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _isEditing
+              _isTeamEditing
                   ? GestureDetector(
                       onTap: () => _pickTeamColor(side),
                       child: Tooltip(
-                        message: 'Change color',
-                        child: Container(
-                          width: compact ? 24 : 32,
-                          height: compact ? 24 : 32,
-                          decoration: BoxDecoration(
-                            color: teamColor,
-                            border: Border.all(
-                              color: Colors.grey.withValues(alpha: 0.5),
-                            ),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
+                        message: 'Zmień kolor',
+                        child: _buildTeamColorBox(
+                          context: context,
+                          color: teamColor,
+                          size: compact ? 24 : 32,
+                          editable: true,
                         ),
                       ),
                     )
-                  : Container(
-                      width: compact ? 24 : 32,
-                      height: compact ? 24 : 32,
-                      decoration: BoxDecoration(
-                        color: teamColor,
-                        border: Border.all(
-                          color: Colors.grey.withValues(alpha: 0.5),
-                        ),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
+                  : _buildTeamColorBox(
+                      context: context,
+                      color: teamColor,
+                      size: compact ? 24 : 32,
+                      editable: false,
                     ),
               SizedBox(width: compact ? 6 : 8),
-              if (_isEditing && nameController != null)
+              if (_isTeamEditing && nameController != null)
                 Flexible(
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: compact ? 140 : 200),
-                    child: TextField(
-                      controller: nameController,
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontSize: compact ? 16 : null,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: fallbackLabel,
-                        isDense: true,
-                        contentPadding: EdgeInsets.zero,
-                        border: const UnderlineInputBorder(),
-                      ),
+                  child: _buildEditableTeamNameField(
+                    context: context,
+                    controller: nameController,
+                    hintText: fallbackLabel,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontSize: compact ? 16 : null,
                     ),
+                    maxWidth: compact ? 140 : 200,
                   ),
                 )
               else
@@ -989,16 +1074,16 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
         ...sortedPlayers.map(
           (player) => MatchPlayerTile(
             player: player,
-            trailing: const SizedBox.shrink(),
-            dragData: _isEditing ? player.playerId : null,
+            trailing: null,
+            dragData: _isTeamEditing ? player.playerId : null,
             compact: compact,
-            onDragStarted: _isEditing
+            onDragStarted: _isTeamEditing
                 ? () => setState(() => _isDraggingPlayer = true)
                 : null,
-            onDragEnd: _isEditing
+            onDragEnd: _isTeamEditing
                 ? () => setState(() => _isDraggingPlayer = false)
                 : null,
-            onTap: !_isEditing
+            onTap: !_isTeamEditing
                 ? () {
                     context.pushNamed(
                       AppRoute.playerDetails.name,
@@ -1011,7 +1096,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
                 : null,
           ),
         ),
-        if (_isEditing && players.isEmpty)
+        if (_isTeamEditing && players.isEmpty)
           Container(
             height: compact ? 48 : 60,
             alignment: Alignment.center,
@@ -1024,7 +1109,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
       ],
     );
 
-    if (_isEditing) {
+    if (_isTeamEditing) {
       return DragTarget<Object>(
         builder: (context, candidateData, rejectedData) {
           return Container(
@@ -1055,19 +1140,16 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
   }) {
     final theme = Theme.of(context);
     final teamColor = _parseColor(colorHex);
-    final nameWidget = _isEditing && nameController != null
+    final nameWidget = _isTeamEditing && nameController != null
         ? SizedBox(
-            width: 120,
-            child: TextField(
+            width: 128,
+            child: _buildEditableTeamNameField(
+              context: context,
               controller: nameController,
+              hintText: fallbackLabel,
               textAlign: alignEnd ? TextAlign.right : TextAlign.left,
               style: theme.textTheme.titleMedium,
-              decoration: InputDecoration(
-                hintText: fallbackLabel,
-                isDense: true,
-                contentPadding: EdgeInsets.zero,
-                border: const UnderlineInputBorder(),
-              ),
+              maxWidth: 128,
             ),
           )
         : Text(
@@ -1077,14 +1159,11 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
             overflow: TextOverflow.ellipsis,
           );
 
-    final colorBox = Container(
-      width: 18,
-      height: 18,
-      decoration: BoxDecoration(
-        color: teamColor,
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.5)),
-        borderRadius: BorderRadius.circular(4),
-      ),
+    final colorBox = _buildTeamColorBox(
+      context: context,
+      color: teamColor,
+      size: 18,
+      editable: onPickColor != null,
     );
 
     return Column(
@@ -1101,7 +1180,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
               if (onPickColor != null)
                 GestureDetector(
                   onTap: onPickColor,
-                  child: Tooltip(message: 'Change color', child: colorBox),
+                  child: Tooltip(message: 'Zmień kolor', child: colorBox),
                 )
               else
                 colorBox,
@@ -1113,7 +1192,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
               if (onPickColor != null)
                 GestureDetector(
                   onTap: onPickColor,
-                  child: Tooltip(message: 'Change color', child: colorBox),
+                  child: Tooltip(message: 'Zmień kolor', child: colorBox),
                 )
               else
                 colorBox,
@@ -1129,19 +1208,6 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
         ),
       ],
     );
-  }
-
-  List<PlayerDto> _availableSquadPlayers() {
-    final existingIds = <String>{
-      for (final p in _homePlayers) p.playerId,
-      for (final p in _awayPlayers) p.playerId,
-    };
-
-    final q = _playerSearchController.text.trim().toLowerCase();
-    return _squadPlayers
-        .where((p) => !existingIds.contains(p.playerId))
-        .where((p) => q.isEmpty || p.name.toLowerCase().contains(q))
-        .toList(growable: false);
   }
 }
 
@@ -1179,69 +1245,6 @@ class _RemoveDropZone extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class _AddPlayerPanel extends StatelessWidget {
-  const _AddPlayerPanel({
-    required this.players,
-    required this.searchController,
-    required this.onQueryChanged,
-    required this.onDragStarted,
-    required this.onDragEnd,
-  });
-
-  final List<PlayerDto> players;
-  final TextEditingController searchController;
-  final ValueChanged<String> onQueryChanged;
-  final VoidCallback onDragStarted;
-  final VoidCallback onDragEnd;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isCompact = MediaQuery.sizeOf(context).width < AppConfig.compactWidth;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Add player', style: theme.textTheme.titleMedium),
-            const SizedBox(height: 8),
-            TextField(
-              controller: searchController,
-              decoration: const InputDecoration(
-                labelText: 'Search',
-                prefixIcon: Icon(Icons.search),
-              ),
-              textCapitalization: TextCapitalization.none,
-              onChanged: onQueryChanged,
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              height: 240,
-              child: players.isEmpty
-                  ? const Center(child: Text('No available players.'))
-                  : ListView.builder(
-                      itemCount: players.length,
-                      itemBuilder: (context, index) {
-                        final p = players[index];
-                        return MatchPlayerTile(
-                          player: p,
-                          trailing: const Icon(Icons.drag_indicator),
-                          dragData: p.playerId,
-                          compact: isCompact,
-                          onDragStarted: onDragStarted,
-                          onDragEnd: onDragEnd,
-                        );
-                      },
-                    ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

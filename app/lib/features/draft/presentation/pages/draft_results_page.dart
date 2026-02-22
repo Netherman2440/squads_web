@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:logging/logging.dart';
 import 'package:app/core/app_config.dart';
 import 'package:app/core/app_router.dart';
 import 'package:app/core/error/failure.dart';
@@ -19,6 +20,8 @@ import 'package:app/features/matches/presentation/controllers/match_details_noti
 import 'package:app/features/matches/presentation/controllers/squad_matches_notifier.dart';
 import 'package:app/features/players/domain/entities/player.dart';
 import 'package:app/features/players/players_providers.dart';
+
+final _logger = Logger('DraftResultsPage');
 
 class DraftResultsPage extends ConsumerStatefulWidget {
   const DraftResultsPage({
@@ -170,7 +173,13 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
               : _DraftLoadingMode.checkingExisting;
         });
       }
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      _logger.warning(
+        'Failed to hydrate loading player count for matchId=$matchId',
+        error,
+        stackTrace,
+      );
+    }
   }
 
   @override

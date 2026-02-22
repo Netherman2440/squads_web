@@ -103,7 +103,11 @@ String _displayTeamName(String? name, String fallback) {
 Color _parseColor(String? colorHex) {
   if (colorHex == null || colorHex.isEmpty) return Colors.grey;
   try {
-    final hex = colorHex.replaceFirst('#', '');
+    final normalized = colorHex.trim();
+    final hex = normalized.startsWith('#')
+        ? normalized.substring(1)
+        : normalized;
+    if (hex.length != 6) return Colors.grey;
     return Color(int.parse('0xFF$hex'));
   } catch (_) {
     return Colors.grey;

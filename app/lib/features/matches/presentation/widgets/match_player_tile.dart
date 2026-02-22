@@ -6,7 +6,7 @@ class MatchPlayerTile extends StatelessWidget {
   const MatchPlayerTile({
     super.key,
     required this.player,
-    required this.trailing,
+    this.trailing,
     this.compact = false,
     this.onTap,
     this.dragData,
@@ -16,7 +16,7 @@ class MatchPlayerTile extends StatelessWidget {
   });
 
   final PlayerDto player;
-  final Widget trailing;
+  final Widget? trailing;
   final bool compact;
   final VoidCallback? onTap;
   final Object? dragData;
@@ -31,7 +31,7 @@ class MatchPlayerTile extends StatelessWidget {
     // In match history, we should show the snapshot ranking if available.
     final displayRanking = snapshotRanking ?? player.ranking;
     final theme = Theme.of(context);
-    final hasTrailing = trailing is! SizedBox;
+    final hasTrailing = trailing != null;
     final scoreText = displayRanking.toStringAsFixed(2);
 
     final tile = Card(
@@ -78,7 +78,7 @@ class MatchPlayerTile extends StatelessWidget {
                         ],
                       ),
                     ),
-                    if (hasTrailing) ...[const SizedBox(width: 8), trailing],
+                    if (hasTrailing) ...[const SizedBox(width: 8), trailing!],
                   ],
                 ),
               ),

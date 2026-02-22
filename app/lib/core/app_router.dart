@@ -240,12 +240,15 @@ final appRouter = () {
               final extra = state.extra;
 
               List<String> selectedIds = const [];
+              var playWithSubstitute = true;
               if (extra is List<String>) {
                 selectedIds = extra;
               } else if (extra is Map<String, dynamic>) {
                 selectedIds =
                     (extra['selectedIds'] as List<dynamic>?)?.cast<String>() ??
                     [];
+                playWithSubstitute =
+                    (extra['playWithSubstitute'] as bool?) ?? true;
               }
 
               return NoTransitionPage(
@@ -253,6 +256,7 @@ final appRouter = () {
                   squadId: squadId,
                   selectedPlayerIds: selectedIds,
                   matchId: matchId,
+                  playWithSubstitute: playWithSubstitute,
                 ),
               );
             },

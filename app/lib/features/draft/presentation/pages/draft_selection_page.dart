@@ -28,6 +28,8 @@ class DraftSelectionPage extends ConsumerStatefulWidget {
 }
 
 class _DraftSelectionPageState extends ConsumerState<DraftSelectionPage> {
+  bool _playWithSubstitute = true;
+
   @override
   void initState() {
     super.initState();
@@ -111,7 +113,10 @@ class _DraftSelectionPageState extends ConsumerState<DraftSelectionPage> {
                             'squadId': widget.squadId,
                             'matchId': targetMatchId,
                           },
-                          extra: {'selectedIds': ids},
+                          extra: {
+                            'selectedIds': ids,
+                            'playWithSubstitute': _playWithSubstitute,
+                          },
                         );
                       }
                     : null,
@@ -183,6 +188,22 @@ class _DraftSelectionPageState extends ConsumerState<DraftSelectionPage> {
 
                 return Column(
                   children: [
+                    Card(
+                      child: SwitchListTile.adaptive(
+                        title: const Text('Gra ze zmianami'),
+                        subtitle: const Text(
+                          'Przy nieparzystej liczbie graczy większa drużyna '
+                          'gra ze zmianą.',
+                        ),
+                        value: _playWithSubstitute,
+                        onChanged: (value) {
+                          setState(() {
+                            _playWithSubstitute = value;
+                          });
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     if (data.validationMessage != null)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 12),

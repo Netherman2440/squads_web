@@ -26,11 +26,13 @@ class DraftResultsPage extends ConsumerStatefulWidget {
     required this.squadId,
     required this.selectedPlayerIds,
     this.matchId,
+    this.playWithSubstitute = true,
   });
 
   final String squadId;
   final List<String> selectedPlayerIds;
   final String? matchId;
+  final bool playWithSubstitute;
 
   @override
   ConsumerState<DraftResultsPage> createState() => _DraftResultsPageState();
@@ -52,6 +54,7 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
   @override
   void initState() {
     super.initState();
+    _playWithSubstitute = widget.playWithSubstitute;
     _loadingPlayerCount = widget.selectedPlayerIds.length;
     _loadingMode = widget.selectedPlayerIds.length >= 2
         ? _DraftLoadingMode.generating
@@ -73,6 +76,9 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
   @override
   void didUpdateWidget(covariant DraftResultsPage oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.playWithSubstitute != widget.playWithSubstitute) {
+      _playWithSubstitute = widget.playWithSubstitute;
+    }
     if (oldWidget.matchId != widget.matchId ||
         oldWidget.selectedPlayerIds != widget.selectedPlayerIds) {
       _loadingPlayerCount = widget.selectedPlayerIds.length;
@@ -170,15 +176,6 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(draftSessionNotifierProvider);
-    final algorithm = ref.watch(draftAlgorithmProvider);
-    final settingsVisible = state.when(
-      data: (data) =>
-          data.proposals.isNotEmpty &&
-          data.proposals[data.selectedIndex].homePlayers.length !=
-              data.proposals[data.selectedIndex].awayPlayers.length,
-      error: (error, stackTrace) => false,
-      loading: () => false,
-    );
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: _loadMatchId == null,
@@ -199,38 +196,6 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
               ),
         title: const Text('Draft'),
         actions: [
-          if (settingsVisible)
-            _DraftOptionsButton(
-              isPlayWithSubstituteEnabled: _playWithSubstitute,
-              onTogglePlayWithSubstitute: () {
-                setState(() {
-                  _playWithSubstitute = !_playWithSubstitute;
-                });
-
-                ref
-                    .read(draftSessionNotifierProvider.notifier)
-                    .load(
-                      squadId: widget.squadId,
-                      selectedPlayerIds: widget.selectedPlayerIds,
-                      algorithm: algorithm,
-                      matchId: _loadMatchId,
-                      playWithSubstitute: _playWithSubstitute,
-                    );
-              },
-              algorithm: algorithm,
-              onSetAlgorithm: (next) {
-                ref.read(draftAlgorithmProvider.notifier).setAlgorithm(next);
-                ref
-                    .read(draftSessionNotifierProvider.notifier)
-                    .load(
-                      squadId: widget.squadId,
-                      selectedPlayerIds: widget.selectedPlayerIds,
-                      algorithm: next,
-                      matchId: _loadMatchId,
-                      playWithSubstitute: _playWithSubstitute,
-                    );
-              },
-            ),
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: _CreateMatchButton(
@@ -417,6 +382,12 @@ class _DraftLoadingBody extends StatelessWidget {
                       : 'Sprawdzane warianty: ${_formatBigInt(count)}')
                 : 'Sprawdzam zapisany draft...',
           ),
+          if (showCombinationCount) ...[
+            const SizedBox(height: 6),
+            const Text(
+              'Możesz wyjść z tego ekranu, ale nie zamykaj przeglądarki.',
+            ),
+          ],
         ],
       ),
     );
@@ -424,58 +395,6 @@ class _DraftLoadingBody extends StatelessWidget {
 }
 
 enum _DraftLoadingMode { checkingExisting, generating }
-
-enum _DraftOptionsAction { togglePlayWithSubstitute, useCombinatory, useGreedy }
-
-class _DraftOptionsButton extends StatelessWidget {
-  const _DraftOptionsButton({
-    required this.isPlayWithSubstituteEnabled,
-    required this.onTogglePlayWithSubstitute,
-    required this.algorithm,
-    required this.onSetAlgorithm,
-  });
-
-  final bool isPlayWithSubstituteEnabled;
-  final VoidCallback onTogglePlayWithSubstitute;
-  final DraftAlgorithm algorithm;
-  final ValueChanged<DraftAlgorithm> onSetAlgorithm;
-
-  @override
-  Widget build(BuildContext context) {
-    return PopupMenuButton<_DraftOptionsAction>(
-      tooltip: 'Draft options',
-      onSelected: (value) {
-        switch (value) {
-          case _DraftOptionsAction.togglePlayWithSubstitute:
-            onTogglePlayWithSubstitute();
-          case _DraftOptionsAction.useCombinatory:
-            onSetAlgorithm(DraftAlgorithm.combinatory);
-          case _DraftOptionsAction.useGreedy:
-            onSetAlgorithm(DraftAlgorithm.greedy);
-        }
-      },
-      itemBuilder: (context) => [
-        CheckedPopupMenuItem<_DraftOptionsAction>(
-          value: _DraftOptionsAction.togglePlayWithSubstitute,
-          checked: isPlayWithSubstituteEnabled,
-          child: const Text('Play with substitute'),
-        ),
-        /*    const PopupMenuDivider(),
-        CheckedPopupMenuItem<_DraftOptionsAction>(
-          value: _DraftOptionsAction.useCombinatory,
-          checked: algorithm == DraftAlgorithm.combinatory,
-          child: const Text('Algorithm: Combinatory'),
-        ),
-        CheckedPopupMenuItem<_DraftOptionsAction>(
-          value: _DraftOptionsAction.useGreedy,
-          checked: algorithm == DraftAlgorithm.greedy,
-          child: const Text('Algorithm: Greedy'),
-        ),*/
-      ],
-      icon: const Icon(Icons.tune),
-    );
-  }
-}
 
 class _CreateMatchButton extends ConsumerWidget {
   const _CreateMatchButton({required this.squadId, this.matchId});

@@ -27,7 +27,7 @@ class SquadMatchesPage extends ConsumerWidget {
           ? FloatingActionButton(
               onPressed: () {
                 context.pushNamed(
-                  AppRoute.draftSelection.name,
+                  AppRoute.draftCreate.name,
                   pathParameters: {'squadId': squadId},
                 );
               },

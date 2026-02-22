@@ -228,3 +228,207 @@ Opcjonalnie (nie MVP):
   - Edycja nazw/kolorów dopiero później w match view (US-013).
 
 
+
+
+-----
+
+DRAFT REFACTOR:
+
+Musimy dostosować draft do zwiększonych potrzeb:
+
+1. Użytkownik chce dzielić daną pulę graczy na więcej równych drużyn niż tylko dwie .
+
+2. Użytkownik chce aby przy wyborze były brane pod uwagę pozycje zawodników.
+
+3. Użytkownik chce móc zdecydować że jacyś zawodnicy muszą być razem w składzie a inni muszą być przeciwko sobie
+
+// NEwton + Gosper
+//todo: gosper hack (iterowanie przez symbole newtonowskie zamiast przez 2^N)
+
+Żeby ograniczyć ilość przeglądanych opcji w combinatory service chcemy ograniczyć się do gosper hack.
+
+Mając wszystkie kombinacje następnym krokiem jest ocena składów.
+
+Definicje
+team score - sumaryczny ranking wszystkich graczy w danej drużynie (z uwzględnieniem rezerwy)
+
+avg team score - ranking "idealnej drużyny", czyli all players score / teamCount
+
+avg player - średni ranking w danym meczu
+
+waga drużyny:
+To dzięki niej będziemy w stanie wziąć pod uwagę pkt. 2 i 3 w user stories.
+Obliczana jest na podstawie doboru wszystkich zawodników do danej drużyny.
+Na wejściu do algorytmu otrzymujemy dwie listy z zasadami:
+- lista z grupami zawodników którzy muszą być RAZEM
+- lista z grupami zawodników którzy muszą być PRZECIWKO SOBIE
+
+
+
+Każdy zawodnik bazowo ma wagę 1.
+Za każdą niespełnioną regułę durzycaym 100 do wagi całego podziału?
+
+edge case: mam w regule 3 graczy, wszyscy chcą być przeciwko sobie, a mam tylko dwie drużyny, 
+wtedy dla jednego gracza reguła jest spełniona - jemu się to podoba
+solution: - blokujemy designem dodawanie takich reguł. Jeśli tworzymy podział na dwie drużyny do reguł 'przeciwko' można dodać maksymalnie 2 graczy.
+Podobnie ograniczamy reguły 'razem' - w jednej regule może być maksymalnie tylko zaowdników ile ostatecznie będzie w jednym składzie - czyli np. jak wybieramy 3 skład y i mamy 15 zawodników to w jednej regule razem może byc tylko 5 graczy.
+
+Do tego pozycje.
+Jeśli w danej drużynie znajduje się już zawodnik z daną pozycją (również bierzemy pod uwagę 'none' czyli brak pozycji jako pozycję)
+wtedy waga tego zawodnika rośnie o tyle ilu już jest zawodników na takie pozycji
+
+np. pierwszy bramkarz w składzie do waga 1, drugi to 2 trzeci to 3 itd. Podbnie - pierwszy gracz bez pozycji to waga 1, drugi 2 itd.
+
+Ocena podziału to:
+
+- suma odchyłu team score od średniej [ abs( team A score - avg team score) + aabs(team B score - avg team score) + ... ]
+POMNOŻONA RAZY:
+-  sumaryczna waga wszystkich drużyn
+
+w przypadku remisów decyduje:
+- suma kwadratów różnic między graczami na poszczególnych pozycjach w rankingu:
+(ranking najlepszego gracza A - ranking najlepszego gracza B)^2 + (ranking drugiego gracza A - ranking drugiego gracza B)^2 + ...
+
+
+Przechowujemy tylko current 20 najlepszych zestawień. - Jeśli jakieś jest słabe to skip i lecimy dalej
+
+
+
+---
+
+W taki sposób jesteśmy gotowi na:
+- więcej drużyn
+- pozycje graczy
+- grupy reguł
+
+
+Chce żebyś zaimplementował ten algorytm w `app/lib/features/draft/infrastructure/repositories/combinatory_draft_repository.dart`
+Potrzeba też dostosować od razu metodę createDraft żeby przyjmowała też parametr liczby drużyn i listę reguł.
+
+co do reguł też potrzebujemy jakiegoś sposobu na przechowywanie ich. 
+
+Proponuję taką strukturę:
+
+enum DraftRuleType:
+- together
+- against
+
+class DraftRule
+DraftRuleType type
+list<playerId> playerIds
+
+W taki sposób przekazujemy list<Rule>
+
+
+----
+
+Tworzenie skomplikowanych draftów trwa długo, ale na ten moment **nie przenosimy logiki do RPC**.
+
+Zostawiamy algorytm w:
+- `app/lib/features/draft/infrastructure/repositories/combinatory_draft_repository.dart`
+
+I dokładamy:
+- trwały zapis wyniku draftu do DB (payload 20 propozycji),
+- powiązanie draftu z meczem.
+
+---
+do tego w matches i tournament dodajemy kolumnę `draft_id`
+
+create match use case:
+- tworzy mecz,
+- tworzy wpis draftu powiązany z `match_id`,
+- liczy combinatory draft lokalnie (jak teraz),
+- zapisuje wynik draftu do DB,
+- zwraca mecz.
+
+UI:
+
+/matches/draft -- zmiana adresu na matches/create
+
+Po wybraniu zawodników prowadzi od razu do utworzonego meczu
+
+/matches/id
+
+jeśli brakuje teams zmieniamy widok:
+
+zaraz pod title meczu dajemy opcję przejrzenia draftu - kliknięcie przenosi nas do
+
+
+/matches/id/draft
+przejście jest możliwe tylko jeśli draft ma wynik zapisany w DB
+możemy tutaj przeglądać gotowe drafty - tutaj wyświetlamy stary ekran matches/create
+
+
+
+## Ustalenia implementacyjne (2026-02-19) - aktualizacja
+
+### 1) Backend
+- Bez RPC dla obliczeń draftu.
+- Algorytm zostaje w `CombinatoryDraftRepository`.
+- Zmieniamy tylko persistence: wynik draftu zapisujemy do DB.
+- `playerIds` zostają formatem w regułach (nie całe obiekty graczy).
+
+### 2) Tryb działania
+- Flow pozostaje synchroniczny z perspektywy aplikacji:
+  - liczymy draft lokalnie,
+  - zapisujemy rezultat,
+  - pokazujemy mecz.
+- Rezygnujemy z jobów async, pollingu i osobnych endpointów statusowych.
+
+### 3) Relacje i nadpisywanie
+- Relacja `match` <-> `draft` to `1:1`.
+- `redraft` dla meczu nadpisuje aktualny draft (ten sam rekord draftu / upsert).
+
+### 4) Zakres domeny match
+- Domena meczu bez zmian (nadal model 2 drużyn: home/away).
+- Obsługa draftu dla >2 drużyn będzie wykorzystana później przy turniejach.
+
+### 5) Walidacje
+- `teamCount` musi być w zakresie `2..4`.
+- `playersCount >= teamCount`.
+
+### 6) Obsługa błędów
+- Jeśli obliczenie lub zapis draftu się nie uda, mecz nadal istnieje.
+- UI pokazuje możliwość ponowienia draftu.
+
+### 7) Payload draftu
+- `payload` przechowuje `json array` 20 propozycji draftów.
+
+### 8) Routing (cutover)
+- Usuwamy stare route'y draftowe.
+- Docelowy flow:
+  - tworzenie draftu startuje z flow tworzenia meczu,
+  - wynik draftu oglądamy pod `/matches/:id/draft`.
+
+---
+
+## TODO: schemat DB (miejsce na Twój input)
+
+Do uzupełnienia przez autora:
+- dokładne kolumny i typy tabel draftowych,
+- indexy i FK,
+- format `payload` (szczegóły JSON),
+- zasady nadpisywania draftu przy `redraft`.
+
+drafts:
+draft_id
+squad_id
+match_id (1:1 z meczem)
+status (opcjonalnie: completed/error)
+proposals (int)
+
+draft_payloads:
+draft_id
+payload
+tablica z prawdopodobieństwem?
+
+## TODO: dodatkowy pomysł DB (miejsce na dopisanie)
+
+Opis pomysłu:
+- przy errorze draftu moglibyśmy stracić informacje o tym jacy gracze są w meczu - trzeba zatem przed stworzeniem draftu utworzyć mecz i dla każdego gracza w meczu dodać ranking history entry (tak jak już się to dzieje w create match use case)
+jednak teraz trzeba to zrobić przed draftem.
+Wpływ na migracje:
+- ... żaden
+
+Wpływ na API:
+- ... żaden

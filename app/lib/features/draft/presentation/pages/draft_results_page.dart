@@ -3,18 +3,25 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:logging/logging.dart';
 import 'package:app/core/app_config.dart';
 import 'package:app/core/app_router.dart';
 import 'package:app/core/error/failure.dart';
 import 'package:app/core/utils/team_ranking.dart';
 import 'package:app/core/widgets/probability_slider.dart';
+import 'package:app/features/draft/application/get_match_draft_use_case.dart';
+import 'package:app/features/draft/application/save_match_draft_use_case.dart';
 import 'package:app/features/draft/presentation/controllers/draft_session_notifier.dart';
 import 'package:app/features/draft/presentation/widgets/draft_draggable_player_tile.dart';
 import 'package:app/features/matches/application/dto/match_details_dto.dart';
+import 'package:app/features/matches/application/usecases/get_match_usecase.dart';
 import 'package:app/features/matches/presentation/controllers/create_match_controller.dart';
 import 'package:app/features/matches/presentation/controllers/match_details_notifier.dart';
 import 'package:app/features/matches/presentation/controllers/squad_matches_notifier.dart';
 import 'package:app/features/players/domain/entities/player.dart';
+import 'package:app/features/players/players_providers.dart';
+
+final _logger = Logger('DraftResultsPage');
 
 class DraftResultsPage extends ConsumerStatefulWidget {
   const DraftResultsPage({
@@ -22,11 +29,13 @@ class DraftResultsPage extends ConsumerStatefulWidget {
     required this.squadId,
     required this.selectedPlayerIds,
     this.matchId,
+    this.playWithSubstitute = true,
   });
 
   final String squadId;
   final List<String> selectedPlayerIds;
   final String? matchId;
+  final bool playWithSubstitute;
 
   @override
   ConsumerState<DraftResultsPage> createState() => _DraftResultsPageState();
@@ -34,67 +43,168 @@ class DraftResultsPage extends ConsumerStatefulWidget {
 
 class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
   bool _playWithSubstitute = true;
+  int? _loadingPlayerCount;
+  _DraftLoadingMode _loadingMode = _DraftLoadingMode.generating;
+
+  String? get _loadMatchId {
+    final value = widget.matchId;
+    if (value == null || value.isEmpty) {
+      return null;
+    }
+    return value;
+  }
 
   @override
   void initState() {
     super.initState();
-    Future.microtask(
-      () => ref
+    _playWithSubstitute = widget.playWithSubstitute;
+    _loadingPlayerCount = widget.selectedPlayerIds.length;
+    _loadingMode = widget.selectedPlayerIds.length >= 2
+        ? _DraftLoadingMode.generating
+        : _DraftLoadingMode.checkingExisting;
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => ref
           .read(draftSessionNotifierProvider.notifier)
           .load(
             squadId: widget.squadId,
             selectedPlayerIds: widget.selectedPlayerIds,
             algorithm: ref.read(draftAlgorithmProvider),
+            matchId: _loadMatchId,
             playWithSubstitute: _playWithSubstitute,
           ),
     );
+    Future.microtask(_resolveLoadingModeAndCount);
+  }
+
+  @override
+  void didUpdateWidget(covariant DraftResultsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.playWithSubstitute != widget.playWithSubstitute) {
+      _playWithSubstitute = widget.playWithSubstitute;
+    }
+    if (oldWidget.matchId != widget.matchId ||
+        oldWidget.selectedPlayerIds != widget.selectedPlayerIds) {
+      _loadingPlayerCount = widget.selectedPlayerIds.length;
+      _loadingMode = widget.selectedPlayerIds.length >= 2
+          ? _DraftLoadingMode.generating
+          : _DraftLoadingMode.checkingExisting;
+      Future.microtask(_resolveLoadingModeAndCount);
+    }
+  }
+
+  Future<void> _resolveLoadingModeAndCount() async {
+    final matchId = _loadMatchId;
+    if (widget.selectedPlayerIds.length >= 2 || matchId == null) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _loadingMode = _DraftLoadingMode.generating;
+      });
+      return;
+    }
+
+    try {
+      final storedDraft = await ref
+          .read(getMatchDraftUseCaseProvider)
+          .execute(matchId: matchId);
+      if (!mounted) {
+        return;
+      }
+
+      if (storedDraft != null) {
+        setState(() {
+          _loadingMode = _DraftLoadingMode.checkingExisting;
+        });
+        return;
+      }
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _loadingMode = _DraftLoadingMode.checkingExisting;
+      });
+      return;
+    }
+
+    await _hydrateLoadingPlayerCount();
+  }
+
+  Future<void> _hydrateLoadingPlayerCount() async {
+    final matchId = _loadMatchId;
+    if (matchId == null || widget.selectedPlayerIds.length >= 2) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _loadingMode = _DraftLoadingMode.generating;
+      });
+      return;
+    }
+
+    try {
+      final rankingEntries = await ref
+          .read(rankingRepositoryProvider)
+          .getMatchRankingHistory(matchId);
+      var count = rankingEntries.map((entry) => entry.playerId).toSet().length;
+
+      if (count < 2) {
+        final match = await ref
+            .read(getMatchUseCaseProvider)
+            .execute(matchId: matchId);
+        count = <String>{
+          for (final player in match.homeTeam?.players ?? const [])
+            player.playerId,
+          for (final player in match.awayTeam?.players ?? const [])
+            player.playerId,
+        }.length;
+      }
+
+      if (!mounted) {
+        return;
+      }
+
+      if (count > 0) {
+        setState(() {
+          _loadingPlayerCount = count;
+          _loadingMode = count >= 2
+              ? _DraftLoadingMode.generating
+              : _DraftLoadingMode.checkingExisting;
+        });
+      }
+    } catch (error, stackTrace) {
+      _logger.warning(
+        'Failed to hydrate loading player count for matchId=$matchId',
+        error,
+        stackTrace,
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(draftSessionNotifierProvider);
-    final algorithm = ref.watch(draftAlgorithmProvider);
-    final settingsVisible = state.when(
-      data: (data) =>
-          data.proposals[data.selectedIndex].homePlayers.length !=
-          data.proposals[data.selectedIndex].awayPlayers.length,
-      error: (error, stackTrace) => false,
-      loading: () => false,
-    );
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: _loadMatchId == null,
+        leading: _loadMatchId == null
+            ? null
+            : IconButton(
+                tooltip: 'Wróć do meczu',
+                onPressed: () {
+                  context.goNamed(
+                    AppRoute.matchDetails.name,
+                    pathParameters: {
+                      'squadId': widget.squadId,
+                      'matchId': _loadMatchId!,
+                    },
+                  );
+                },
+                icon: const Icon(Icons.arrow_back),
+              ),
         title: const Text('Draft'),
         actions: [
-          if (settingsVisible)
-            _DraftOptionsButton(
-              isPlayWithSubstituteEnabled: _playWithSubstitute,
-              onTogglePlayWithSubstitute: () {
-                setState(() {
-                  _playWithSubstitute = !_playWithSubstitute;
-                });
-
-                ref
-                    .read(draftSessionNotifierProvider.notifier)
-                    .load(
-                      squadId: widget.squadId,
-                      selectedPlayerIds: widget.selectedPlayerIds,
-                      algorithm: algorithm,
-                      playWithSubstitute: _playWithSubstitute,
-                    );
-              },
-              algorithm: algorithm,
-              onSetAlgorithm: (next) {
-                ref.read(draftAlgorithmProvider.notifier).setAlgorithm(next);
-                ref
-                    .read(draftSessionNotifierProvider.notifier)
-                    .load(
-                      squadId: widget.squadId,
-                      selectedPlayerIds: widget.selectedPlayerIds,
-                      algorithm: next,
-                      playWithSubstitute: _playWithSubstitute,
-                    );
-              },
-            ),
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: _CreateMatchButton(
@@ -105,8 +215,17 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
         ],
       ),
       body: state.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => _ErrorBody(error: error),
+        loading: () => _DraftLoadingBody(
+          selectedPlayerCount:
+              _loadingPlayerCount ?? widget.selectedPlayerIds.length,
+          showCombinationCount: _loadingMode == _DraftLoadingMode.generating,
+        ),
+        error: (error, _) => _ErrorBody(
+          error: error,
+          squadId: widget.squadId,
+          matchId: _loadMatchId,
+          selectedPlayerIds: widget.selectedPlayerIds,
+        ),
         data: (data) {
           if (data.proposals.isEmpty) {
             return const Padding(
@@ -135,10 +254,8 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
                 ),
                 const SizedBox(height: 12),
                 _TotalsRow(
-                  homeTotal: _sum(data.home),
-                  awayTotal: _sum(data.away),
-                  homeCount: data.home.length,
-                  awayCount: data.away.length,
+                  homePlayers: data.home,
+                  awayPlayers: data.away,
                   playWithSubstitute: _playWithSubstitute,
                   homeWinProbability: data.homeWinProbability,
                 ),
@@ -243,57 +360,50 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
   }
 }
 
-enum _DraftOptionsAction { togglePlayWithSubstitute, useCombinatory, useGreedy }
-
-class _DraftOptionsButton extends StatelessWidget {
-  const _DraftOptionsButton({
-    required this.isPlayWithSubstituteEnabled,
-    required this.onTogglePlayWithSubstitute,
-    required this.algorithm,
-    required this.onSetAlgorithm,
+class _DraftLoadingBody extends StatelessWidget {
+  const _DraftLoadingBody({
+    required this.selectedPlayerCount,
+    required this.showCombinationCount,
   });
 
-  final bool isPlayWithSubstituteEnabled;
-  final VoidCallback onTogglePlayWithSubstitute;
-  final DraftAlgorithm algorithm;
-  final ValueChanged<DraftAlgorithm> onSetAlgorithm;
+  final int selectedPlayerCount;
+  final bool showCombinationCount;
 
   @override
   Widget build(BuildContext context) {
-    return PopupMenuButton<_DraftOptionsAction>(
-      tooltip: 'Draft options',
-      onSelected: (value) {
-        switch (value) {
-          case _DraftOptionsAction.togglePlayWithSubstitute:
-            onTogglePlayWithSubstitute();
-          case _DraftOptionsAction.useCombinatory:
-            onSetAlgorithm(DraftAlgorithm.combinatory);
-          case _DraftOptionsAction.useGreedy:
-            onSetAlgorithm(DraftAlgorithm.greedy);
-        }
-      },
-      itemBuilder: (context) => [
-        CheckedPopupMenuItem<_DraftOptionsAction>(
-          value: _DraftOptionsAction.togglePlayWithSubstitute,
-          checked: isPlayWithSubstituteEnabled,
-          child: const Text('Play with substitute'),
-        ),
-        /*    const PopupMenuDivider(),
-        CheckedPopupMenuItem<_DraftOptionsAction>(
-          value: _DraftOptionsAction.useCombinatory,
-          checked: algorithm == DraftAlgorithm.combinatory,
-          child: const Text('Algorithm: Combinatory'),
-        ),
-        CheckedPopupMenuItem<_DraftOptionsAction>(
-          value: _DraftOptionsAction.useGreedy,
-          checked: algorithm == DraftAlgorithm.greedy,
-          child: const Text('Algorithm: Greedy'),
-        ),*/
-      ],
-      icon: const Icon(Icons.tune),
+    final count = _estimatedCheckedDraftCount(
+      playerCount: selectedPlayerCount,
+      teamCount: 2,
+    );
+
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const CircularProgressIndicator(),
+          const SizedBox(height: 12),
+          const Text('Trwa generowanie draftu. To może chwilę potrwać.'),
+          const SizedBox(height: 8),
+          Text(
+            showCombinationCount
+                ? (count == null
+                      ? 'Sprawdzane warianty: wyliczanie...'
+                      : 'Sprawdzane warianty: ${_formatBigInt(count)}')
+                : 'Sprawdzam zapisany draft...',
+          ),
+          if (showCombinationCount) ...[
+            const SizedBox(height: 6),
+            const Text(
+              'Możesz wyjść z tego ekranu, ale nie zamykaj przeglądarki.',
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
+
+enum _DraftLoadingMode { checkingExisting, generating }
 
 class _CreateMatchButton extends ConsumerWidget {
   const _CreateMatchButton({required this.squadId, this.matchId});
@@ -305,19 +415,20 @@ class _CreateMatchButton extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final draftState = ref.watch(draftSessionNotifierProvider);
     final createMatchState = ref.watch(createMatchControllerProvider);
+    final draftData = draftState.asData?.value;
+
+    final isExistingMatch = matchId != null && matchId!.isNotEmpty;
+    final hasProposals = draftData != null && draftData.proposals.isNotEmpty;
 
     final isLoading = createMatchState.isLoading;
 
     return IconButton(
-      tooltip: matchId != null ? 'Update Match' : 'Create Match',
-      onPressed: isLoading
+      tooltip: isExistingMatch ? 'Update Match' : 'Create Match',
+      onPressed: isLoading || !hasProposals
           ? null
           : () async {
-              final draftData = draftState.asData?.value;
-              if (draftData == null) return;
-
               MatchDetailsDto? match;
-              if (matchId != null) {
+              if (isExistingMatch) {
                 match = await ref
                     .read(createMatchControllerProvider.notifier)
                     .updateMatch(
@@ -336,8 +447,36 @@ class _CreateMatchButton extends ConsumerWidget {
                     );
               }
 
+              final persistedMatchId = isExistingMatch
+                  ? matchId
+                  : match?.matchId;
+              if (persistedMatchId != null) {
+                try {
+                  await ref
+                      .read(saveMatchDraftUseCaseProvider)
+                      .executeCompleted(
+                        squadId: squadId,
+                        matchId: persistedMatchId,
+                        proposals: draftData.proposals,
+                        winRateMatrix: draftData.winRateMatrix,
+                        teamCount: draftData.proposals.first.teams.length,
+                      );
+                } catch (error) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Match saved, but draft payload failed to save: $error',
+                        ),
+                        backgroundColor: Colors.orange,
+                      ),
+                    );
+                  }
+                }
+              }
+
               if (context.mounted && match != null) {
-                if (matchId != null) {
+                if (isExistingMatch) {
                   ref.invalidate(matchDetailsProvider(matchId!));
                 }
                 ref.invalidate(squadMatchesProvider(squadId));
@@ -352,7 +491,7 @@ class _CreateMatchButton extends ConsumerWidget {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
-                      'Failed to ${matchId != null ? 'update' : 'create'} match: ${createMatchState.error}',
+                      'Failed to ${isExistingMatch ? 'update' : 'create'} match: ${createMatchState.error}',
                     ),
                     backgroundColor: Colors.red,
                   ),
@@ -398,34 +537,28 @@ class _ProposalNavigator extends StatelessWidget {
 
 class _TotalsRow extends StatelessWidget {
   const _TotalsRow({
-    required this.homeTotal,
-    required this.awayTotal,
-    required this.homeCount,
-    required this.awayCount,
+    required this.homePlayers,
+    required this.awayPlayers,
     required this.playWithSubstitute,
     required this.homeWinProbability,
   });
 
-  final double homeTotal;
-  final double awayTotal;
-  final int homeCount;
-  final int awayCount;
+  final List<Player> homePlayers;
+  final List<Player> awayPlayers;
   final bool playWithSubstitute;
   final double homeWinProbability;
 
   @override
   Widget build(BuildContext context) {
-    final effectiveHome = effectiveTeamRanking(
-      totalRanking: homeTotal,
-      teamSize: homeCount,
-      opponentTeamSize: awayCount,
+    final effectiveHome = _uiTeamScore(
+      players: homePlayers,
+      opponentCount: awayPlayers.length,
       playWithSubstitute: playWithSubstitute,
     );
 
-    final effectiveAway = effectiveTeamRanking(
-      totalRanking: awayTotal,
-      teamSize: awayCount,
-      opponentTeamSize: homeCount,
+    final effectiveAway = _uiTeamScore(
+      players: awayPlayers,
+      opponentCount: homePlayers.length,
       playWithSubstitute: playWithSubstitute,
     );
 
@@ -482,6 +615,24 @@ class _TotalsRow extends StatelessWidget {
       },
     );
   }
+}
+
+double _uiTeamScore({
+  required List<Player> players,
+  required int opponentCount,
+  required bool playWithSubstitute,
+}) {
+  var total = 0.0;
+  for (final player in players) {
+    total += player.ranking;
+  }
+
+  return effectiveTeamRanking(
+    totalRanking: total,
+    teamSize: players.length,
+    opponentTeamSize: opponentCount,
+    playWithSubstitute: playWithSubstitute,
+  );
 }
 
 class _TotalChip extends StatelessWidget {
@@ -585,9 +736,17 @@ class _RosterPanel extends StatelessWidget {
 }
 
 class _ErrorBody extends StatelessWidget {
-  const _ErrorBody({required this.error});
+  const _ErrorBody({
+    required this.error,
+    required this.squadId,
+    required this.matchId,
+    required this.selectedPlayerIds,
+  });
 
   final Object error;
+  final String squadId;
+  final String? matchId;
+  final List<String> selectedPlayerIds;
 
   @override
   Widget build(BuildContext context) {
@@ -596,22 +755,104 @@ class _ErrorBody extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.all(16),
-      child: SelectableText.rich(
-        TextSpan(
-          text: message,
-          style: TextStyle(color: Theme.of(context).colorScheme.error),
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SelectableText.rich(
+            TextSpan(
+              text: message,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ),
+          if (matchId != null) ...[
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              onPressed: () {
+                context.pushNamed(
+                  AppRoute.draftCreate.name,
+                  pathParameters: {'squadId': squadId},
+                  extra: {'selectedIds': selectedPlayerIds, 'matchId': matchId},
+                );
+              },
+              icon: const Icon(Icons.refresh),
+              label: const Text('Wybierz zawodników i spróbuj ponownie'),
+            ),
+          ],
+        ],
       ),
     );
   }
 }
 
-double _sum(List<Player> players) {
-  var total = 0.0;
-  for (final p in players) {
-    total += p.ranking;
+BigInt? _estimatedCheckedDraftCount({
+  required int playerCount,
+  required int teamCount,
+}) {
+  if (playerCount < teamCount || playerCount <= 0 || teamCount <= 0) {
+    return null;
   }
-  return total;
+
+  final teamSizes = _calculateTeamSizes(
+    playerCount: playerCount,
+    teamCount: teamCount,
+  );
+
+  var remainingPlayers = playerCount;
+  var count = BigInt.one;
+
+  for (var i = 0; i < teamSizes.length - 1; i++) {
+    final teamSize = teamSizes[i];
+    count *= _binomial(remainingPlayers - 1, teamSize - 1);
+    remainingPlayers -= teamSize;
+  }
+
+  return count;
+}
+
+List<int> _calculateTeamSizes({
+  required int playerCount,
+  required int teamCount,
+}) {
+  final base = playerCount ~/ teamCount;
+  final remainder = playerCount % teamCount;
+
+  return List<int>.generate(
+    teamCount,
+    (index) => base + (index < remainder ? 1 : 0),
+  );
+}
+
+BigInt _binomial(int n, int k) {
+  if (k < 0 || n < 0 || k > n) {
+    return BigInt.zero;
+  }
+
+  var adjusted = k;
+  if (adjusted > n - adjusted) {
+    adjusted = n - adjusted;
+  }
+
+  var result = BigInt.one;
+  for (var i = 1; i <= adjusted; i++) {
+    result = (result * BigInt.from(n - adjusted + i)) ~/ BigInt.from(i);
+  }
+
+  return result;
+}
+
+String _formatBigInt(BigInt value) {
+  final digits = value.toString();
+  final buffer = StringBuffer();
+
+  for (var i = 0; i < digits.length; i++) {
+    final isSeparator = i > 0 && (digits.length - i) % 3 == 0;
+    if (isSeparator) {
+      buffer.write(' ');
+    }
+    buffer.write(digits[i]);
+  }
+
+  return buffer.toString();
 }
 
 String? _extractPlayerId(Object data) {

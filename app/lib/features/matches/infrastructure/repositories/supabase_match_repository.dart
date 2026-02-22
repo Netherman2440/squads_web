@@ -13,6 +13,16 @@ import 'package:app/features/matches/domain/repositories/match_repository.dart';
 class SupabaseMatchRepository implements MatchRepository {
   final SupabaseClient _supabase;
   final Logger _logger = Logger('SupabaseMatchRepository');
+  static const _matchListSelect = '''
+    *,
+    teams:teams!teams_match_fk (
+      team_id,
+      match_id,
+      side,
+      name,
+      color
+    )
+  ''';
 
   SupabaseMatchRepository(this._supabase);
 
@@ -21,16 +31,14 @@ class SupabaseMatchRepository implements MatchRepository {
     try {
       final response = await _supabase
           .from('matches')
-          .select()
+          .select(_matchListSelect)
           .eq('squad_id', squadId)
           .order('played_at', ascending: false, nullsFirst: false)
           .order('created_at', ascending: false);
 
       final List<dynamic> data = response as List<dynamic>;
 
-      return data
-          .map((row) => Match.fromJson(Map<String, dynamic>.from(row as Map)))
-          .toList();
+      return data.map((row) => _matchFromListRow(row)).toList();
     } catch (e, stack) {
       _logger.severe('Failed to fetch matches for squad $squadId', e, stack);
       throw e.toFailure();
@@ -68,16 +76,14 @@ class SupabaseMatchRepository implements MatchRepository {
     try {
       final response = await _supabase
           .from('matches')
-          .select()
+          .select(_matchListSelect)
           .inFilter('match_id', matchIds)
           .order('played_at', ascending: false, nullsFirst: false)
           .order('created_at', ascending: false);
 
       final List<dynamic> data = response as List<dynamic>;
 
-      return data
-          .map((row) => Match.fromJson(Map<String, dynamic>.from(row as Map)))
-          .toList();
+      return data.map((row) => _matchFromListRow(row)).toList();
     } catch (e, stack) {
       _logger.severe('Failed to fetch matches by ids', e, stack);
       throw e.toFailure();
@@ -295,6 +301,29 @@ class SupabaseMatchRepository implements MatchRepository {
       );
       throw e.toFailure();
     }
+  }
+
+  Match _matchFromListRow(dynamic row) {
+    final rowData = Map<String, dynamic>.from(row as Map);
+    final teamsData = rowData.remove('teams');
+    final match = Match.fromJson(rowData);
+
+    if (teamsData is! List<dynamic>) {
+      return match;
+    }
+
+    Team? homeTeam;
+    Team? awayTeam;
+    for (final teamRow in teamsData) {
+      final team = Team.fromJson(Map<String, dynamic>.from(teamRow as Map));
+      if (team.side == Side.home) {
+        homeTeam = team;
+      } else {
+        awayTeam = team;
+      }
+    }
+
+    return match.copyWith(homeTeam: homeTeam, awayTeam: awayTeam);
   }
 
   @override

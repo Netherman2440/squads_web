@@ -4,6 +4,9 @@ abstract class RankingRepository {
   /// Get all ranking history entries for a specific player, ordered by created_at DESC
   Future<List<RankingHistoryEntry>> getPlayerRankingHistory(String playerId);
 
+  /// Get all ranking history entries for a specific match.
+  Future<List<RankingHistoryEntry>> getMatchRankingHistory(String matchId);
+
   /// Get a specific ranking history entry by match_id
   Future<RankingHistoryEntry?> getRankingHistoryEntryByMatch({
     required String matchId,

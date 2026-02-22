@@ -76,18 +76,6 @@ class DraftDraggablePlayerTile extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        Icons.star_border,
-                        size: 16,
-                        color: theme.colorScheme.secondary,
-                      ),
-                      const SizedBox(width: 4),
-                      Text('Base: ${player.baseRanking}'),
-                    ],
-                  ),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
                         Icons.insights,
                         size: 16,
                         color: theme.colorScheme.tertiary,

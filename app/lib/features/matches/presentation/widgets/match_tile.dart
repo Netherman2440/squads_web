@@ -14,10 +14,20 @@ class MatchTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final dateFormat = DateFormat('dd.MM.yyyy HH:mm');
-
-    // Determine result display
-    // If no score, show "Pending" or similar?
-    // MD says "wynik: dwa boxy jak w legacy (puste gdy brak wyniku)"
+    final homeTeamName = _displayTeamName(
+      match.homeTeam?.name,
+      'home',
+    ).toUpperCase();
+    final awayTeamName = _displayTeamName(
+      match.awayTeam?.name,
+      'away',
+    ).toUpperCase();
+    final homeTeamColor = _parseColor(match.homeTeam?.color);
+    final awayTeamColor = _parseColor(match.awayTeam?.color);
+    final titleStyle = theme.textTheme.titleMedium?.copyWith(
+      fontWeight: FontWeight.w700,
+      letterSpacing: 0.3,
+    );
 
     final hasScore = match.homeScore != null && match.awayScore != null;
     final homeScore = hasScore ? match.homeScore.toString() : '-';
@@ -36,20 +46,38 @@ class MatchTile extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    dateFormat.format(match.createdAt.toLocal()),
-                    style: theme.textTheme.bodyMedium,
-                  ),
-                  if (match.tournamentId != null)
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text.rich(
+                      TextSpan(
+                        children: [
+                          WidgetSpan(
+                            alignment: PlaceholderAlignment.middle,
+                            child: _TeamColorBox(color: homeTeamColor),
+                          ),
+                          TextSpan(text: ' $homeTeamName', style: titleStyle),
+                          TextSpan(text: '  -  ', style: titleStyle),
+                          WidgetSpan(
+                            alignment: PlaceholderAlignment.middle,
+                            child: _TeamColorBox(color: awayTeamColor),
+                          ),
+                          TextSpan(text: ' $awayTeamName', style: titleStyle),
+                        ],
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
                     Text(
-                      'Tournament Match', // Ideally fetch tournament name
+                      dateFormat.format(match.createdAt.toLocal()),
                       style: theme.textTheme.bodySmall,
                     ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 12),
               Row(
                 children: [
                   _ScoreBox(score: homeScore),
@@ -64,6 +92,25 @@ class MatchTile extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+String _displayTeamName(String? name, String fallback) {
+  final trimmed = name?.trim() ?? '';
+  return trimmed.isEmpty ? fallback : trimmed;
+}
+
+Color _parseColor(String? colorHex) {
+  if (colorHex == null || colorHex.isEmpty) return Colors.grey;
+  try {
+    final normalized = colorHex.trim();
+    final hex = normalized.startsWith('#')
+        ? normalized.substring(1)
+        : normalized;
+    if (hex.length != 6) return Colors.grey;
+    return Color(int.parse('0xFF$hex'));
+  } catch (_) {
+    return Colors.grey;
   }
 }
 
@@ -85,6 +132,25 @@ class _ScoreBox extends StatelessWidget {
       child: Text(
         score,
         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+      ),
+    );
+  }
+}
+
+class _TeamColorBox extends StatelessWidget {
+  final Color color;
+
+  const _TeamColorBox({required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 18,
+      height: 18,
+      decoration: BoxDecoration(
+        color: color,
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.5)),
+        borderRadius: BorderRadius.circular(4),
       ),
     );
   }

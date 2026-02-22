@@ -51,19 +51,37 @@ class UpdateMatchTeamsUseCase {
     // Identify Added Players
     final addedIds = newPlayerIds.difference(currentPlayerIds);
     if (addedIds.isNotEmpty) {
-      final addedPlayersFutures = addedIds.map(
-        (id) => _playerRepository.getPlayer(playerId: id),
+      final existingEntries = await Future.wait(
+        addedIds.map(
+          (id) async => MapEntry(
+            id,
+            await _rankingRepository.getRankingHistoryEntryByMatch(
+              matchId: matchId,
+              playerId: id,
+            ),
+          ),
+        ),
       );
-      final addedPlayers = await Future.wait(addedPlayersFutures);
+      final missingEntryIds = {
+        for (final entry in existingEntries)
+          if (entry.value == null) entry.key,
+      };
 
-      final createEntryFutures = addedPlayers.map((player) {
-        return _rankingRepository.createMatchRankingEntry(
-          playerId: player.playerId,
-          matchId: matchId,
-          currentRanking: player.ranking,
+      if (missingEntryIds.isNotEmpty) {
+        final addedPlayersFutures = missingEntryIds.map(
+          (id) => _playerRepository.getPlayer(playerId: id),
         );
-      });
-      await Future.wait(createEntryFutures);
+        final addedPlayers = await Future.wait(addedPlayersFutures);
+
+        final createEntryFutures = addedPlayers.map((player) {
+          return _rankingRepository.createMatchRankingEntry(
+            playerId: player.playerId,
+            matchId: matchId,
+            currentRanking: player.ranking,
+          );
+        });
+        await Future.wait(createEntryFutures);
+      }
     }
 
     // Identify Removed Players

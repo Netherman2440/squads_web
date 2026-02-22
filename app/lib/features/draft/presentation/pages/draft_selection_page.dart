@@ -7,6 +7,8 @@ import 'package:app/core/app_router.dart';
 import 'package:app/core/error/failure.dart';
 import 'package:app/features/draft/presentation/controllers/draft_selection_controller.dart';
 import 'package:app/features/draft/presentation/widgets/draft_draggable_player_tile.dart';
+import 'package:app/features/matches/presentation/controllers/create_match_controller.dart';
+import 'package:app/features/matches/presentation/controllers/squad_matches_notifier.dart';
 import 'package:app/features/players/domain/entities/player.dart';
 
 class DraftSelectionPage extends ConsumerStatefulWidget {
@@ -26,6 +28,8 @@ class DraftSelectionPage extends ConsumerStatefulWidget {
 }
 
 class _DraftSelectionPageState extends ConsumerState<DraftSelectionPage> {
+  bool _playWithSubstitute = true;
+
   @override
   void initState() {
     super.initState();
@@ -42,6 +46,7 @@ class _DraftSelectionPageState extends ConsumerState<DraftSelectionPage> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(draftSelectionControllerProvider);
+    final createMatchState = ref.watch(createMatchControllerProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -49,28 +54,79 @@ class _DraftSelectionPageState extends ConsumerState<DraftSelectionPage> {
         actions: [
           state.when(
             data: (data) {
-              final canGenerate = data.selectedPlayerIds.length >= 2;
+              final selectedCount = data.selectedPlayerIds.length;
+              final hasMinimumPlayers = selectedCount >= 2;
+              final isWithinLimit =
+                  selectedCount <= AppConfig.maxPlayersPerMatch;
+              final canGenerate = hasMinimumPlayers && isWithinLimit;
+              final isCreatingMatch = createMatchState.isLoading;
+              final tooltip = !hasMinimumPlayers
+                  ? 'Select at least 2 players to generate draft'
+                  : !isWithinLimit
+                  ? 'You can select up to ${AppConfig.maxPlayersPerMatch} players per match'
+                  : 'Generate draft';
 
               return IconButton(
-                tooltip: canGenerate
-                    ? 'Generate draft'
-                    : 'Select at least 2 players to generate draft',
-                onPressed: canGenerate
-                    ? () {
+                tooltip: tooltip,
+                onPressed: canGenerate && !isCreatingMatch
+                    ? () async {
                         final ids = data.selectedPlayerIds.toList(
                           growable: false,
                         );
+
+                        var targetMatchId = widget.matchId;
+                        if (targetMatchId == null || targetMatchId.isEmpty) {
+                          final createdMatch = await ref
+                              .read(createMatchControllerProvider.notifier)
+                              .createMatch(
+                                squadId: widget.squadId,
+                                homePlayers: const <Player>[],
+                                awayPlayers: const <Player>[],
+                                rankingHistoryPlayerIds: ids,
+                              );
+                          targetMatchId = createdMatch?.matchId;
+
+                          if (targetMatchId == null || targetMatchId.isEmpty) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Nie udało się utworzyć meczu.',
+                                  ),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                            return;
+                          }
+
+                          ref.invalidate(squadMatchesProvider(widget.squadId));
+                        }
+
+                        if (!context.mounted) {
+                          return;
+                        }
+
                         context.pushNamed(
-                          AppRoute.draftCreate.name,
-                          pathParameters: {'squadId': widget.squadId},
+                          AppRoute.matchDraft.name,
+                          pathParameters: {
+                            'squadId': widget.squadId,
+                            'matchId': targetMatchId,
+                          },
                           extra: {
                             'selectedIds': ids,
-                            'matchId': widget.matchId,
+                            'playWithSubstitute': _playWithSubstitute,
                           },
                         );
                       }
                     : null,
-                icon: const Icon(Icons.auto_awesome),
+                icon: isCreatingMatch
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.auto_awesome),
               );
             },
             error: (_, _) => const SizedBox.shrink(),
@@ -103,6 +159,7 @@ class _DraftSelectionPageState extends ConsumerState<DraftSelectionPage> {
                   child: _SelectedPlayersPanel(
                     players: selected,
                     selectedCount: data.selectedPlayerIds.length,
+                    maxPlayers: AppConfig.maxPlayersPerMatch,
                     compact: isCompact,
                     onToggle: (playerId) => ref
                         .read(draftSelectionControllerProvider.notifier)
@@ -131,6 +188,22 @@ class _DraftSelectionPageState extends ConsumerState<DraftSelectionPage> {
 
                 return Column(
                   children: [
+                    Card(
+                      child: SwitchListTile.adaptive(
+                        title: const Text('Gra ze zmianami'),
+                        subtitle: const Text(
+                          'Przy nieparzystej liczbie graczy większa drużyna '
+                          'gra ze zmianą.',
+                        ),
+                        value: _playWithSubstitute,
+                        onChanged: (value) {
+                          setState(() {
+                            _playWithSubstitute = value;
+                          });
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     if (data.validationMessage != null)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 12),
@@ -248,6 +321,7 @@ class _SelectedPlayersPanel extends StatefulWidget {
   const _SelectedPlayersPanel({
     required this.players,
     required this.selectedCount,
+    required this.maxPlayers,
     required this.compact,
     required this.onToggle,
     required this.onClear,
@@ -255,6 +329,7 @@ class _SelectedPlayersPanel extends StatefulWidget {
 
   final List<Player> players;
   final int selectedCount;
+  final int maxPlayers;
   final bool compact;
   final ValueChanged<String> onToggle;
   final VoidCallback onClear;
@@ -290,7 +365,7 @@ class _SelectedPlayersPanelState extends State<_SelectedPlayersPanel> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Selected players (${widget.selectedCount})',
+                  'Selected players (${widget.selectedCount}/${widget.maxPlayers})',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 TextButton(

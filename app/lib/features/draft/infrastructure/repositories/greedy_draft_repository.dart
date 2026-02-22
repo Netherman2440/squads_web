@@ -4,6 +4,7 @@ import 'package:app/core/error/failure.dart';
 import 'package:app/core/utils/team_ranking.dart';
 import 'package:app/features/draft/domain/repositories/draft_repository.dart';
 import 'package:app/features/draft/domain/entities/draft.dart';
+import 'package:app/features/draft/domain/entities/draft_rule.dart';
 import 'package:app/features/players/domain/entities/player.dart';
 
 class GreedyDraftRepository implements DraftRepository {
@@ -12,9 +13,21 @@ class GreedyDraftRepository implements DraftRepository {
   @override
   Future<List<Draft>> createDraft({
     required List<Player> players,
+    int teamCount = 2,
+    List<DraftRule> rules = const [],
     int limit = 20,
     bool playWithSubstitute = true,
   }) async {
+    if (teamCount != 2) {
+      throw const ValidationFailure('Greedy draft supports exactly 2 teams.');
+    }
+
+    if (rules.isNotEmpty) {
+      throw const ValidationFailure(
+        'Greedy draft does not support draft rules.',
+      );
+    }
+
     if (limit <= 0) {
       return [];
     }
@@ -240,7 +253,7 @@ Draft _buildGreedyDraft({
   home.sort((a, b) => a.playerId.compareTo(b.playerId));
   away.sort((a, b) => a.playerId.compareTo(b.playerId));
 
-  return Draft(
+  return Draft.twoTeams(
     homePlayers: home,
     awayPlayers: away,
     homeTotalRanking: homeTotal,
@@ -412,7 +425,7 @@ Draft _improveBySwaps({
   home.sort((a, b) => a.playerId.compareTo(b.playerId));
   away.sort((a, b) => a.playerId.compareTo(b.playerId));
 
-  return Draft(
+  return Draft.twoTeams(
     homePlayers: home,
     awayPlayers: away,
     homeTotalRanking: homeTotal,
@@ -439,7 +452,7 @@ Draft _canonicalizeDraft({
     return draft;
   }
 
-  return Draft(
+  return Draft.twoTeams(
     homePlayers: draft.awayPlayers,
     awayPlayers: draft.homePlayers,
     homeTotalRanking: draft.awayTotalRanking,

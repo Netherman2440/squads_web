@@ -31,31 +31,75 @@ class MatchPlayerTile extends StatelessWidget {
     // In match history, we should show the snapshot ranking if available.
     final displayRanking = snapshotRanking ?? player.ranking;
     final theme = Theme.of(context);
+    final hasTrailing = trailing is! SizedBox;
+    final scoreText = displayRanking.toStringAsFixed(2);
 
     final tile = Card(
-      child: ListTile(
-        dense: compact,
-        visualDensity: compact ? VisualDensity.compact : VisualDensity.standard,
-        contentPadding: compact
-            ? const EdgeInsets.symmetric(horizontal: 8)
-            : null,
-        leading: CircleAvatar(
-          radius: compact ? 14 : null,
-          child: Text(
-            player.name.isNotEmpty ? player.name[0].toUpperCase() : '?',
-            style: compact ? theme.textTheme.labelSmall : null,
-          ),
-        ),
-        title: Text(
-          player.name,
-          maxLines: compact ? 2 : 1,
-          overflow: TextOverflow.ellipsis,
-          style: compact ? theme.textTheme.bodyMedium : null,
-        ),
-        subtitle: compact ? null : Text(displayRanking.toStringAsFixed(2)),
-        trailing: trailing,
-        onTap: onTap,
-      ),
+      child: compact
+          ? InkWell(
+              onTap: onTap,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 10,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    CircleAvatar(
+                      radius: 14,
+                      child: Text(
+                        player.name.isNotEmpty
+                            ? player.name[0].toUpperCase()
+                            : '?',
+                        style: theme.textTheme.labelSmall,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              player.name,
+                              softWrap: true,
+                              style: theme.textTheme.bodyMedium,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            scoreText,
+                            textAlign: TextAlign.right,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (hasTrailing) ...[const SizedBox(width: 8), trailing],
+                  ],
+                ),
+              ),
+            )
+          : ListTile(
+              dense: false,
+              visualDensity: VisualDensity.standard,
+              leading: CircleAvatar(
+                child: Text(
+                  player.name.isNotEmpty ? player.name[0].toUpperCase() : '?',
+                ),
+              ),
+              title: Text(
+                player.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              subtitle: Text(scoreText),
+              trailing: trailing,
+              onTap: onTap,
+            ),
     );
 
     final data = dragData;

@@ -7,6 +7,7 @@ import 'package:app/features/matches/domain/repositories/team_repository.dart';
 import 'package:app/features/matches/matches_providers.dart';
 import 'package:app/features/players/domain/repositories/player_repository.dart';
 import 'package:app/features/players/domain/repositories/ranking_repository.dart';
+import 'package:app/features/players/domain/entities/player.dart';
 import 'package:app/features/players/players_providers.dart';
 
 class CreateMatchUseCase {
@@ -26,6 +27,7 @@ class CreateMatchUseCase {
     required String squadId,
     required List<String> homePlayerIds,
     required List<String> awayPlayerIds,
+    List<String> rankingHistoryPlayerIds = const [],
     String? homeTeamName,
     String? awayTeamName,
     String? homeTeamColor,
@@ -96,14 +98,38 @@ class CreateMatchUseCase {
     final allPlayers = [...homePlayers, ...awayPlayers];
     if (allPlayers.isNotEmpty) {
       await _matchRepository.refreshMatchWinProbability(matchId: match.matchId);
+    }
 
-      // 5. Create Ranking Entries
-      // We need to use the current score of players (from step 1)
-      final rankingFutures = allPlayers.map((player) {
+    final rankingEntryPlayerIds = <String>{
+      ...rankingHistoryPlayerIds,
+      if (rankingHistoryPlayerIds.isEmpty) ...homePlayerIds,
+      if (rankingHistoryPlayerIds.isEmpty) ...awayPlayerIds,
+    }.toList(growable: false);
+
+    if (rankingEntryPlayerIds.isNotEmpty) {
+      final playersById = <String, Player>{
+        for (final player in allPlayers) player.playerId: player,
+      };
+      final missingIds = rankingEntryPlayerIds
+          .where((playerId) => !playersById.containsKey(playerId))
+          .toList(growable: false);
+      if (missingIds.isNotEmpty) {
+        final missingPlayers = await Future.wait(
+          missingIds.map(
+            (playerId) => _playerRepository.getPlayer(playerId: playerId),
+          ),
+        );
+        for (final player in missingPlayers) {
+          playersById[player.playerId] = player;
+        }
+      }
+
+      final rankingFutures = rankingEntryPlayerIds.map((playerId) {
+        final player = playersById[playerId];
         return _rankingRepository.createMatchRankingEntry(
-          playerId: player.playerId,
+          playerId: playerId,
           matchId: match.matchId,
-          currentRanking: player.ranking,
+          currentRanking: player!.ranking,
         );
       });
 

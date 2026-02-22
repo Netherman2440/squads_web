@@ -46,6 +46,35 @@ class SupabaseRankingRepository implements RankingRepository {
   }
 
   @override
+  Future<List<RankingHistoryEntry>> getMatchRankingHistory(
+    String matchId,
+  ) async {
+    try {
+      final response = await _supabase
+          .from('ranking_history')
+          .select()
+          .eq('match_id', matchId)
+          .order('created_at', ascending: false);
+
+      final data = response as List<dynamic>;
+      return data
+          .map(
+            (row) => RankingHistoryEntry.fromMap(
+              Map<String, dynamic>.from(row as Map),
+            ),
+          )
+          .toList(growable: false);
+    } catch (e, stack) {
+      _logger.severe(
+        'Failed to fetch ranking history for match $matchId',
+        e,
+        stack,
+      );
+      throw e.toFailure();
+    }
+  }
+
+  @override
   Future<RankingHistoryEntry?> getRankingHistoryEntryByMatch({
     required String matchId,
     required String playerId,

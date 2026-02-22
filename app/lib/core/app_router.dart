@@ -223,9 +223,9 @@ final appRouter = () {
               }
 
               return NoTransitionPage(
-                child: DraftResultsPage(
+                child: DraftSelectionPage(
                   squadId: squadId,
-                  selectedPlayerIds: selectedIds,
+                  initialSelectedIds: selectedIds,
                   matchId: matchId,
                 ),
               );

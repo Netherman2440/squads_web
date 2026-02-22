@@ -8,14 +8,17 @@ import 'package:app/core/app_router.dart';
 import 'package:app/core/error/failure.dart';
 import 'package:app/core/utils/team_ranking.dart';
 import 'package:app/core/widgets/probability_slider.dart';
+import 'package:app/features/draft/application/get_match_draft_use_case.dart';
 import 'package:app/features/draft/application/save_match_draft_use_case.dart';
 import 'package:app/features/draft/presentation/controllers/draft_session_notifier.dart';
 import 'package:app/features/draft/presentation/widgets/draft_draggable_player_tile.dart';
 import 'package:app/features/matches/application/dto/match_details_dto.dart';
+import 'package:app/features/matches/application/usecases/get_match_usecase.dart';
 import 'package:app/features/matches/presentation/controllers/create_match_controller.dart';
 import 'package:app/features/matches/presentation/controllers/match_details_notifier.dart';
 import 'package:app/features/matches/presentation/controllers/squad_matches_notifier.dart';
 import 'package:app/features/players/domain/entities/player.dart';
+import 'package:app/features/players/players_providers.dart';
 
 class DraftResultsPage extends ConsumerStatefulWidget {
   const DraftResultsPage({
@@ -35,6 +38,8 @@ class DraftResultsPage extends ConsumerStatefulWidget {
 
 class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
   bool _playWithSubstitute = true;
+  int? _loadingPlayerCount;
+  _DraftLoadingMode _loadingMode = _DraftLoadingMode.generating;
 
   String? get _loadMatchId {
     final value = widget.matchId;
@@ -47,8 +52,12 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(
-      () => ref
+    _loadingPlayerCount = widget.selectedPlayerIds.length;
+    _loadingMode = widget.selectedPlayerIds.length >= 2
+        ? _DraftLoadingMode.generating
+        : _DraftLoadingMode.checkingExisting;
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => ref
           .read(draftSessionNotifierProvider.notifier)
           .load(
             squadId: widget.squadId,
@@ -58,6 +67,104 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
             playWithSubstitute: _playWithSubstitute,
           ),
     );
+    Future.microtask(_resolveLoadingModeAndCount);
+  }
+
+  @override
+  void didUpdateWidget(covariant DraftResultsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.matchId != widget.matchId ||
+        oldWidget.selectedPlayerIds != widget.selectedPlayerIds) {
+      _loadingPlayerCount = widget.selectedPlayerIds.length;
+      _loadingMode = widget.selectedPlayerIds.length >= 2
+          ? _DraftLoadingMode.generating
+          : _DraftLoadingMode.checkingExisting;
+      Future.microtask(_resolveLoadingModeAndCount);
+    }
+  }
+
+  Future<void> _resolveLoadingModeAndCount() async {
+    final matchId = _loadMatchId;
+    if (widget.selectedPlayerIds.length >= 2 || matchId == null) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _loadingMode = _DraftLoadingMode.generating;
+      });
+      return;
+    }
+
+    try {
+      final storedDraft = await ref
+          .read(getMatchDraftUseCaseProvider)
+          .execute(matchId: matchId);
+      if (!mounted) {
+        return;
+      }
+
+      if (storedDraft != null) {
+        setState(() {
+          _loadingMode = _DraftLoadingMode.checkingExisting;
+        });
+        return;
+      }
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _loadingMode = _DraftLoadingMode.checkingExisting;
+      });
+      return;
+    }
+
+    await _hydrateLoadingPlayerCount();
+  }
+
+  Future<void> _hydrateLoadingPlayerCount() async {
+    final matchId = _loadMatchId;
+    if (matchId == null || widget.selectedPlayerIds.length >= 2) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _loadingMode = _DraftLoadingMode.generating;
+      });
+      return;
+    }
+
+    try {
+      final rankingEntries = await ref
+          .read(rankingRepositoryProvider)
+          .getMatchRankingHistory(matchId);
+      var count = rankingEntries.map((entry) => entry.playerId).toSet().length;
+
+      if (count < 2) {
+        final match = await ref
+            .read(getMatchUseCaseProvider)
+            .execute(matchId: matchId);
+        count = <String>{
+          for (final player in match.homeTeam?.players ?? const [])
+            player.playerId,
+          for (final player in match.awayTeam?.players ?? const [])
+            player.playerId,
+        }.length;
+      }
+
+      if (!mounted) {
+        return;
+      }
+
+      if (count > 0) {
+        setState(() {
+          _loadingPlayerCount = count;
+          _loadingMode = count >= 2
+              ? _DraftLoadingMode.generating
+              : _DraftLoadingMode.checkingExisting;
+        });
+      }
+    } catch (_) {}
   }
 
   @override
@@ -134,8 +241,17 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
         ],
       ),
       body: state.when(
-        loading: () => const _DraftLoadingBody(),
-        error: (error, _) => _ErrorBody(error: error),
+        loading: () => _DraftLoadingBody(
+          selectedPlayerCount:
+              _loadingPlayerCount ?? widget.selectedPlayerIds.length,
+          showCombinationCount: _loadingMode == _DraftLoadingMode.generating,
+        ),
+        error: (error, _) => _ErrorBody(
+          error: error,
+          squadId: widget.squadId,
+          matchId: _loadMatchId,
+          selectedPlayerIds: widget.selectedPlayerIds,
+        ),
         data: (data) {
           if (data.proposals.isEmpty) {
             return const Padding(
@@ -164,10 +280,8 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
                 ),
                 const SizedBox(height: 12),
                 _TotalsRow(
-                  homeTotal: _sum(data.home),
-                  awayTotal: _sum(data.away),
-                  homeCount: data.home.length,
-                  awayCount: data.away.length,
+                  homePlayers: data.home,
+                  awayPlayers: data.away,
                   playWithSubstitute: _playWithSubstitute,
                   homeWinProbability: data.homeWinProbability,
                 ),
@@ -273,22 +387,43 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
 }
 
 class _DraftLoadingBody extends StatelessWidget {
-  const _DraftLoadingBody();
+  const _DraftLoadingBody({
+    required this.selectedPlayerCount,
+    required this.showCombinationCount,
+  });
+
+  final int selectedPlayerCount;
+  final bool showCombinationCount;
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    final count = _estimatedCheckedDraftCount(
+      playerCount: selectedPlayerCount,
+      teamCount: 2,
+    );
+
+    return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          CircularProgressIndicator(),
-          SizedBox(height: 12),
-          Text('Trwa generowanie draftu. To może chwilę potrwać.'),
+          const CircularProgressIndicator(),
+          const SizedBox(height: 12),
+          const Text('Trwa generowanie draftu. To może chwilę potrwać.'),
+          const SizedBox(height: 8),
+          Text(
+            showCombinationCount
+                ? (count == null
+                      ? 'Sprawdzane warianty: wyliczanie...'
+                      : 'Sprawdzane warianty: ${_formatBigInt(count)}')
+                : 'Sprawdzam zapisany draft...',
+          ),
         ],
       ),
     );
   }
 }
+
+enum _DraftLoadingMode { checkingExisting, generating }
 
 enum _DraftOptionsAction { togglePlayWithSubstitute, useCombinatory, useGreedy }
 
@@ -474,34 +609,28 @@ class _ProposalNavigator extends StatelessWidget {
 
 class _TotalsRow extends StatelessWidget {
   const _TotalsRow({
-    required this.homeTotal,
-    required this.awayTotal,
-    required this.homeCount,
-    required this.awayCount,
+    required this.homePlayers,
+    required this.awayPlayers,
     required this.playWithSubstitute,
     required this.homeWinProbability,
   });
 
-  final double homeTotal;
-  final double awayTotal;
-  final int homeCount;
-  final int awayCount;
+  final List<Player> homePlayers;
+  final List<Player> awayPlayers;
   final bool playWithSubstitute;
   final double homeWinProbability;
 
   @override
   Widget build(BuildContext context) {
-    final effectiveHome = effectiveTeamRanking(
-      totalRanking: homeTotal,
-      teamSize: homeCount,
-      opponentTeamSize: awayCount,
+    final effectiveHome = _uiTeamScore(
+      players: homePlayers,
+      opponentCount: awayPlayers.length,
       playWithSubstitute: playWithSubstitute,
     );
 
-    final effectiveAway = effectiveTeamRanking(
-      totalRanking: awayTotal,
-      teamSize: awayCount,
-      opponentTeamSize: homeCount,
+    final effectiveAway = _uiTeamScore(
+      players: awayPlayers,
+      opponentCount: homePlayers.length,
       playWithSubstitute: playWithSubstitute,
     );
 
@@ -558,6 +687,24 @@ class _TotalsRow extends StatelessWidget {
       },
     );
   }
+}
+
+double _uiTeamScore({
+  required List<Player> players,
+  required int opponentCount,
+  required bool playWithSubstitute,
+}) {
+  var total = 0.0;
+  for (final player in players) {
+    total += player.ranking;
+  }
+
+  return effectiveTeamRanking(
+    totalRanking: total,
+    teamSize: players.length,
+    opponentTeamSize: opponentCount,
+    playWithSubstitute: playWithSubstitute,
+  );
 }
 
 class _TotalChip extends StatelessWidget {
@@ -661,9 +808,17 @@ class _RosterPanel extends StatelessWidget {
 }
 
 class _ErrorBody extends StatelessWidget {
-  const _ErrorBody({required this.error});
+  const _ErrorBody({
+    required this.error,
+    required this.squadId,
+    required this.matchId,
+    required this.selectedPlayerIds,
+  });
 
   final Object error;
+  final String squadId;
+  final String? matchId;
+  final List<String> selectedPlayerIds;
 
   @override
   Widget build(BuildContext context) {
@@ -672,22 +827,104 @@ class _ErrorBody extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.all(16),
-      child: SelectableText.rich(
-        TextSpan(
-          text: message,
-          style: TextStyle(color: Theme.of(context).colorScheme.error),
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SelectableText.rich(
+            TextSpan(
+              text: message,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ),
+          if (matchId != null) ...[
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              onPressed: () {
+                context.pushNamed(
+                  AppRoute.draftCreate.name,
+                  pathParameters: {'squadId': squadId},
+                  extra: {'selectedIds': selectedPlayerIds, 'matchId': matchId},
+                );
+              },
+              icon: const Icon(Icons.refresh),
+              label: const Text('Wybierz zawodników i spróbuj ponownie'),
+            ),
+          ],
+        ],
       ),
     );
   }
 }
 
-double _sum(List<Player> players) {
-  var total = 0.0;
-  for (final p in players) {
-    total += p.ranking;
+BigInt? _estimatedCheckedDraftCount({
+  required int playerCount,
+  required int teamCount,
+}) {
+  if (playerCount < teamCount || playerCount <= 0 || teamCount <= 0) {
+    return null;
   }
-  return total;
+
+  final teamSizes = _calculateTeamSizes(
+    playerCount: playerCount,
+    teamCount: teamCount,
+  );
+
+  var remainingPlayers = playerCount;
+  var count = BigInt.one;
+
+  for (var i = 0; i < teamSizes.length - 1; i++) {
+    final teamSize = teamSizes[i];
+    count *= _binomial(remainingPlayers - 1, teamSize - 1);
+    remainingPlayers -= teamSize;
+  }
+
+  return count;
+}
+
+List<int> _calculateTeamSizes({
+  required int playerCount,
+  required int teamCount,
+}) {
+  final base = playerCount ~/ teamCount;
+  final remainder = playerCount % teamCount;
+
+  return List<int>.generate(
+    teamCount,
+    (index) => base + (index < remainder ? 1 : 0),
+  );
+}
+
+BigInt _binomial(int n, int k) {
+  if (k < 0 || n < 0 || k > n) {
+    return BigInt.zero;
+  }
+
+  var adjusted = k;
+  if (adjusted > n - adjusted) {
+    adjusted = n - adjusted;
+  }
+
+  var result = BigInt.one;
+  for (var i = 1; i <= adjusted; i++) {
+    result = (result * BigInt.from(n - adjusted + i)) ~/ BigInt.from(i);
+  }
+
+  return result;
+}
+
+String _formatBigInt(BigInt value) {
+  final digits = value.toString();
+  final buffer = StringBuffer();
+
+  for (var i = 0; i < digits.length; i++) {
+    final isSeparator = i > 0 && (digits.length - i) % 3 == 0;
+    if (isSeparator) {
+      buffer.write(' ');
+    }
+    buffer.write(digits[i]);
+  }
+
+  return buffer.toString();
 }
 
 String? _extractPlayerId(Object data) {

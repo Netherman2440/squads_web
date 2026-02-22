@@ -80,6 +80,7 @@ class _DraftSelectionPageState extends ConsumerState<DraftSelectionPage> {
                                 squadId: widget.squadId,
                                 homePlayers: const <Player>[],
                                 awayPlayers: const <Player>[],
+                                rankingHistoryPlayerIds: ids,
                               );
                           targetMatchId = createdMatch?.matchId;
 

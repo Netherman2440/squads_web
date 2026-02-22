@@ -14,7 +14,7 @@ class CombinatoryDraftRepository implements DraftRepository {
   static final Logger _logger = Logger('CombinatoryDraftRepository');
   static const int _minTeamCount = 2;
   static const int _maxTeamCount = 4;
-  static const Duration _uiYieldBudget = Duration(milliseconds: 8);
+  static const Duration _uiYieldBudget = Duration(milliseconds: 2);
   static const double _rulePenalty = 100.0;
   static const double _positionPenalty = 100.0;
 

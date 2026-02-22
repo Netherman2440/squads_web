@@ -11,8 +11,10 @@ import 'package:app/features/draft/domain/entities/draft.dart';
 import 'package:app/features/draft/domain/entities/head_to_head_win_rate.dart';
 import 'package:app/features/draft/domain/entities/stored_draft_payload.dart';
 import 'package:app/features/draft/presentation/state/draft_session_state.dart';
+import 'package:app/features/matches/application/usecases/get_match_usecase.dart';
 import 'package:app/features/players/application/usecases/get_squad_players_usecase.dart';
 import 'package:app/features/players/domain/entities/player.dart';
+import 'package:app/features/players/players_providers.dart';
 
 enum DraftAlgorithm { combinatory, greedy }
 
@@ -99,7 +101,36 @@ class DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>> {
               .execute(matchId: request.matchId!);
 
           if (storedDraft == null) {
-            throw const NotFoundFailure('Draft not found for this match.');
+            final rankingEntries = await ref
+                .read(rankingRepositoryProvider)
+                .getMatchRankingHistory(request.matchId!);
+            var selectedPlayerIds = <String>{
+              for (final entry in rankingEntries) entry.playerId,
+            }.toList(growable: false);
+
+            if (selectedPlayerIds.length < 2) {
+              final match = await ref
+                  .read(getMatchUseCaseProvider)
+                  .execute(matchId: request.matchId!);
+              selectedPlayerIds = <String>{
+                for (final player in match.homeTeam?.players ?? const [])
+                  player.playerId,
+                for (final player in match.awayTeam?.players ?? const [])
+                  player.playerId,
+              }.toList(growable: false);
+            }
+
+            if (selectedPlayerIds.length < 2) {
+              throw const ValidationFailure(
+                'Draft not found for this match. Select players and retry.',
+              );
+            }
+
+            return _generateAndPersistDraftState(
+              request: request,
+              allPlayers: allPlayers,
+              selectedPlayerIds: selectedPlayerIds,
+            );
           }
 
           if (storedDraft.status == 'error') {
@@ -118,31 +149,9 @@ class DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>> {
           );
           final winRateMatrix = storedDraft.winRateMatrix;
 
-          if (proposals.isEmpty) {
-            return DraftSessionState(
-              proposals: const [],
-              selectedIndex: 0,
-              home: const [],
-              away: const [],
-              winRateMatrix: winRateMatrix,
-              homeWinProbability: 0.5,
-            );
-          }
-
-          final first = proposals.first;
-          final homeWinProbability = _calculateHomeWinProbability(
-            home: first.homePlayers,
-            away: first.awayPlayers,
-            winRateMatrix: winRateMatrix,
-          );
-
-          return DraftSessionState(
+          return _buildDraftState(
             proposals: proposals,
-            selectedIndex: 0,
-            home: first.homePlayers,
-            away: first.awayPlayers,
             winRateMatrix: winRateMatrix,
-            homeWinProbability: homeWinProbability,
           );
         }
 
@@ -155,84 +164,21 @@ class DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>> {
           );
         }
 
-        final selected = _filterByIds(
+        final selectedCount = _filterByIds(
           players: allPlayers,
           ids: request.selectedPlayerIds,
-        );
-        if (selected.length > AppConfig.maxPlayersPerMatch) {
+        ).length;
+        if (selectedCount > AppConfig.maxPlayersPerMatch) {
           throw ValidationFailure(
             'Draft supports up to ${AppConfig.maxPlayersPerMatch} players per match.',
           );
         }
 
-        final useCase = switch (request.algorithm) {
-          DraftAlgorithm.combinatory => ref.read(
-            combinatoryCreateDraftUseCaseProvider,
-          ),
-          DraftAlgorithm.greedy => ref.read(greedyCreateDraftUseCaseProvider),
-        };
-
-        final proposals = await useCase.execute(
-          players: selected,
-          playWithSubstitute: request.playWithSubstitute,
+        return _generateAndPersistDraftState(
+          request: request,
+          allPlayers: allPlayers,
+          selectedPlayerIds: request.selectedPlayerIds,
         );
-
-        final winRates = await ref
-            .read(getPlayerPairWinRatesUseCaseProvider)
-            .execute(playerIds: request.selectedPlayerIds);
-
-        final winRateMatrix = _buildWinRateMatrix(winRates);
-
-        final draftState = proposals.isEmpty
-            ? const DraftSessionState(
-                proposals: [],
-                selectedIndex: 0,
-                home: [],
-                away: [],
-                winRateMatrix: {},
-                homeWinProbability: 0.5,
-              )
-            : (() {
-                final first = proposals.first;
-                final homeWinProbability = _calculateHomeWinProbability(
-                  home: first.homePlayers,
-                  away: first.awayPlayers,
-                  winRateMatrix: winRateMatrix,
-                );
-
-                return DraftSessionState(
-                  proposals: proposals,
-                  selectedIndex: 0,
-                  home: first.homePlayers,
-                  away: first.awayPlayers,
-                  winRateMatrix: winRateMatrix,
-                  homeWinProbability: homeWinProbability,
-                );
-              })();
-
-        if (request.matchId != null) {
-          try {
-            await ref
-                .read(saveMatchDraftUseCaseProvider)
-                .executeCompleted(
-                  squadId: request.squadId,
-                  matchId: request.matchId!,
-                  proposals: draftState.proposals,
-                  winRateMatrix: draftState.winRateMatrix,
-                  teamCount: draftState.proposals.isEmpty
-                      ? 2
-                      : draftState.proposals.first.teams.length,
-                );
-          } catch (persistError, persistStack) {
-            _logger.warning(
-              'Draft generated but failed to persist payload for ${request.matchId}',
-              persistError,
-              persistStack,
-            );
-          }
-        }
-
-        return draftState;
       } catch (error, stack) {
         if (request.matchId != null && request.selectedPlayerIds.isNotEmpty) {
           try {
@@ -255,6 +201,67 @@ class DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>> {
         Error.throwWithStackTrace(error, stack);
       }
     });
+  }
+
+  Future<DraftSessionState> _generateAndPersistDraftState({
+    required _DraftLoadRequest request,
+    required List<Player> allPlayers,
+    required List<String> selectedPlayerIds,
+  }) async {
+    final selected = _filterByIds(players: allPlayers, ids: selectedPlayerIds);
+    if (selected.length < 2) {
+      throw const ValidationFailure('Draft requires at least 2 players.');
+    }
+    if (selected.length > AppConfig.maxPlayersPerMatch) {
+      throw ValidationFailure(
+        'Draft supports up to ${AppConfig.maxPlayersPerMatch} players per match.',
+      );
+    }
+
+    final useCase = switch (request.algorithm) {
+      DraftAlgorithm.combinatory => ref.read(
+        combinatoryCreateDraftUseCaseProvider,
+      ),
+      DraftAlgorithm.greedy => ref.read(greedyCreateDraftUseCaseProvider),
+    };
+
+    final proposals = await useCase.execute(
+      players: selected,
+      playWithSubstitute: request.playWithSubstitute,
+    );
+
+    final winRates = await ref
+        .read(getPlayerPairWinRatesUseCaseProvider)
+        .execute(playerIds: selectedPlayerIds);
+
+    final draftState = _buildDraftState(
+      proposals: proposals,
+      winRateMatrix: _buildWinRateMatrix(winRates),
+    );
+
+    if (request.matchId != null) {
+      try {
+        await ref
+            .read(saveMatchDraftUseCaseProvider)
+            .executeCompleted(
+              squadId: request.squadId,
+              matchId: request.matchId!,
+              proposals: draftState.proposals,
+              winRateMatrix: draftState.winRateMatrix,
+              teamCount: draftState.proposals.isEmpty
+                  ? 2
+                  : draftState.proposals.first.teams.length,
+            );
+      } catch (persistError, persistStack) {
+        _logger.warning(
+          'Draft generated but failed to persist payload for ${request.matchId}',
+          persistError,
+          persistStack,
+        );
+      }
+    }
+
+    return draftState;
   }
 
   void selectProposal(int index) {
@@ -422,6 +429,38 @@ Map<String, Map<String, double>> _buildWinRateMatrix(
     oppMap[rate.oppPlayerId] = rate.winRate;
   }
   return matrix;
+}
+
+DraftSessionState _buildDraftState({
+  required List<Draft> proposals,
+  required Map<String, Map<String, double>> winRateMatrix,
+}) {
+  if (proposals.isEmpty) {
+    return DraftSessionState(
+      proposals: const [],
+      selectedIndex: 0,
+      home: const [],
+      away: const [],
+      winRateMatrix: winRateMatrix,
+      homeWinProbability: 0.5,
+    );
+  }
+
+  final first = proposals.first;
+  final homeWinProbability = _calculateHomeWinProbability(
+    home: first.homePlayers,
+    away: first.awayPlayers,
+    winRateMatrix: winRateMatrix,
+  );
+
+  return DraftSessionState(
+    proposals: proposals,
+    selectedIndex: 0,
+    home: first.homePlayers,
+    away: first.awayPlayers,
+    winRateMatrix: winRateMatrix,
+    homeWinProbability: homeWinProbability,
+  );
 }
 
 double _calculateHomeWinProbability({

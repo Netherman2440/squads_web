@@ -18,6 +18,7 @@ class CreateMatchController extends _$CreateMatchController {
     required String squadId,
     required List<Player> homePlayers,
     required List<Player> awayPlayers,
+    List<String> rankingHistoryPlayerIds = const [],
     String? homeTeamName,
     String? awayTeamName,
   }) async {
@@ -30,6 +31,7 @@ class CreateMatchController extends _$CreateMatchController {
             squadId: squadId,
             homePlayerIds: homePlayers.map((p) => p.playerId).toList(),
             awayPlayerIds: awayPlayers.map((p) => p.playerId).toList(),
+            rankingHistoryPlayerIds: rankingHistoryPlayerIds,
             homeTeamName: homeTeamName,
             awayTeamName: awayTeamName,
           );

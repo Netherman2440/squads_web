@@ -187,7 +187,7 @@ class _QuickActionsSheet extends StatelessWidget {
               onTap: () {
                 Navigator.of(context).pop();
                 context.pushNamed(
-                  AppRoute.draftSelection.name,
+                  AppRoute.draftCreate.name,
                   pathParameters: {'squadId': squad.squadId},
                 );
               },

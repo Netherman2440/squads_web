@@ -310,7 +310,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
     final selectedIds = allPlayers.map((p) => p.playerId).toList();
 
     context.pushNamed(
-      AppRoute.draftSelection.name,
+      AppRoute.draftCreate.name,
       pathParameters: {'squadId': widget.squadId},
       extra: {'selectedIds': selectedIds, 'matchId': widget.matchId},
     );
@@ -459,6 +459,18 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: Navigator.of(context).canPop()
+            ? null
+            : IconButton(
+                tooltip: 'Wróć do meczów',
+                onPressed: () {
+                  context.goNamed(
+                    AppRoute.matches.name,
+                    pathParameters: {'squadId': widget.squadId},
+                  );
+                },
+                icon: const Icon(Icons.arrow_back),
+              ),
         title: const Text('Match Details'),
         actions: [
           if (canManage && matchAsync.hasValue) ...[
@@ -536,6 +548,10 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
     final hasTeamAssignments =
         (match.homeTeam?.players.isNotEmpty ?? false) &&
         (match.awayTeam?.players.isNotEmpty ?? false);
+    final selectedIds = <String>{
+      for (final player in match.homeTeam?.players ?? const []) player.playerId,
+      for (final player in match.awayTeam?.players ?? const []) player.playerId,
+    }.toList(growable: false);
 
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomInset),
@@ -556,28 +572,28 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
                     TextButton(
                       onPressed: () {
                         context.pushNamed(
-                          AppRoute.matchDraft.name,
-                          pathParameters: {
-                            'squadId': widget.squadId,
+                          AppRoute.draftCreate.name,
+                          pathParameters: {'squadId': widget.squadId},
+                          extra: {
+                            'selectedIds': selectedIds,
                             'matchId': widget.matchId,
                           },
                         );
                       },
                       child: const Text('Wybierz drużyny'),
                     ),
-                  if (hasTeamAssignments)
-                    TextButton(
-                      onPressed: () {
-                        context.pushNamed(
-                          AppRoute.matchDraft.name,
-                          pathParameters: {
-                            'squadId': widget.squadId,
-                            'matchId': widget.matchId,
-                          },
-                        );
-                      },
-                      child: const Text('Podgląd draftu'),
-                    ),
+                  TextButton(
+                    onPressed: () {
+                      context.pushNamed(
+                        AppRoute.matchDraft.name,
+                        pathParameters: {
+                          'squadId': widget.squadId,
+                          'matchId': widget.matchId,
+                        },
+                      );
+                    },
+                    child: const Text('Podgląd draftu'),
+                  ),
                   TextButton(
                     onPressed: _onRematch,
                     child: const Text('Rewanż'),

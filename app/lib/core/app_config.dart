@@ -4,7 +4,7 @@ class AppConfig {
     'SUPABASE_ANON_KEY',
   );
 
-  static const int maxPlayersPerMatch = 20;
+  static const int maxPlayersPerMatch = 22;
   static const int maxMatchesPlayed = 10;
   static const Duration inviteLinkValidity = Duration(hours: 24);
   static const double mobileWidth = 600;

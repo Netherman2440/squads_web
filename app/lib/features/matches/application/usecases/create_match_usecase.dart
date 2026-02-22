@@ -93,21 +93,22 @@ class CreateMatchUseCase {
       tournamentId: tournamentId,
     );
 
-    await _matchRepository.refreshMatchWinProbability(matchId: match.matchId);
-
-    // 5. Create Ranking Entries
-    // We need to use the current score of players (from step 1)
-
     final allPlayers = [...homePlayers, ...awayPlayers];
-    final rankingFutures = allPlayers.map((player) {
-      return _rankingRepository.createMatchRankingEntry(
-        playerId: player.playerId,
-        matchId: match.matchId,
-        currentRanking: player.ranking,
-      );
-    });
+    if (allPlayers.isNotEmpty) {
+      await _matchRepository.refreshMatchWinProbability(matchId: match.matchId);
 
-    await Future.wait(rankingFutures);
+      // 5. Create Ranking Entries
+      // We need to use the current score of players (from step 1)
+      final rankingFutures = allPlayers.map((player) {
+        return _rankingRepository.createMatchRankingEntry(
+          playerId: player.playerId,
+          matchId: match.matchId,
+          currentRanking: player.ranking,
+        );
+      });
+
+      await Future.wait(rankingFutures);
+    }
 
     return match;
   }

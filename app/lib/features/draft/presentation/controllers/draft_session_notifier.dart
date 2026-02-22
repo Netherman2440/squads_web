@@ -6,6 +6,7 @@ import 'package:app/core/error/failure.dart';
 import 'package:app/features/draft/application/create_draft_use_case.dart';
 import 'package:app/features/draft/application/get_match_draft_use_case.dart';
 import 'package:app/features/draft/application/get_player_pair_win_rates_use_case.dart';
+import 'package:app/features/draft/application/save_match_draft_use_case.dart';
 import 'package:app/features/draft/domain/entities/draft.dart';
 import 'package:app/features/draft/domain/entities/head_to_head_win_rate.dart';
 import 'package:app/features/draft/domain/entities/stored_draft_payload.dart';
@@ -35,6 +36,10 @@ final draftAlgorithmProvider =
     );
 
 class DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>> {
+  static final Logger _logger = Logger('DraftSessionNotifier');
+  _DraftLoadRequest? _activeRequest;
+  Future<void>? _activeLoadFuture;
+
   @override
   AsyncValue<DraftSessionState> build() {
     return const AsyncValue.loading();
@@ -47,130 +52,208 @@ class DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>> {
     String? matchId,
     bool playWithSubstitute = true,
   }) async {
+    final request = _DraftLoadRequest(
+      squadId: squadId,
+      selectedPlayerIds: selectedPlayerIds,
+      algorithm: algorithm,
+      matchId: matchId,
+      playWithSubstitute: playWithSubstitute,
+    );
+
+    final inFlight = _activeLoadFuture;
+    final isMatchLookupOnly = matchId != null && selectedPlayerIds.isEmpty;
+    if (inFlight != null && state.isLoading) {
+      final sameRequest = _activeRequest == request;
+      final sameMatchLookup =
+          isMatchLookupOnly && _activeRequest?.matchId == matchId;
+      if (sameRequest || sameMatchLookup) {
+        await inFlight;
+        return;
+      }
+    }
+
     state = const AsyncValue.loading();
     await Future<void>.delayed(Duration.zero);
 
+    final loadFuture = _performLoad(request);
+    _activeRequest = request;
+    _activeLoadFuture = loadFuture;
+
+    await loadFuture;
+
+    if (identical(_activeLoadFuture, loadFuture)) {
+      _activeLoadFuture = null;
+    }
+  }
+
+  Future<void> _performLoad(_DraftLoadRequest request) async {
     state = await AsyncValue.guard(() async {
-      final allPlayers = await ref
-          .read(getSquadPlayersUseCaseProvider)
-          .execute(squadId: squadId);
+      try {
+        final allPlayers = await ref
+            .read(getSquadPlayersUseCaseProvider)
+            .execute(squadId: request.squadId);
 
-      if (selectedPlayerIds.isEmpty && matchId != null) {
-        final storedDraft = await ref
-            .read(getMatchDraftUseCaseProvider)
-            .execute(matchId: matchId);
+        if (request.selectedPlayerIds.isEmpty && request.matchId != null) {
+          final storedDraft = await ref
+              .read(getMatchDraftUseCaseProvider)
+              .execute(matchId: request.matchId!);
 
-        if (storedDraft == null) {
-          throw const NotFoundFailure('Draft not found for this match.');
-        }
+          if (storedDraft == null) {
+            throw const NotFoundFailure('Draft not found for this match.');
+          }
 
-        if (storedDraft.status == 'error') {
-          throw ValidationFailure(
-            storedDraft.errorMessage ??
-                'Draft for this match failed previously. Retry redraft.',
+          if (storedDraft.status == 'error') {
+            throw ValidationFailure(
+              storedDraft.errorMessage ??
+                  'Draft for this match failed previously. Retry redraft.',
+            );
+          }
+
+          final playersById = {
+            for (final player in allPlayers) player.playerId: player,
+          };
+          final proposals = _restoreDraftsFromPayload(
+            proposals: storedDraft.proposals,
+            playersById: playersById,
           );
-        }
+          final winRateMatrix = storedDraft.winRateMatrix;
 
-        final playersById = {
-          for (final player in allPlayers) player.playerId: player,
-        };
-        final proposals = _restoreDraftsFromPayload(
-          proposals: storedDraft.proposals,
-          playersById: playersById,
-        );
-        final winRateMatrix = storedDraft.winRateMatrix;
+          if (proposals.isEmpty) {
+            return DraftSessionState(
+              proposals: const [],
+              selectedIndex: 0,
+              home: const [],
+              away: const [],
+              winRateMatrix: winRateMatrix,
+              homeWinProbability: 0.5,
+            );
+          }
 
-        if (proposals.isEmpty) {
-          return DraftSessionState(
-            proposals: const [],
-            selectedIndex: 0,
-            home: const [],
-            away: const [],
+          final first = proposals.first;
+          final homeWinProbability = _calculateHomeWinProbability(
+            home: first.homePlayers,
+            away: first.awayPlayers,
             winRateMatrix: winRateMatrix,
-            homeWinProbability: 0.5,
+          );
+
+          return DraftSessionState(
+            proposals: proposals,
+            selectedIndex: 0,
+            home: first.homePlayers,
+            away: first.awayPlayers,
+            winRateMatrix: winRateMatrix,
+            homeWinProbability: homeWinProbability,
           );
         }
 
-        final first = proposals.first;
-        final homeWinProbability = _calculateHomeWinProbability(
-          home: first.homePlayers,
-          away: first.awayPlayers,
-          winRateMatrix: winRateMatrix,
+        if (request.selectedPlayerIds.length < 2) {
+          throw const ValidationFailure('Draft requires at least 2 players.');
+        }
+        if (request.selectedPlayerIds.length > AppConfig.maxPlayersPerMatch) {
+          throw ValidationFailure(
+            'Draft supports up to ${AppConfig.maxPlayersPerMatch} players per match.',
+          );
+        }
+
+        final selected = _filterByIds(
+          players: allPlayers,
+          ids: request.selectedPlayerIds,
+        );
+        if (selected.length > AppConfig.maxPlayersPerMatch) {
+          throw ValidationFailure(
+            'Draft supports up to ${AppConfig.maxPlayersPerMatch} players per match.',
+          );
+        }
+
+        final useCase = switch (request.algorithm) {
+          DraftAlgorithm.combinatory => ref.read(
+            combinatoryCreateDraftUseCaseProvider,
+          ),
+          DraftAlgorithm.greedy => ref.read(greedyCreateDraftUseCaseProvider),
+        };
+
+        final proposals = await useCase.execute(
+          players: selected,
+          playWithSubstitute: request.playWithSubstitute,
         );
 
-        return DraftSessionState(
-          proposals: proposals,
-          selectedIndex: 0,
-          home: first.homePlayers,
-          away: first.awayPlayers,
-          winRateMatrix: winRateMatrix,
-          homeWinProbability: homeWinProbability,
-        );
+        final winRates = await ref
+            .read(getPlayerPairWinRatesUseCaseProvider)
+            .execute(playerIds: request.selectedPlayerIds);
+
+        final winRateMatrix = _buildWinRateMatrix(winRates);
+
+        final draftState = proposals.isEmpty
+            ? const DraftSessionState(
+                proposals: [],
+                selectedIndex: 0,
+                home: [],
+                away: [],
+                winRateMatrix: {},
+                homeWinProbability: 0.5,
+              )
+            : (() {
+                final first = proposals.first;
+                final homeWinProbability = _calculateHomeWinProbability(
+                  home: first.homePlayers,
+                  away: first.awayPlayers,
+                  winRateMatrix: winRateMatrix,
+                );
+
+                return DraftSessionState(
+                  proposals: proposals,
+                  selectedIndex: 0,
+                  home: first.homePlayers,
+                  away: first.awayPlayers,
+                  winRateMatrix: winRateMatrix,
+                  homeWinProbability: homeWinProbability,
+                );
+              })();
+
+        if (request.matchId != null) {
+          try {
+            await ref
+                .read(saveMatchDraftUseCaseProvider)
+                .executeCompleted(
+                  squadId: request.squadId,
+                  matchId: request.matchId!,
+                  proposals: draftState.proposals,
+                  winRateMatrix: draftState.winRateMatrix,
+                  teamCount: draftState.proposals.isEmpty
+                      ? 2
+                      : draftState.proposals.first.teams.length,
+                );
+          } catch (persistError, persistStack) {
+            _logger.warning(
+              'Draft generated but failed to persist payload for ${request.matchId}',
+              persistError,
+              persistStack,
+            );
+          }
+        }
+
+        return draftState;
+      } catch (error, stack) {
+        if (request.matchId != null && request.selectedPlayerIds.isNotEmpty) {
+          try {
+            await ref
+                .read(saveMatchDraftUseCaseProvider)
+                .executeError(
+                  squadId: request.squadId,
+                  matchId: request.matchId!,
+                  teamCount: 2,
+                  errorMessage: '$error',
+                );
+          } catch (persistError, persistStack) {
+            _logger.warning(
+              'Failed to persist draft error state for ${request.matchId}',
+              persistError,
+              persistStack,
+            );
+          }
+        }
+        Error.throwWithStackTrace(error, stack);
       }
-
-      if (selectedPlayerIds.length < 2) {
-        throw const ValidationFailure('Draft requires at least 2 players.');
-      }
-      if (selectedPlayerIds.length > AppConfig.maxPlayersPerMatch) {
-        throw ValidationFailure(
-          'Draft supports up to ${AppConfig.maxPlayersPerMatch} players per match.',
-        );
-      }
-
-      final selected = _filterByIds(
-        players: allPlayers,
-        ids: selectedPlayerIds,
-      );
-      if (selected.length > AppConfig.maxPlayersPerMatch) {
-        throw ValidationFailure(
-          'Draft supports up to ${AppConfig.maxPlayersPerMatch} players per match.',
-        );
-      }
-
-      final useCase = switch (algorithm) {
-        DraftAlgorithm.combinatory => ref.read(
-          combinatoryCreateDraftUseCaseProvider,
-        ),
-        DraftAlgorithm.greedy => ref.read(greedyCreateDraftUseCaseProvider),
-      };
-
-      final proposals = await useCase.execute(
-        players: selected,
-        playWithSubstitute: playWithSubstitute,
-      );
-
-      final winRates = await ref
-          .read(getPlayerPairWinRatesUseCaseProvider)
-          .execute(playerIds: selectedPlayerIds);
-
-      final winRateMatrix = _buildWinRateMatrix(winRates);
-
-      if (proposals.isEmpty) {
-        return const DraftSessionState(
-          proposals: [],
-          selectedIndex: 0,
-          home: [],
-          away: [],
-          winRateMatrix: {},
-          homeWinProbability: 0.5,
-        );
-      }
-
-      final first = proposals.first;
-      final homeWinProbability = _calculateHomeWinProbability(
-        home: first.homePlayers,
-        away: first.awayPlayers,
-        winRateMatrix: winRateMatrix,
-      );
-
-      return DraftSessionState(
-        proposals: proposals,
-        selectedIndex: 0,
-        home: first.homePlayers,
-        away: first.awayPlayers,
-        winRateMatrix: winRateMatrix,
-        homeWinProbability: homeWinProbability,
-      );
     });
   }
 
@@ -254,6 +337,66 @@ class DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>> {
       ),
     );
   }
+}
+
+class _DraftLoadRequest {
+  final String squadId;
+  final List<String> selectedPlayerIds;
+  final DraftAlgorithm algorithm;
+  final String? matchId;
+  final bool playWithSubstitute;
+
+  _DraftLoadRequest({
+    required this.squadId,
+    required List<String> selectedPlayerIds,
+    required this.algorithm,
+    required this.matchId,
+    required this.playWithSubstitute,
+  }) : selectedPlayerIds = List<String>.unmodifiable(
+         [...selectedPlayerIds]..sort(),
+       );
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is _DraftLoadRequest &&
+        other.squadId == squadId &&
+        other.algorithm == algorithm &&
+        other.matchId == matchId &&
+        other.playWithSubstitute == playWithSubstitute &&
+        _listEquals(other.selectedPlayerIds, selectedPlayerIds);
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(
+      squadId,
+      algorithm,
+      matchId,
+      playWithSubstitute,
+      _listHash(selectedPlayerIds),
+    );
+  }
+}
+
+bool _listEquals(List<String> left, List<String> right) {
+  if (left.length != right.length) {
+    return false;
+  }
+  for (var i = 0; i < left.length; i++) {
+    if (left[i] != right[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+int _listHash(List<String> values) {
+  var hash = 17;
+  for (final value in values) {
+    hash = 37 * hash + value.hashCode;
+  }
+  return hash;
 }
 
 final draftSessionNotifierProvider =

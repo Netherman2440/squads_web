@@ -14,7 +14,7 @@ class CombinatoryDraftRepository implements DraftRepository {
   static final Logger _logger = Logger('CombinatoryDraftRepository');
   static const int _minTeamCount = 2;
   static const int _maxTeamCount = 4;
-  static const int _yieldEveryGeneratedProposals = 150;
+  static const Duration _uiYieldBudget = Duration(milliseconds: 8);
   static const double _rulePenalty = 100.0;
   static const double _positionPenalty = 100.0;
 
@@ -63,7 +63,7 @@ class CombinatoryDraftRepository implements DraftRepository {
     final proposals = <DraftProposal>[];
     final allPlayersMask = (1 << sortedPlayers.length) - 1;
 
-    var generatedProposals = 0;
+    final yieldStopwatch = Stopwatch()..start();
     for (final teamMasks in _generatePartitions(
       remainingMask: allPlayersMask,
       remainingTeamSizes: teamSizes,
@@ -76,11 +76,12 @@ class CombinatoryDraftRepository implements DraftRepository {
         playWithSubstitute: playWithSubstitute,
       );
       proposals.add(proposal);
-      generatedProposals += 1;
 
-      if (generatedProposals % _yieldEveryGeneratedProposals == 0) {
-        // Yield periodically so Flutter can paint loading indicators.
+      if (yieldStopwatch.elapsed >= _uiYieldBudget) {
+        // Yield frequently based on elapsed time to keep UI responsive
+        // even on large combinatory datasets.
         await Future<void>.delayed(Duration.zero);
+        yieldStopwatch.reset();
       }
     }
 

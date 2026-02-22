@@ -533,6 +533,9 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
     final dateFormat = DateFormat('dd.MM.yyyy HH:mm');
     final bottomInset = _isEditing && _isDraggingPlayer ? 84.0 : 0.0;
     final hasScore = match.homeScore != null && match.awayScore != null;
+    final hasTeamAssignments =
+        (match.homeTeam?.players.isNotEmpty ?? false) &&
+        (match.awayTeam?.players.isNotEmpty ?? false);
 
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomInset),
@@ -544,23 +547,37 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
               child: Wrap(
                 spacing: 8,
                 children: [
-                  if (!hasScore)
+                  if (!hasScore && hasTeamAssignments)
                     TextButton(
                       onPressed: () => _onRedraft(match),
                       child: const Text('Wylosuj jeszcze raz'),
                     ),
-                  TextButton(
-                    onPressed: () {
-                      context.pushNamed(
-                        AppRoute.matchDraft.name,
-                        pathParameters: {
-                          'squadId': widget.squadId,
-                          'matchId': widget.matchId,
-                        },
-                      );
-                    },
-                    child: const Text('Podgląd draftu'),
-                  ),
+                  if (!hasTeamAssignments)
+                    TextButton(
+                      onPressed: () {
+                        context.pushNamed(
+                          AppRoute.matchDraft.name,
+                          pathParameters: {
+                            'squadId': widget.squadId,
+                            'matchId': widget.matchId,
+                          },
+                        );
+                      },
+                      child: const Text('Wybierz drużyny'),
+                    ),
+                  if (hasTeamAssignments)
+                    TextButton(
+                      onPressed: () {
+                        context.pushNamed(
+                          AppRoute.matchDraft.name,
+                          pathParameters: {
+                            'squadId': widget.squadId,
+                            'matchId': widget.matchId,
+                          },
+                        );
+                      },
+                      child: const Text('Podgląd draftu'),
+                    ),
                   TextButton(
                     onPressed: _onRematch,
                     child: const Text('Rewanż'),

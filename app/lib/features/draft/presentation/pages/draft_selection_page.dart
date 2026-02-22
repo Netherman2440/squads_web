@@ -7,6 +7,8 @@ import 'package:app/core/app_router.dart';
 import 'package:app/core/error/failure.dart';
 import 'package:app/features/draft/presentation/controllers/draft_selection_controller.dart';
 import 'package:app/features/draft/presentation/widgets/draft_draggable_player_tile.dart';
+import 'package:app/features/matches/presentation/controllers/create_match_controller.dart';
+import 'package:app/features/matches/presentation/controllers/squad_matches_notifier.dart';
 import 'package:app/features/players/domain/entities/player.dart';
 
 class DraftSelectionPage extends ConsumerStatefulWidget {
@@ -42,6 +44,7 @@ class _DraftSelectionPageState extends ConsumerState<DraftSelectionPage> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(draftSelectionControllerProvider);
+    final createMatchState = ref.watch(createMatchControllerProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -54,6 +57,7 @@ class _DraftSelectionPageState extends ConsumerState<DraftSelectionPage> {
               final isWithinLimit =
                   selectedCount <= AppConfig.maxPlayersPerMatch;
               final canGenerate = hasMinimumPlayers && isWithinLimit;
+              final isCreatingMatch = createMatchState.isLoading;
               final tooltip = !hasMinimumPlayers
                   ? 'Select at least 2 players to generate draft'
                   : !isWithinLimit
@@ -62,22 +66,61 @@ class _DraftSelectionPageState extends ConsumerState<DraftSelectionPage> {
 
               return IconButton(
                 tooltip: tooltip,
-                onPressed: canGenerate
-                    ? () {
+                onPressed: canGenerate && !isCreatingMatch
+                    ? () async {
                         final ids = data.selectedPlayerIds.toList(
                           growable: false,
                         );
+
+                        var targetMatchId = widget.matchId;
+                        if (targetMatchId == null || targetMatchId.isEmpty) {
+                          final createdMatch = await ref
+                              .read(createMatchControllerProvider.notifier)
+                              .createMatch(
+                                squadId: widget.squadId,
+                                homePlayers: const <Player>[],
+                                awayPlayers: const <Player>[],
+                              );
+                          targetMatchId = createdMatch?.matchId;
+
+                          if (targetMatchId == null || targetMatchId.isEmpty) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Nie udało się utworzyć meczu.',
+                                  ),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                            return;
+                          }
+
+                          ref.invalidate(squadMatchesProvider(widget.squadId));
+                        }
+
+                        if (!context.mounted) {
+                          return;
+                        }
+
                         context.pushNamed(
-                          AppRoute.draftCreate.name,
-                          pathParameters: {'squadId': widget.squadId},
-                          extra: {
-                            'selectedIds': ids,
-                            'matchId': widget.matchId,
+                          AppRoute.matchDraft.name,
+                          pathParameters: {
+                            'squadId': widget.squadId,
+                            'matchId': targetMatchId,
                           },
+                          extra: {'selectedIds': ids},
                         );
                       }
                     : null,
-                icon: const Icon(Icons.auto_awesome),
+                icon: isCreatingMatch
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.auto_awesome),
               );
             },
             error: (_, _) => const SizedBox.shrink(),

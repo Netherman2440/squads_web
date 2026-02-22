@@ -74,6 +74,22 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
     );
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: _loadMatchId == null,
+        leading: _loadMatchId == null
+            ? null
+            : IconButton(
+                tooltip: 'Wróć do meczu',
+                onPressed: () {
+                  context.goNamed(
+                    AppRoute.matchDetails.name,
+                    pathParameters: {
+                      'squadId': widget.squadId,
+                      'matchId': _loadMatchId!,
+                    },
+                  );
+                },
+                icon: const Icon(Icons.arrow_back),
+              ),
         title: const Text('Draft'),
         actions: [
           if (settingsVisible)

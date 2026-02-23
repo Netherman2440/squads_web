@@ -30,14 +30,12 @@ class DraftResultsPage extends ConsumerStatefulWidget {
     required this.selectedPlayerIds,
     this.matchId,
     this.playWithSubstitute = true,
-    this.useBetterAlgorithm = true,
   });
 
   final String squadId;
   final List<String> selectedPlayerIds;
   final String? matchId;
   final bool playWithSubstitute;
-  final bool useBetterAlgorithm;
 
   @override
   ConsumerState<DraftResultsPage> createState() => _DraftResultsPageState();
@@ -45,7 +43,6 @@ class DraftResultsPage extends ConsumerStatefulWidget {
 
 class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
   bool _playWithSubstitute = true;
-  bool _useBetterAlgorithm = true;
   int? _loadingPlayerCount;
   _DraftLoadingMode _loadingMode = _DraftLoadingMode.generating;
 
@@ -61,7 +58,6 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
   void initState() {
     super.initState();
     _playWithSubstitute = widget.playWithSubstitute;
-    _useBetterAlgorithm = widget.useBetterAlgorithm;
     _loadingPlayerCount = widget.selectedPlayerIds.length;
     _loadingMode = widget.selectedPlayerIds.length >= 2
         ? _DraftLoadingMode.generating
@@ -85,9 +81,6 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.playWithSubstitute != widget.playWithSubstitute) {
       _playWithSubstitute = widget.playWithSubstitute;
-    }
-    if (oldWidget.useBetterAlgorithm != widget.useBetterAlgorithm) {
-      _useBetterAlgorithm = widget.useBetterAlgorithm;
     }
     if (oldWidget.matchId != widget.matchId ||
         oldWidget.selectedPlayerIds != widget.selectedPlayerIds) {
@@ -140,12 +133,10 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
 
   DraftAlgorithm get _preferredAlgorithm {
     final selectedCount = widget.selectedPlayerIds.toSet().length;
-    if (selectedCount > AppConfig.maxPlayersPerMatch) {
+    if (selectedCount >= AppConfig.greedyDraftThresholdPlayers) {
       return DraftAlgorithm.greedy;
     }
-    return _useBetterAlgorithm
-        ? DraftAlgorithm.combinatory
-        : DraftAlgorithm.greedy;
+    return DraftAlgorithm.combinatory;
   }
 
   Future<void> _hydrateLoadingPlayerCount() async {
@@ -388,10 +379,14 @@ class _DraftLoadingBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final count = _estimatedCheckedDraftCount(
-      playerCount: selectedPlayerCount,
-      teamCount: 2,
-    );
+    final usesGreedyHeuristic =
+        selectedPlayerCount >= AppConfig.greedyDraftThresholdPlayers;
+    final count = usesGreedyHeuristic
+        ? BigInt.from(AppConfig.greedyDraftVariantChecks)
+        : _estimatedCheckedDraftCount(
+            playerCount: selectedPlayerCount,
+            teamCount: 2,
+          );
 
     return Center(
       child: Column(
@@ -413,6 +408,14 @@ class _DraftLoadingBody extends StatelessWidget {
             const Text(
               'Możesz wyjść z tego ekranu, ale nie zamykaj przeglądarki.',
             ),
+            if (usesGreedyHeuristic) ...[
+              const SizedBox(height: 6),
+              const Text(
+                'Uwaga: przy większej liczbie graczy wynik draftu '
+                'może być mniej dokładny.',
+                textAlign: TextAlign.center,
+              ),
+            ],
           ],
         ],
       ),

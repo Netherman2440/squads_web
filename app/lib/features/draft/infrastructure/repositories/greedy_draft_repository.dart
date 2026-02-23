@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:app/core/app_config.dart';
 import 'package:app/core/error/failure.dart';
 import 'package:app/core/utils/team_ranking.dart';
 import 'package:app/features/draft/domain/entities/draft.dart';
@@ -8,6 +9,7 @@ import 'package:app/features/draft/domain/entities/draft_rule.dart';
 import 'package:app/features/draft/domain/entities/normalized_draft_rule.dart';
 import 'package:app/features/draft/domain/repositories/draft_repository.dart';
 import 'package:app/features/players/domain/entities/player.dart';
+import 'package:flutter/foundation.dart' show compute, kIsWeb;
 import 'package:logging/logging.dart';
 
 class GreedyDraftRepository implements DraftRepository {
@@ -18,7 +20,12 @@ class GreedyDraftRepository implements DraftRepository {
   static const int _minTeamCount = 2;
   static const int _maxTeamCount = 4;
   static const int _defaultCandidatePoolSize = 7;
-  static const int _fixedIterations = 50000;
+  static const int _maxIterations = AppConfig.greedyDraftVariantChecks;
+  static const int _minIterations = 3000;
+  static const int _iterationsPerRequestedDraft = 300;
+  static const int _maxNoProgressIterations = 2500;
+  static const int _largeDraftPoolDivisor = 2;
+  static const Duration _uiYieldBudget = Duration(milliseconds: 12);
   static const double _rulePenalty = 100.0;
   static const double _positionPenalty = 100.0;
   static final Logger _logger = Logger('GreedyDraftRepository');
@@ -35,8 +42,16 @@ class GreedyDraftRepository implements DraftRepository {
     int? seed,
   }) async {
     final startedAt = DateTime.now();
+    final forceFullIterationBudget =
+        players.length >= AppConfig.greedyDraftThresholdPlayers;
+    final targetIterations = forceFullIterationBudget
+        ? _maxIterations
+        : min(
+            _maxIterations,
+            max(_minIterations, limit * _iterationsPerRequestedDraft),
+          );
     _logger.info(
-      'createDraft started: startedAt=${startedAt.toIso8601String()} teamCount=$teamCount players=${players.length} limit=$limit seed=${seed ?? 'random'} iterations=$_fixedIterations',
+      'createDraft started: startedAt=${startedAt.toIso8601String()} teamCount=$teamCount players=${players.length} limit=$limit seed=${seed ?? 'random'} iterations=$targetIterations',
     );
 
     if (players.isEmpty || limit <= 0) {
@@ -68,6 +83,7 @@ class GreedyDraftRepository implements DraftRepository {
       rules: rules,
       playersById: playersById,
     );
+    final rulesByPlayer = _groupRulesByPlayer(rules: normalizedRules);
 
     final targetTeamSizes = _calculateTeamSizes(
       playerCount: sortedPlayers.length,
@@ -75,30 +91,22 @@ class GreedyDraftRepository implements DraftRepository {
     );
 
     final processSeed = seed ?? _randomSeed();
-    final generatedProposals = <DraftProposal>[];
-    final seenSignatures = <String>{};
+    final generationInput = _GreedyGenerationInput(
+      sortedPlayers: sortedPlayers,
+      normalizedRules: normalizedRules,
+      rulesByPlayer: rulesByPlayer,
+      targetTeamSizes: targetTeamSizes,
+      candidatePoolSize: candidatePoolSize,
+      playWithSubstitute: playWithSubstitute,
+      processSeed: processSeed,
+      iterations: targetIterations,
+      requestedLimit: limit,
+      stopWhenStalled: !forceFullIterationBudget,
+    );
 
-    for (var iteration = 0; iteration < _fixedIterations; iteration++) {
-      final iterationSeed = _mixSeed(processSeed, iteration);
-      final proposal = _buildGreedyProposal(
-        sortedPlayers: sortedPlayers,
-        rules: normalizedRules,
-        teamSizes: targetTeamSizes,
-        candidatePoolSize: candidatePoolSize,
-        iterationSeed: iterationSeed,
-        playWithSubstitute: playWithSubstitute,
-      );
-
-      if (proposal == null) {
-        continue;
-      }
-
-      if (!seenSignatures.add(proposal.signature)) {
-        continue;
-      }
-
-      generatedProposals.add(proposal);
-    }
+    final generatedProposals = kIsWeb
+        ? await _runGreedyGenerationWithYield(generationInput)
+        : await compute(_runGreedyGeneration, generationInput);
 
     final scoredProposals = _applyEqualWeightScoring(generatedProposals);
 
@@ -123,15 +131,129 @@ class GreedyDraftRepository implements DraftRepository {
     final finishedAt = DateTime.now();
     final elapsedMs = finishedAt.difference(startedAt).inMilliseconds;
     _logger.info(
-      'createDraft completed: finishedAt=${finishedAt.toIso8601String()} elapsedMs=$elapsedMs teamCount=$teamCount players=${players.length} limit=$limit seed=$processSeed iterations=$_fixedIterations proposals=${generatedProposals.length} returned=${result.length}',
+      'createDraft completed: finishedAt=${finishedAt.toIso8601String()} elapsedMs=$elapsedMs teamCount=$teamCount players=${players.length} limit=$limit seed=$processSeed iterations=$targetIterations proposals=${generatedProposals.length} returned=${result.length}',
     );
     return result;
   }
 }
 
+List<DraftProposal> _runGreedyGeneration(_GreedyGenerationInput input) {
+  final generatedProposals = <DraftProposal>[];
+  final seenSignatures = <String>{};
+  var noProgressIterations = 0;
+
+  for (var iteration = 0; iteration < input.iterations; iteration++) {
+    final iterationCandidatePoolSize = _candidatePoolSizeForIteration(
+      input: input,
+      iteration: iteration,
+    );
+    final iterationSeed = _mixSeed(input.processSeed, iteration);
+    final proposal = _buildGreedyProposal(
+      sortedPlayers: input.sortedPlayers,
+      rules: input.normalizedRules,
+      ruleIndexesByPlayer: input.rulesByPlayer,
+      teamSizes: input.targetTeamSizes,
+      candidatePoolSize: iterationCandidatePoolSize,
+      iterationSeed: iterationSeed,
+      playWithSubstitute: input.playWithSubstitute,
+    );
+
+    if (proposal == null) {
+      noProgressIterations++;
+      if (generatedProposals.length >= input.requestedLimit &&
+          input.stopWhenStalled &&
+          noProgressIterations >=
+              GreedyDraftRepository._maxNoProgressIterations) {
+        break;
+      }
+      continue;
+    }
+
+    if (!seenSignatures.add(proposal.signature)) {
+      noProgressIterations++;
+      if (generatedProposals.length >= input.requestedLimit &&
+          input.stopWhenStalled &&
+          noProgressIterations >=
+              GreedyDraftRepository._maxNoProgressIterations) {
+        break;
+      }
+      continue;
+    }
+
+    generatedProposals.add(proposal);
+    noProgressIterations = 0;
+  }
+
+  return generatedProposals;
+}
+
+Future<List<DraftProposal>> _runGreedyGenerationWithYield(
+  _GreedyGenerationInput input,
+) async {
+  final generatedProposals = <DraftProposal>[];
+  final seenSignatures = <String>{};
+  final yieldStopwatch = Stopwatch()..start();
+  var noProgressIterations = 0;
+
+  for (var iteration = 0; iteration < input.iterations; iteration++) {
+    final iterationCandidatePoolSize = _candidatePoolSizeForIteration(
+      input: input,
+      iteration: iteration,
+    );
+    final iterationSeed = _mixSeed(input.processSeed, iteration);
+    final proposal = _buildGreedyProposal(
+      sortedPlayers: input.sortedPlayers,
+      rules: input.normalizedRules,
+      ruleIndexesByPlayer: input.rulesByPlayer,
+      teamSizes: input.targetTeamSizes,
+      candidatePoolSize: iterationCandidatePoolSize,
+      iterationSeed: iterationSeed,
+      playWithSubstitute: input.playWithSubstitute,
+    );
+
+    if (proposal != null && seenSignatures.add(proposal.signature)) {
+      generatedProposals.add(proposal);
+      noProgressIterations = 0;
+    } else {
+      noProgressIterations++;
+      if (generatedProposals.length >= input.requestedLimit &&
+          input.stopWhenStalled &&
+          noProgressIterations >=
+              GreedyDraftRepository._maxNoProgressIterations) {
+        break;
+      }
+    }
+
+    if (yieldStopwatch.elapsed >= GreedyDraftRepository._uiYieldBudget) {
+      await Future<void>.delayed(Duration.zero);
+      yieldStopwatch.reset();
+    }
+  }
+
+  return generatedProposals;
+}
+
+int _candidatePoolSizeForIteration({
+  required _GreedyGenerationInput input,
+  required int iteration,
+}) {
+  final playersCount = input.sortedPlayers.length;
+  if (playersCount < AppConfig.greedyDraftThresholdPlayers) {
+    return input.candidatePoolSize;
+  }
+
+  if (iteration == 0) {
+    return playersCount;
+  }
+
+  final poolSize = playersCount ~/ GreedyDraftRepository._largeDraftPoolDivisor;
+  return poolSize > 0 ? poolSize : 1;
+}
+
 DraftProposal? _buildGreedyProposal({
   required List<Player> sortedPlayers,
   required List<NormalizedDraftRule> rules,
+  required Map<int, List<NormalizedDraftRule>> ruleIndexesByPlayer,
   required List<int> teamSizes,
   required int candidatePoolSize,
   required int iterationSeed,
@@ -152,7 +274,6 @@ DraftProposal? _buildGreedyProposal({
     sortedPlayers.length,
     null,
   );
-  final ruleIndexesByPlayer = _groupRulesByPlayer(rules: rules);
 
   var nextTeamIndex = iterationSeed % teamCount;
 
@@ -783,5 +904,31 @@ class _TeamWithKey {
     required this.key,
     required this.players,
     required this.totalRanking,
+  });
+}
+
+class _GreedyGenerationInput {
+  final List<Player> sortedPlayers;
+  final List<NormalizedDraftRule> normalizedRules;
+  final Map<int, List<NormalizedDraftRule>> rulesByPlayer;
+  final List<int> targetTeamSizes;
+  final int candidatePoolSize;
+  final bool playWithSubstitute;
+  final int processSeed;
+  final int iterations;
+  final int requestedLimit;
+  final bool stopWhenStalled;
+
+  const _GreedyGenerationInput({
+    required this.sortedPlayers,
+    required this.normalizedRules,
+    required this.rulesByPlayer,
+    required this.targetTeamSizes,
+    required this.candidatePoolSize,
+    required this.playWithSubstitute,
+    required this.processSeed,
+    required this.iterations,
+    required this.requestedLimit,
+    required this.stopWhenStalled,
   });
 }

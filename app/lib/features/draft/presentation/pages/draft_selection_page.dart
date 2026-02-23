@@ -29,7 +29,6 @@ class DraftSelectionPage extends ConsumerStatefulWidget {
 
 class _DraftSelectionPageState extends ConsumerState<DraftSelectionPage> {
   bool _playWithSubstitute = true;
-  bool _useBetterAlgorithm = true;
 
   @override
   void initState() {
@@ -113,7 +112,6 @@ class _DraftSelectionPageState extends ConsumerState<DraftSelectionPage> {
                           extra: {
                             'selectedIds': ids,
                             'playWithSubstitute': _playWithSubstitute,
-                            'useBetterAlgorithm': _useBetterAlgorithm,
                           },
                         );
                       }
@@ -201,20 +199,18 @@ class _DraftSelectionPageState extends ConsumerState<DraftSelectionPage> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Card(
-                      child: SwitchListTile.adaptive(
-                        title: const Text('Use better algorithm'),
-                        subtitle: const Text(
-                          'Włączone = combinatory, wyłączone = greedy.',
+                    if (data.selectedPlayerIds.length >=
+                        AppConfig.greedyDraftThresholdPlayers) ...[
+                      Text(
+                        'Uwaga: przy większej liczbie graczy wynik draftu '
+                        'może być mniej dokładny.',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
                         ),
-                        value: _useBetterAlgorithm,
-                        onChanged: (value) {
-                          setState(() {
-                            _useBetterAlgorithm = value;
-                          });
-                        },
+                        textAlign: TextAlign.center,
                       ),
-                    ),
+                      const SizedBox(height: 8),
+                    ],
                     const SizedBox(height: 12),
                     if (data.validationMessage != null)
                       Padding(

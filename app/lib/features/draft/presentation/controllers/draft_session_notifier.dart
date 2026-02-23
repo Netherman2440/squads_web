@@ -488,6 +488,9 @@ DraftAlgorithm _resolveAlgorithmForPlayerCount({
   required DraftAlgorithm preferred,
   required int playerCount,
 }) {
+  if (playerCount >= AppConfig.greedyDraftThresholdPlayers) {
+    return DraftAlgorithm.greedy;
+  }
   if (playerCount > AppConfig.maxPlayersPerMatch) {
     return DraftAlgorithm.greedy;
   }

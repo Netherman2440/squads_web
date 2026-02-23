@@ -30,12 +30,14 @@ class DraftResultsPage extends ConsumerStatefulWidget {
     required this.selectedPlayerIds,
     this.matchId,
     this.playWithSubstitute = true,
+    this.useBetterAlgorithm = true,
   });
 
   final String squadId;
   final List<String> selectedPlayerIds;
   final String? matchId;
   final bool playWithSubstitute;
+  final bool useBetterAlgorithm;
 
   @override
   ConsumerState<DraftResultsPage> createState() => _DraftResultsPageState();
@@ -43,6 +45,7 @@ class DraftResultsPage extends ConsumerStatefulWidget {
 
 class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
   bool _playWithSubstitute = true;
+  bool _useBetterAlgorithm = true;
   int? _loadingPlayerCount;
   _DraftLoadingMode _loadingMode = _DraftLoadingMode.generating;
 
@@ -58,6 +61,7 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
   void initState() {
     super.initState();
     _playWithSubstitute = widget.playWithSubstitute;
+    _useBetterAlgorithm = widget.useBetterAlgorithm;
     _loadingPlayerCount = widget.selectedPlayerIds.length;
     _loadingMode = widget.selectedPlayerIds.length >= 2
         ? _DraftLoadingMode.generating
@@ -68,7 +72,7 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
           .load(
             squadId: widget.squadId,
             selectedPlayerIds: widget.selectedPlayerIds,
-            algorithm: ref.read(draftAlgorithmProvider),
+            algorithm: _preferredAlgorithm,
             matchId: _loadMatchId,
             playWithSubstitute: _playWithSubstitute,
           ),
@@ -81,6 +85,9 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.playWithSubstitute != widget.playWithSubstitute) {
       _playWithSubstitute = widget.playWithSubstitute;
+    }
+    if (oldWidget.useBetterAlgorithm != widget.useBetterAlgorithm) {
+      _useBetterAlgorithm = widget.useBetterAlgorithm;
     }
     if (oldWidget.matchId != widget.matchId ||
         oldWidget.selectedPlayerIds != widget.selectedPlayerIds) {
@@ -129,6 +136,16 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
     }
 
     await _hydrateLoadingPlayerCount();
+  }
+
+  DraftAlgorithm get _preferredAlgorithm {
+    final selectedCount = widget.selectedPlayerIds.toSet().length;
+    if (selectedCount > AppConfig.maxPlayersPerMatch) {
+      return DraftAlgorithm.greedy;
+    }
+    return _useBetterAlgorithm
+        ? DraftAlgorithm.combinatory
+        : DraftAlgorithm.greedy;
   }
 
   Future<void> _hydrateLoadingPlayerCount() async {
@@ -460,6 +477,7 @@ class _CreateMatchButton extends ConsumerWidget {
                         proposals: draftData.proposals,
                         winRateMatrix: draftData.winRateMatrix,
                         teamCount: draftData.proposals.first.teams.length,
+                        seed: draftData.seed,
                       );
                 } catch (error) {
                   if (context.mounted) {

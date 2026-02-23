@@ -9,6 +9,7 @@ class StoredDraftPayload {
   final String matchId;
   final int teamCount;
   final int proposalsCount;
+  final int? seed;
   final String status;
   final String? errorMessage;
   final List<StoredDraftProposal> proposals;
@@ -19,6 +20,7 @@ class StoredDraftPayload {
     required this.matchId,
     required this.teamCount,
     required this.proposalsCount,
+    required this.seed,
     required this.status,
     required this.errorMessage,
     required this.proposals,

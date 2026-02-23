@@ -241,6 +241,7 @@ final appRouter = () {
 
               List<String> selectedIds = const [];
               var playWithSubstitute = true;
+              var useBetterAlgorithm = true;
               if (extra is List<String>) {
                 selectedIds = extra;
               } else if (extra is Map<String, dynamic>) {
@@ -249,6 +250,8 @@ final appRouter = () {
                     [];
                 playWithSubstitute =
                     (extra['playWithSubstitute'] as bool?) ?? true;
+                useBetterAlgorithm =
+                    (extra['useBetterAlgorithm'] as bool?) ?? true;
               }
 
               return NoTransitionPage(
@@ -257,6 +260,7 @@ final appRouter = () {
                   selectedPlayerIds: selectedIds,
                   matchId: matchId,
                   playWithSubstitute: playWithSubstitute,
+                  useBetterAlgorithm: useBetterAlgorithm,
                 ),
               );
             },

@@ -8,6 +8,7 @@ abstract class DraftPersistenceRepository {
     required List<Draft> proposals,
     required Map<String, Map<String, double>> winRateMatrix,
     required int teamCount,
+    int? seed,
   });
 
   Future<void> upsertDraftError({

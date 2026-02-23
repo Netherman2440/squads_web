@@ -21,6 +21,7 @@ class SupabaseDraftPersistenceRepository implements DraftPersistenceRepository {
     required List<Draft> proposals,
     required Map<String, Map<String, double>> winRateMatrix,
     required int teamCount,
+    int? seed,
   }) async {
     try {
       final now = DateTime.now().toUtc().toIso8601String();
@@ -36,7 +37,7 @@ class SupabaseDraftPersistenceRepository implements DraftPersistenceRepository {
 
       await _supabase.from('draft_payloads').upsert({
         'draft_id': draftId,
-        'proposals': _serializeProposals(proposals),
+        'proposals': _serializeProposals(proposals, seed: seed),
         'win_rate_matrix': _serializeWinRateMatrix(winRateMatrix),
         'updated_at': now,
       }, onConflict: 'draft_id');
@@ -104,15 +105,17 @@ class SupabaseDraftPersistenceRepository implements DraftPersistenceRepository {
       final payloadData = payloadRow == null
           ? const <String, dynamic>{}
           : Map<String, dynamic>.from(payloadRow as Map);
+      final parsedProposals = _parseStoredProposals(payloadData['proposals']);
 
       return StoredDraftPayload(
         draftId: draftId,
         matchId: draftData['match_id'] as String,
         teamCount: (draftData['team_count'] as num?)?.toInt() ?? 2,
         proposalsCount: (draftData['proposals_count'] as num?)?.toInt() ?? 0,
+        seed: parsedProposals.seed,
         status: (draftData['status'] as String?) ?? 'completed',
         errorMessage: draftData['error_message'] as String?,
-        proposals: _parseStoredProposals(payloadData['proposals']),
+        proposals: parsedProposals.proposals,
         winRateMatrix: _parseWinRateMatrix(payloadData['win_rate_matrix']),
       );
     } catch (e, stack) {
@@ -149,16 +152,31 @@ class SupabaseDraftPersistenceRepository implements DraftPersistenceRepository {
   }
 }
 
-List<Map<String, dynamic>> _serializeProposals(List<Draft> proposals) {
-  return proposals
-      .map(
-        (draft) => {
-          'teams': draft.teams
-              .map((team) => team.players.map((p) => p.playerId).toList())
-              .toList(),
-        },
-      )
-      .toList(growable: false);
+const String _proposalMetadataKey = '_meta';
+const String _proposalSeedKey = 'seed';
+
+List<Map<String, dynamic>> _serializeProposals(
+  List<Draft> proposals, {
+  int? seed,
+}) {
+  final serialized = <Map<String, dynamic>>[];
+  if (seed != null) {
+    serialized.add({
+      _proposalMetadataKey: {_proposalSeedKey: seed},
+    });
+  }
+
+  serialized.addAll(
+    proposals.map(
+      (draft) => {
+        'teams': draft.teams
+            .map((team) => team.players.map((p) => p.playerId).toList())
+            .toList(),
+      },
+    ),
+  );
+
+  return serialized;
 }
 
 Map<String, dynamic> _serializeWinRateMatrix(
@@ -172,12 +190,13 @@ Map<String, dynamic> _serializeWinRateMatrix(
   );
 }
 
-List<StoredDraftProposal> _parseStoredProposals(dynamic raw) {
+_ParsedStoredProposals _parseStoredProposals(dynamic raw) {
   if (raw is! List) {
-    return const [];
+    return const _ParsedStoredProposals(proposals: [], seed: null);
   }
 
   final result = <StoredDraftProposal>[];
+  int? seed;
 
   for (final proposalRaw in raw) {
     if (proposalRaw is! Map) {
@@ -185,6 +204,16 @@ List<StoredDraftProposal> _parseStoredProposals(dynamic raw) {
     }
 
     final proposalMap = Map<String, dynamic>.from(proposalRaw);
+    final metadataRaw = proposalMap[_proposalMetadataKey];
+    if (metadataRaw is Map) {
+      final metadata = Map<String, dynamic>.from(metadataRaw);
+      final parsedSeed = metadata[_proposalSeedKey];
+      if (parsedSeed is num) {
+        seed = parsedSeed.toInt();
+      }
+      continue;
+    }
+
     final teamsRaw = proposalMap['teams'];
     if (teamsRaw is! List) {
       continue;
@@ -211,7 +240,17 @@ List<StoredDraftProposal> _parseStoredProposals(dynamic raw) {
     }
   }
 
-  return result;
+  return _ParsedStoredProposals(
+    proposals: result.toList(growable: false),
+    seed: seed,
+  );
+}
+
+class _ParsedStoredProposals {
+  final List<StoredDraftProposal> proposals;
+  final int? seed;
+
+  const _ParsedStoredProposals({required this.proposals, required this.seed});
 }
 
 Map<String, Map<String, double>> _parseWinRateMatrix(dynamic raw) {

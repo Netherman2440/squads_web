@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
@@ -152,13 +154,19 @@ class DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>> {
           return _buildDraftState(
             proposals: proposals,
             winRateMatrix: winRateMatrix,
+            seed: storedDraft.seed,
           );
         }
 
         if (request.selectedPlayerIds.length < 2) {
           throw const ValidationFailure('Draft requires at least 2 players.');
         }
-        if (request.selectedPlayerIds.length > AppConfig.maxPlayersPerMatch) {
+        final requestedAlgorithm = _resolveAlgorithmForPlayerCount(
+          preferred: request.algorithm,
+          playerCount: request.selectedPlayerIds.length,
+        );
+        if (requestedAlgorithm == DraftAlgorithm.combinatory &&
+            request.selectedPlayerIds.length > AppConfig.maxPlayersPerMatch) {
           throw ValidationFailure(
             'Draft supports up to ${AppConfig.maxPlayersPerMatch} players per match.',
           );
@@ -168,7 +176,8 @@ class DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>> {
           players: allPlayers,
           ids: request.selectedPlayerIds,
         ).length;
-        if (selectedCount > AppConfig.maxPlayersPerMatch) {
+        if (requestedAlgorithm == DraftAlgorithm.combinatory &&
+            selectedCount > AppConfig.maxPlayersPerMatch) {
           throw ValidationFailure(
             'Draft supports up to ${AppConfig.maxPlayersPerMatch} players per match.',
           );
@@ -212,22 +221,29 @@ class DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>> {
     if (selected.length < 2) {
       throw const ValidationFailure('Draft requires at least 2 players.');
     }
-    if (selected.length > AppConfig.maxPlayersPerMatch) {
+    final algorithm = _resolveAlgorithmForPlayerCount(
+      preferred: request.algorithm,
+      playerCount: selected.length,
+    );
+    if (algorithm == DraftAlgorithm.combinatory &&
+        selected.length > AppConfig.maxPlayersPerMatch) {
       throw ValidationFailure(
         'Draft supports up to ${AppConfig.maxPlayersPerMatch} players per match.',
       );
     }
 
-    final useCase = switch (request.algorithm) {
+    final useCase = switch (algorithm) {
       DraftAlgorithm.combinatory => ref.read(
         combinatoryCreateDraftUseCaseProvider,
       ),
       DraftAlgorithm.greedy => ref.read(greedyCreateDraftUseCaseProvider),
     };
+    final seed = algorithm == DraftAlgorithm.greedy ? _randomSeed() : null;
 
     final proposals = await useCase.execute(
       players: selected,
       playWithSubstitute: request.playWithSubstitute,
+      seed: seed,
     );
 
     final winRates = await ref
@@ -237,6 +253,7 @@ class DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>> {
     final draftState = _buildDraftState(
       proposals: proposals,
       winRateMatrix: _buildWinRateMatrix(winRates),
+      seed: seed,
     );
 
     if (request.matchId != null) {
@@ -251,6 +268,7 @@ class DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>> {
               teamCount: draftState.proposals.isEmpty
                   ? 2
                   : draftState.proposals.first.teams.length,
+              seed: draftState.seed,
             );
       } catch (persistError, persistStack) {
         _logger.warning(
@@ -434,11 +452,13 @@ Map<String, Map<String, double>> _buildWinRateMatrix(
 DraftSessionState _buildDraftState({
   required List<Draft> proposals,
   required Map<String, Map<String, double>> winRateMatrix,
+  required int? seed,
 }) {
   if (proposals.isEmpty) {
     return DraftSessionState(
       proposals: const [],
       selectedIndex: 0,
+      seed: seed,
       home: const [],
       away: const [],
       winRateMatrix: winRateMatrix,
@@ -456,12 +476,25 @@ DraftSessionState _buildDraftState({
   return DraftSessionState(
     proposals: proposals,
     selectedIndex: 0,
+    seed: seed,
     home: first.homePlayers,
     away: first.awayPlayers,
     winRateMatrix: winRateMatrix,
     homeWinProbability: homeWinProbability,
   );
 }
+
+DraftAlgorithm _resolveAlgorithmForPlayerCount({
+  required DraftAlgorithm preferred,
+  required int playerCount,
+}) {
+  if (playerCount > AppConfig.maxPlayersPerMatch) {
+    return DraftAlgorithm.greedy;
+  }
+  return preferred;
+}
+
+int _randomSeed() => Random().nextInt(0x7FFFFFFF);
 
 double _calculateHomeWinProbability({
   required List<Player> home,

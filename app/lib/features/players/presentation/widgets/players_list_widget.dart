@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:app/core/app_router.dart';
 
 import 'package:app/features/players/domain/entities/player.dart';
+import 'package:app/features/players/domain/entities/player_position.dart';
 
 class PlayersListWidget extends StatelessWidget {
   const PlayersListWidget({
@@ -23,11 +24,8 @@ class PlayersListWidget extends StatelessWidget {
       itemBuilder: (context, index) {
         final player = players[index];
         final difference = player.ranking - player.baseRanking;
-        final positionText = player.position?.trim();
-        final hasPosition =
-            positionText != null &&
-            positionText.isNotEmpty &&
-            positionText.toLowerCase() != 'none';
+        final positionText = playerPositionPolishLabel(player.position);
+        final hasPosition = positionText != null;
 
         return Card(
           child: ListTile(

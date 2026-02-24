@@ -9,6 +9,7 @@ import 'package:app/core/app_router.dart';
 import 'package:app/core/error/failure.dart';
 import 'package:app/core/utils/team_ranking.dart';
 import 'package:app/core/widgets/probability_slider.dart';
+import 'package:app/features/draft/domain/entities/draft_rule.dart';
 import 'package:app/features/draft/application/get_match_draft_use_case.dart';
 import 'package:app/features/draft/application/save_match_draft_use_case.dart';
 import 'package:app/features/draft/presentation/controllers/draft_session_notifier.dart';
@@ -28,12 +29,14 @@ class DraftResultsPage extends ConsumerStatefulWidget {
     super.key,
     required this.squadId,
     required this.selectedPlayerIds,
+    this.draftRules = const [],
     this.matchId,
     this.playWithSubstitute = true,
   });
 
   final String squadId;
   final List<String> selectedPlayerIds;
+  final List<DraftRule> draftRules;
   final String? matchId;
   final bool playWithSubstitute;
 
@@ -71,6 +74,7 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
             algorithm: _preferredAlgorithm,
             matchId: _loadMatchId,
             playWithSubstitute: _playWithSubstitute,
+            rules: widget.draftRules,
           ),
     );
     Future.microtask(_resolveLoadingModeAndCount);
@@ -233,6 +237,8 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
           squadId: widget.squadId,
           matchId: _loadMatchId,
           selectedPlayerIds: widget.selectedPlayerIds,
+          playWithSubstitute: _playWithSubstitute,
+          draftRules: widget.draftRules,
         ),
         data: (data) {
           if (data.proposals.isEmpty) {
@@ -762,12 +768,16 @@ class _ErrorBody extends StatelessWidget {
     required this.squadId,
     required this.matchId,
     required this.selectedPlayerIds,
+    required this.playWithSubstitute,
+    required this.draftRules,
   });
 
   final Object error;
   final String squadId;
   final String? matchId;
   final List<String> selectedPlayerIds;
+  final bool playWithSubstitute;
+  final List<DraftRule> draftRules;
 
   @override
   Widget build(BuildContext context) {
@@ -790,9 +800,14 @@ class _ErrorBody extends StatelessWidget {
             FilledButton.icon(
               onPressed: () {
                 context.pushNamed(
-                  AppRoute.draftCreate.name,
+                  AppRoute.draftAgainstRelations.name,
                   pathParameters: {'squadId': squadId},
-                  extra: {'selectedIds': selectedPlayerIds, 'matchId': matchId},
+                  extra: {
+                    'selectedIds': selectedPlayerIds,
+                    'matchId': matchId,
+                    'playWithSubstitute': playWithSubstitute,
+                    'draftRules': _serializeDraftRules(draftRules),
+                  },
                 );
               },
               icon: const Icon(Icons.refresh),
@@ -803,6 +818,13 @@ class _ErrorBody extends StatelessWidget {
       ),
     );
   }
+}
+
+List<Map<String, dynamic>> _serializeDraftRules(List<DraftRule> rules) {
+  return [
+    for (final rule in rules)
+      {'type': rule.type.name, 'playerIds': rule.playerIds},
+  ];
 }
 
 BigInt? _estimatedCheckedDraftCount({

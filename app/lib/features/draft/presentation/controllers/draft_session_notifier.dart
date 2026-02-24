@@ -10,6 +10,7 @@ import 'package:app/features/draft/application/get_match_draft_use_case.dart';
 import 'package:app/features/draft/application/get_player_pair_win_rates_use_case.dart';
 import 'package:app/features/draft/application/save_match_draft_use_case.dart';
 import 'package:app/features/draft/domain/entities/draft.dart';
+import 'package:app/features/draft/domain/entities/draft_rule.dart';
 import 'package:app/features/draft/domain/entities/head_to_head_win_rate.dart';
 import 'package:app/features/draft/domain/entities/stored_draft_payload.dart';
 import 'package:app/features/draft/presentation/state/draft_session_state.dart';
@@ -53,6 +54,7 @@ class DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>> {
     required String squadId,
     required List<String> selectedPlayerIds,
     required DraftAlgorithm algorithm,
+    List<DraftRule> rules = const [],
     String? matchId,
     bool playWithSubstitute = true,
   }) async {
@@ -60,6 +62,7 @@ class DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>> {
       squadId: squadId,
       selectedPlayerIds: selectedPlayerIds,
       algorithm: algorithm,
+      rules: rules,
       matchId: matchId,
       playWithSubstitute: playWithSubstitute,
     );
@@ -242,6 +245,7 @@ class DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>> {
 
     final proposals = await useCase.execute(
       players: selected,
+      rules: request.rules,
       playWithSubstitute: request.playWithSubstitute,
       seed: seed,
     );
@@ -368,6 +372,7 @@ class _DraftLoadRequest {
   final String squadId;
   final List<String> selectedPlayerIds;
   final DraftAlgorithm algorithm;
+  final List<DraftRule> rules;
   final String? matchId;
   final bool playWithSubstitute;
 
@@ -375,11 +380,19 @@ class _DraftLoadRequest {
     required this.squadId,
     required List<String> selectedPlayerIds,
     required this.algorithm,
+    required List<DraftRule> rules,
     required this.matchId,
     required this.playWithSubstitute,
   }) : selectedPlayerIds = List<String>.unmodifiable(
          [...selectedPlayerIds]..sort(),
-       );
+       ),
+       rules = List<DraftRule>.unmodifiable([
+         for (final rule in rules)
+           DraftRule(
+             type: rule.type,
+             playerIds: List<String>.unmodifiable([...rule.playerIds]),
+           ),
+       ]);
 
   @override
   bool operator ==(Object other) {
@@ -389,6 +402,7 @@ class _DraftLoadRequest {
         other.algorithm == algorithm &&
         other.matchId == matchId &&
         other.playWithSubstitute == playWithSubstitute &&
+        _rulesEqual(other.rules, rules) &&
         _listEquals(other.selectedPlayerIds, selectedPlayerIds);
   }
 
@@ -399,6 +413,7 @@ class _DraftLoadRequest {
       algorithm,
       matchId,
       playWithSubstitute,
+      _rulesHash(rules),
       _listHash(selectedPlayerIds),
     );
   }
@@ -420,6 +435,32 @@ int _listHash(List<String> values) {
   var hash = 17;
   for (final value in values) {
     hash = 37 * hash + value.hashCode;
+  }
+  return hash;
+}
+
+bool _rulesEqual(List<DraftRule> left, List<DraftRule> right) {
+  if (left.length != right.length) {
+    return false;
+  }
+  for (var i = 0; i < left.length; i++) {
+    final leftRule = left[i];
+    final rightRule = right[i];
+    if (leftRule.type != rightRule.type) {
+      return false;
+    }
+    if (!_listEquals(leftRule.playerIds, rightRule.playerIds)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+int _rulesHash(List<DraftRule> rules) {
+  var hash = 19;
+  for (final rule in rules) {
+    hash = 41 * hash + rule.type.hashCode;
+    hash = 41 * hash + _listHash(rule.playerIds);
   }
   return hash;
 }

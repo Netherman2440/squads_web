@@ -46,6 +46,29 @@ void main() {
     expect(repository.wasCalled, isTrue);
     expect(result.length, 1);
   });
+
+  test('forwards optional seed to repository', () async {
+    final repository = _FakeDraftRepository();
+    final useCase = CreateDraftUseCase(repository);
+    final players = [_player('p1'), _player('p2')];
+
+    await useCase.execute(players: players, seed: 123456);
+
+    expect(repository.lastSeed, 123456);
+  });
+
+  test('allows lists larger than max when max check is disabled', () async {
+    final repository = _FakeDraftRepository();
+    final useCase = CreateDraftUseCase(repository, enforceMaxPlayers: false);
+    final players = List<Player>.generate(
+      AppConfig.maxPlayersPerMatch + 1,
+      (index) => _player('p$index'),
+    );
+
+    await useCase.execute(players: players);
+
+    expect(repository.wasCalled, isTrue);
+  });
 }
 
 class _FakeDraftRepository implements DraftRepository {
@@ -53,6 +76,7 @@ class _FakeDraftRepository implements DraftRepository {
 
   final List<Draft> result;
   bool wasCalled = false;
+  int? lastSeed;
 
   @override
   Future<List<Draft>> createDraft({
@@ -61,8 +85,10 @@ class _FakeDraftRepository implements DraftRepository {
     List<DraftRule> rules = const [],
     int limit = 20,
     bool playWithSubstitute = true,
+    int? seed,
   }) async {
     wasCalled = true;
+    lastSeed = seed;
     return result;
   }
 }

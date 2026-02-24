@@ -56,14 +56,10 @@ class _DraftSelectionPageState extends ConsumerState<DraftSelectionPage> {
             data: (data) {
               final selectedCount = data.selectedPlayerIds.length;
               final hasMinimumPlayers = selectedCount >= 2;
-              final isWithinLimit =
-                  selectedCount <= AppConfig.maxPlayersPerMatch;
-              final canGenerate = hasMinimumPlayers && isWithinLimit;
+              final canGenerate = hasMinimumPlayers;
               final isCreatingMatch = createMatchState.isLoading;
               final tooltip = !hasMinimumPlayers
                   ? 'Select at least 2 players to generate draft'
-                  : !isWithinLimit
-                  ? 'You can select up to ${AppConfig.maxPlayersPerMatch} players per match'
                   : 'Generate draft';
 
               return IconButton(
@@ -159,7 +155,6 @@ class _DraftSelectionPageState extends ConsumerState<DraftSelectionPage> {
                   child: _SelectedPlayersPanel(
                     players: selected,
                     selectedCount: data.selectedPlayerIds.length,
-                    maxPlayers: AppConfig.maxPlayersPerMatch,
                     compact: isCompact,
                     onToggle: (playerId) => ref
                         .read(draftSelectionControllerProvider.notifier)
@@ -203,6 +198,19 @@ class _DraftSelectionPageState extends ConsumerState<DraftSelectionPage> {
                         },
                       ),
                     ),
+                    const SizedBox(height: 8),
+                    if (data.selectedPlayerIds.length >=
+                        AppConfig.greedyDraftThresholdPlayers) ...[
+                      Text(
+                        'Uwaga: przy większej liczbie graczy wynik draftu '
+                        'może być mniej dokładny.',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                    ],
                     const SizedBox(height: 12),
                     if (data.validationMessage != null)
                       Padding(
@@ -321,7 +329,6 @@ class _SelectedPlayersPanel extends StatefulWidget {
   const _SelectedPlayersPanel({
     required this.players,
     required this.selectedCount,
-    required this.maxPlayers,
     required this.compact,
     required this.onToggle,
     required this.onClear,
@@ -329,7 +336,6 @@ class _SelectedPlayersPanel extends StatefulWidget {
 
   final List<Player> players;
   final int selectedCount;
-  final int maxPlayers;
   final bool compact;
   final ValueChanged<String> onToggle;
   final VoidCallback onClear;
@@ -365,7 +371,7 @@ class _SelectedPlayersPanelState extends State<_SelectedPlayersPanel> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Selected players (${widget.selectedCount}/${widget.maxPlayers})',
+                  'Selected players (${widget.selectedCount})',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 TextButton(

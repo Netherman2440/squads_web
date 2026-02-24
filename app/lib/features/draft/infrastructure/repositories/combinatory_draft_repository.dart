@@ -25,6 +25,7 @@ class CombinatoryDraftRepository implements DraftRepository {
     List<DraftRule> rules = const [],
     int limit = 20,
     bool playWithSubstitute = true,
+    int? seed,
   }) async {
     final startedAt = DateTime.now();
     _logger.info(

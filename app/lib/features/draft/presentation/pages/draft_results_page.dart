@@ -68,7 +68,7 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
           .load(
             squadId: widget.squadId,
             selectedPlayerIds: widget.selectedPlayerIds,
-            algorithm: ref.read(draftAlgorithmProvider),
+            algorithm: _preferredAlgorithm,
             matchId: _loadMatchId,
             playWithSubstitute: _playWithSubstitute,
           ),
@@ -129,6 +129,14 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
     }
 
     await _hydrateLoadingPlayerCount();
+  }
+
+  DraftAlgorithm get _preferredAlgorithm {
+    final selectedCount = widget.selectedPlayerIds.toSet().length;
+    if (selectedCount >= AppConfig.greedyDraftThresholdPlayers) {
+      return DraftAlgorithm.greedy;
+    }
+    return DraftAlgorithm.combinatory;
   }
 
   Future<void> _hydrateLoadingPlayerCount() async {
@@ -371,10 +379,14 @@ class _DraftLoadingBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final count = _estimatedCheckedDraftCount(
-      playerCount: selectedPlayerCount,
-      teamCount: 2,
-    );
+    final usesGreedyHeuristic =
+        selectedPlayerCount >= AppConfig.greedyDraftThresholdPlayers;
+    final count = usesGreedyHeuristic
+        ? BigInt.from(AppConfig.greedyDraftVariantChecks)
+        : _estimatedCheckedDraftCount(
+            playerCount: selectedPlayerCount,
+            teamCount: 2,
+          );
 
     return Center(
       child: Column(
@@ -396,6 +408,14 @@ class _DraftLoadingBody extends StatelessWidget {
             const Text(
               'Możesz wyjść z tego ekranu, ale nie zamykaj przeglądarki.',
             ),
+            if (usesGreedyHeuristic) ...[
+              const SizedBox(height: 6),
+              const Text(
+                'Uwaga: przy większej liczbie graczy wynik draftu '
+                'może być mniej dokładny.',
+                textAlign: TextAlign.center,
+              ),
+            ],
           ],
         ],
       ),
@@ -460,6 +480,7 @@ class _CreateMatchButton extends ConsumerWidget {
                         proposals: draftData.proposals,
                         winRateMatrix: draftData.winRateMatrix,
                         teamCount: draftData.proposals.first.teams.length,
+                        seed: draftData.seed,
                       );
                 } catch (error) {
                   if (context.mounted) {

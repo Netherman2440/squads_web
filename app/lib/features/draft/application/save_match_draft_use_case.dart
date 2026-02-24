@@ -15,6 +15,7 @@ class SaveMatchDraftUseCase {
     required List<Draft> proposals,
     required Map<String, Map<String, double>> winRateMatrix,
     required int teamCount,
+    int? seed,
   }) {
     return _repository.upsertCompletedDraft(
       squadId: squadId,
@@ -22,6 +23,7 @@ class SaveMatchDraftUseCase {
       proposals: proposals,
       winRateMatrix: winRateMatrix,
       teamCount: teamCount,
+      seed: seed,
     );
   }
 

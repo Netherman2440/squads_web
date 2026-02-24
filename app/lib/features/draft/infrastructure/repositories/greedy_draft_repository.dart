@@ -1,14 +1,36 @@
 import 'dart:math';
 
+import 'package:app/core/app_config.dart';
 import 'package:app/core/error/failure.dart';
 import 'package:app/core/utils/team_ranking.dart';
-import 'package:app/features/draft/domain/repositories/draft_repository.dart';
 import 'package:app/features/draft/domain/entities/draft.dart';
+import 'package:app/features/draft/domain/entities/draft_proposal.dart';
 import 'package:app/features/draft/domain/entities/draft_rule.dart';
+import 'package:app/features/draft/domain/entities/normalized_draft_rule.dart';
+import 'package:app/features/draft/domain/repositories/draft_repository.dart';
 import 'package:app/features/players/domain/entities/player.dart';
+import 'package:flutter/foundation.dart' show compute, kIsWeb;
+import 'package:logging/logging.dart';
 
 class GreedyDraftRepository implements DraftRepository {
-  const GreedyDraftRepository();
+  const GreedyDraftRepository({
+    this.candidatePoolSize = _defaultCandidatePoolSize,
+  });
+
+  static const int _minTeamCount = 2;
+  static const int _maxTeamCount = 4;
+  static const int _defaultCandidatePoolSize = 7;
+  static const int _maxIterations = AppConfig.greedyDraftVariantChecks;
+  static const int _minIterations = 3000;
+  static const int _iterationsPerRequestedDraft = 300;
+  static const int _maxNoProgressIterations = 2500;
+  static const int _largeDraftPoolDivisor = 2;
+  static const Duration _uiYieldBudget = Duration(milliseconds: 12);
+  static const double _rulePenalty = 100.0;
+  static const double _positionPenalty = 100.0;
+  static final Logger _logger = Logger('GreedyDraftRepository');
+
+  final int candidatePoolSize;
 
   @override
   Future<List<Draft>> createDraft({
@@ -17,516 +39,896 @@ class GreedyDraftRepository implements DraftRepository {
     List<DraftRule> rules = const [],
     int limit = 20,
     bool playWithSubstitute = true,
+    int? seed,
   }) async {
-    if (teamCount != 2) {
-      throw const ValidationFailure('Greedy draft supports exactly 2 teams.');
+    final startedAt = DateTime.now();
+    final forceFullIterationBudget =
+        players.length >= AppConfig.greedyDraftThresholdPlayers;
+    final targetIterations = forceFullIterationBudget
+        ? _maxIterations
+        : min(
+            _maxIterations,
+            max(_minIterations, limit * _iterationsPerRequestedDraft),
+          );
+    _logger.info(
+      'createDraft started: startedAt=${startedAt.toIso8601String()} teamCount=$teamCount players=${players.length} limit=$limit seed=${seed ?? 'random'} iterations=$targetIterations',
+    );
+
+    if (players.isEmpty || limit <= 0) {
+      return const [];
     }
 
-    if (rules.isNotEmpty) {
+    if (teamCount < _minTeamCount || teamCount > _maxTeamCount) {
+      throw ValidationFailure(
+        'Draft supports between $_minTeamCount and $_maxTeamCount teams.',
+      );
+    }
+
+    if (players.length < teamCount) {
       throw const ValidationFailure(
-        'Greedy draft does not support draft rules.',
+        'Draft requires at least one player per team.',
       );
     }
 
-    if (limit <= 0) {
-      return [];
+    if (candidatePoolSize <= 0) {
+      throw const ValidationFailure(
+        'Greedy draft requires positive candidatePoolSize.',
+      );
     }
 
-    if (players.isEmpty) {
-      return [];
-    }
-
-    if (players.length < 2) {
-      throw const ValidationFailure('Draft requires at least 2 players.');
-    }
-
-    // Greedy draft supports larger groups than the combinatory version, but we
-    // still guard against absurd input sizes to keep the UI responsive.
-    if (players.length > 200) {
-      throw const ValidationFailure('Draft supports up to 200 players.');
-    }
-
-    final sortedById = [...players]
+    final sortedPlayers = [...players]
       ..sort((a, b) => a.playerId.compareTo(b.playerId));
+    final playersById = {for (final p in sortedPlayers) p.playerId: p};
+    final normalizedRules = _normalizeRules(
+      rules: rules,
+      playersById: playersById,
+    );
+    final rulesByPlayer = _groupRulesByPlayer(rules: normalizedRules);
 
-    final n = sortedById.length;
-    final isOdd = n.isOdd;
-    final homeTargetSize = n ~/ 2;
-    final awayTargetSize = n - homeTargetSize;
+    final targetTeamSizes = _calculateTeamSizes(
+      playerCount: sortedPlayers.length,
+      teamCount: teamCount,
+    );
 
-    final proposals = <_DraftProposal>[];
-    final seen = <String>{};
+    final processSeed = seed ?? _randomSeed();
+    final generationInput = _GreedyGenerationInput(
+      sortedPlayers: sortedPlayers,
+      normalizedRules: normalizedRules,
+      rulesByPlayer: rulesByPlayer,
+      targetTeamSizes: targetTeamSizes,
+      candidatePoolSize: candidatePoolSize,
+      playWithSubstitute: playWithSubstitute,
+      processSeed: processSeed,
+      iterations: targetIterations,
+      requestedLimit: limit,
+      stopWhenStalled: !forceFullIterationBudget,
+    );
 
-    // We only need [limit] results, so we generate multiple greedy runs with
-    // deterministic variation and deduplicate them.
-    final maxAttempts = min(1000, max(limit * 60, limit));
+    final generatedProposals = kIsWeb
+        ? await _runGreedyGenerationWithYield(generationInput)
+        : await compute(_runGreedyGeneration, generationInput);
 
-    for (var attempt = 0; attempt < maxAttempts; attempt++) {
-      if (proposals.length >= limit) {
+    final scoredProposals = _applyEqualWeightScoring(generatedProposals);
+
+    scoredProposals.sort((a, b) {
+      final byScore = a.score.compareTo(b.score);
+      if (byScore != 0) {
+        return byScore;
+      }
+
+      final byTieBreaker = a.tieBreaker.compareTo(b.tieBreaker);
+      if (byTieBreaker != 0) {
+        return byTieBreaker;
+      }
+
+      return a.signature.compareTo(b.signature);
+    });
+
+    final result = scoredProposals
+        .take(limit)
+        .map((proposal) => proposal.draft)
+        .toList(growable: false);
+    final finishedAt = DateTime.now();
+    final elapsedMs = finishedAt.difference(startedAt).inMilliseconds;
+    _logger.info(
+      'createDraft completed: finishedAt=${finishedAt.toIso8601String()} elapsedMs=$elapsedMs teamCount=$teamCount players=${players.length} limit=$limit seed=$processSeed iterations=$targetIterations proposals=${generatedProposals.length} returned=${result.length}',
+    );
+    return result;
+  }
+}
+
+List<DraftProposal> _runGreedyGeneration(_GreedyGenerationInput input) {
+  final generatedProposals = <DraftProposal>[];
+  final seenSignatures = <String>{};
+  var noProgressIterations = 0;
+
+  for (var iteration = 0; iteration < input.iterations; iteration++) {
+    final iterationCandidatePoolSize = _candidatePoolSizeForIteration(
+      input: input,
+      iteration: iteration,
+    );
+    final iterationSeed = _mixSeed(input.processSeed, iteration);
+    final proposal = _buildGreedyProposal(
+      sortedPlayers: input.sortedPlayers,
+      rules: input.normalizedRules,
+      ruleIndexesByPlayer: input.rulesByPlayer,
+      teamSizes: input.targetTeamSizes,
+      candidatePoolSize: iterationCandidatePoolSize,
+      iterationSeed: iterationSeed,
+      playWithSubstitute: input.playWithSubstitute,
+    );
+
+    if (proposal == null) {
+      noProgressIterations++;
+      if (generatedProposals.length >= input.requestedLimit &&
+          input.stopWhenStalled &&
+          noProgressIterations >=
+              GreedyDraftRepository._maxNoProgressIterations) {
         break;
       }
-
-      final seed = _stableSeed(sortedPlayers: sortedById, attempt: attempt);
-
-      var draft = _buildGreedyDraft(
-        sortedById: sortedById,
-        seed: seed,
-        homeTargetSize: homeTargetSize,
-        awayTargetSize: awayTargetSize,
-        playWithSubstitute: isOdd && playWithSubstitute,
-      );
-
-      draft = _improveBySwaps(
-        draft: draft,
-        homeTargetSize: homeTargetSize,
-        awayTargetSize: awayTargetSize,
-        playWithSubstitute: isOdd && playWithSubstitute,
-        seed: seed,
-      );
-
-      draft = _canonicalizeDraft(sortedById: sortedById, draft: draft);
-
-      final signature = _draftSignature(draft);
-      if (!seen.add(signature)) {
-        continue;
-      }
-
-      final effectiveHome = effectiveTeamRanking(
-        totalRanking: draft.homeTotalRanking,
-        teamSize: draft.homePlayers.length,
-        opponentTeamSize: draft.awayPlayers.length,
-        playWithSubstitute: isOdd && playWithSubstitute,
-      );
-
-      final effectiveAway = effectiveTeamRanking(
-        totalRanking: draft.awayTotalRanking,
-        teamSize: draft.awayPlayers.length,
-        opponentTeamSize: draft.homePlayers.length,
-        playWithSubstitute: isOdd && playWithSubstitute,
-      );
-
-      proposals.add(
-        _DraftProposal(
-          draft: draft,
-          teamDifference: (effectiveHome - effectiveAway).abs(),
-          externalBalance: _calculateExternalBalance(
-            draft.homePlayers,
-            draft.awayPlayers,
-          ),
-        ),
-      );
+      continue;
     }
 
-    proposals.sort((a, b) {
-      final byTeamDifference = a.teamDifference.compareTo(b.teamDifference);
-      if (byTeamDifference != 0) {
-        return byTeamDifference;
+    if (!seenSignatures.add(proposal.signature)) {
+      noProgressIterations++;
+      if (generatedProposals.length >= input.requestedLimit &&
+          input.stopWhenStalled &&
+          noProgressIterations >=
+              GreedyDraftRepository._maxNoProgressIterations) {
+        break;
       }
-
-      return a.externalBalance.compareTo(b.externalBalance);
-    });
-
-    return proposals.take(limit).map((p) => p.draft).toList(growable: false);
-  }
-}
-
-class _DraftProposal {
-  final Draft draft;
-  final double teamDifference;
-  final double externalBalance;
-
-  const _DraftProposal({
-    required this.draft,
-    required this.teamDifference,
-    required this.externalBalance,
-  });
-}
-
-Draft _buildGreedyDraft({
-  required List<Player> sortedById,
-  required int seed,
-  required int homeTargetSize,
-  required int awayTargetSize,
-  required bool playWithSubstitute,
-}) {
-  final rng = Random(seed);
-
-  final byRanking = [...sortedById]
-    ..sort((a, b) {
-      final byRankingDesc = b.ranking.compareTo(a.ranking);
-      if (byRankingDesc != 0) {
-        return byRankingDesc;
-      }
-
-      // Deterministic per-attempt tie-breaker.
-      final ha = _stableHash32(a.playerId, seed);
-      final hb = _stableHash32(b.playerId, seed);
-      final byHash = ha.compareTo(hb);
-      if (byHash != 0) {
-        return byHash;
-      }
-
-      return a.playerId.compareTo(b.playerId);
-    });
-
-  // Shuffle within blocks to create different drafts while keeping strong
-  // players early in the assignment order.
-  final blockSize = 3 + (seed.abs() % 4); // 3..6
-  for (var start = 0; start < byRanking.length; start += blockSize) {
-    final end = min(start + blockSize, byRanking.length);
-    for (var i = end - 1; i > start; i--) {
-      final j = start + rng.nextInt(i - start + 1);
-      final tmp = byRanking[i];
-      byRanking[i] = byRanking[j];
-      byRanking[j] = tmp;
+      continue;
     }
+
+    generatedProposals.add(proposal);
+    noProgressIterations = 0;
   }
 
-  final home = <Player>[];
-  final away = <Player>[];
+  return generatedProposals;
+}
 
-  var homeTotal = 0.0;
-  var awayTotal = 0.0;
+Future<List<DraftProposal>> _runGreedyGenerationWithYield(
+  _GreedyGenerationInput input,
+) async {
+  final generatedProposals = <DraftProposal>[];
+  final seenSignatures = <String>{};
+  final yieldStopwatch = Stopwatch()..start();
+  var noProgressIterations = 0;
 
-  for (final player in byRanking) {
-    if (home.length >= homeTargetSize) {
-      away.add(player);
-      awayTotal += player.ranking;
-      continue;
-    }
-
-    if (away.length >= awayTargetSize) {
-      home.add(player);
-      homeTotal += player.ranking;
-      continue;
-    }
-
-    final diffIfHome = _effectiveDiffAfterAdd(
-      addToHome: true,
-      addRanking: player.ranking,
-      homeTotal: homeTotal,
-      awayTotal: awayTotal,
-      homeTargetSize: homeTargetSize,
-      awayTargetSize: awayTargetSize,
-      playWithSubstitute: playWithSubstitute,
+  for (var iteration = 0; iteration < input.iterations; iteration++) {
+    final iterationCandidatePoolSize = _candidatePoolSizeForIteration(
+      input: input,
+      iteration: iteration,
+    );
+    final iterationSeed = _mixSeed(input.processSeed, iteration);
+    final proposal = _buildGreedyProposal(
+      sortedPlayers: input.sortedPlayers,
+      rules: input.normalizedRules,
+      ruleIndexesByPlayer: input.rulesByPlayer,
+      teamSizes: input.targetTeamSizes,
+      candidatePoolSize: iterationCandidatePoolSize,
+      iterationSeed: iterationSeed,
+      playWithSubstitute: input.playWithSubstitute,
     );
 
-    final diffIfAway = _effectiveDiffAfterAdd(
-      addToHome: false,
-      addRanking: player.ranking,
-      homeTotal: homeTotal,
-      awayTotal: awayTotal,
-      homeTargetSize: homeTargetSize,
-      awayTargetSize: awayTargetSize,
-      playWithSubstitute: playWithSubstitute,
-    );
-
-    if (diffIfHome < diffIfAway) {
-      home.add(player);
-      homeTotal += player.ranking;
-      continue;
-    }
-
-    if (diffIfAway < diffIfHome) {
-      away.add(player);
-      awayTotal += player.ranking;
-      continue;
-    }
-
-    // Tie: pick deterministically based on seed/player id and current sizes to
-    // produce diverse but stable results across attempts.
-    final tieBreaker = _stableHash32(
-      player.playerId,
-      seed ^ home.length ^ away.length,
-    );
-    final toHome = (tieBreaker & 1) == 0;
-
-    if (toHome) {
-      home.add(player);
-      homeTotal += player.ranking;
+    if (proposal != null && seenSignatures.add(proposal.signature)) {
+      generatedProposals.add(proposal);
+      noProgressIterations = 0;
     } else {
-      away.add(player);
-      awayTotal += player.ranking;
-    }
-  }
-
-  home.sort((a, b) => a.playerId.compareTo(b.playerId));
-  away.sort((a, b) => a.playerId.compareTo(b.playerId));
-
-  return Draft.twoTeams(
-    homePlayers: home,
-    awayPlayers: away,
-    homeTotalRanking: homeTotal,
-    awayTotalRanking: awayTotal,
-  );
-}
-
-double _effectiveDiffAfterAdd({
-  required bool addToHome,
-  required double addRanking,
-  required double homeTotal,
-  required double awayTotal,
-  required int homeTargetSize,
-  required int awayTargetSize,
-  required bool playWithSubstitute,
-}) {
-  final nextHomeTotal = addToHome ? homeTotal + addRanking : homeTotal;
-  final nextAwayTotal = addToHome ? awayTotal : awayTotal + addRanking;
-
-  final effectiveHome = effectiveTeamRanking(
-    totalRanking: nextHomeTotal,
-    teamSize: homeTargetSize,
-    opponentTeamSize: awayTargetSize,
-    playWithSubstitute: playWithSubstitute,
-  );
-
-  final effectiveAway = effectiveTeamRanking(
-    totalRanking: nextAwayTotal,
-    teamSize: awayTargetSize,
-    opponentTeamSize: homeTargetSize,
-    playWithSubstitute: playWithSubstitute,
-  );
-
-  return (effectiveHome - effectiveAway).abs();
-}
-
-Draft _improveBySwaps({
-  required Draft draft,
-  required int homeTargetSize,
-  required int awayTargetSize,
-  required bool playWithSubstitute,
-  required int seed,
-}) {
-  if (draft.homePlayers.isEmpty || draft.awayPlayers.isEmpty) {
-    return draft;
-  }
-
-  final isOdd = homeTargetSize != awayTargetSize;
-  final rng = Random(seed ^ 0x9E3779B9);
-
-  final home = [...draft.homePlayers];
-  final away = [...draft.awayPlayers];
-
-  var homeTotal = draft.homeTotalRanking;
-  var awayTotal = draft.awayTotalRanking;
-
-  double currentDiff() {
-    final effectiveHome = effectiveTeamRanking(
-      totalRanking: homeTotal,
-      teamSize: homeTargetSize,
-      opponentTeamSize: awayTargetSize,
-      playWithSubstitute: playWithSubstitute,
-    );
-
-    final effectiveAway = effectiveTeamRanking(
-      totalRanking: awayTotal,
-      teamSize: awayTargetSize,
-      opponentTeamSize: homeTargetSize,
-      playWithSubstitute: playWithSubstitute,
-    );
-
-    return (effectiveHome - effectiveAway).abs();
-  }
-
-  var bestDiff = currentDiff();
-  var bestExternal = _calculateExternalBalance(home, away);
-
-  // Focus swaps around top players by ranking; this is a cheap local improvement.
-  const maxIterations = 20;
-  for (var iteration = 0; iteration < maxIterations; iteration++) {
-    home.sort((a, b) => b.ranking.compareTo(a.ranking));
-    away.sort((a, b) => b.ranking.compareTo(a.ranking));
-
-    final probeHome = min(12, home.length);
-    final probeAway = min(12, away.length);
-
-    var improved = false;
-    var bestHomeIdx = -1;
-    var bestAwayIdx = -1;
-
-    // Randomize probe order a bit for variety between attempts.
-    final homeIndices = List<int>.generate(probeHome, (i) => i)..shuffle(rng);
-    final awayIndices = List<int>.generate(probeAway, (i) => i)..shuffle(rng);
-
-    for (final i in homeIndices) {
-      final hp = home[i];
-      for (final j in awayIndices) {
-        final ap = away[j];
-
-        final nextHomeTotal = homeTotal - hp.ranking + ap.ranking;
-        final nextAwayTotal = awayTotal - ap.ranking + hp.ranking;
-
-        final effectiveHome = effectiveTeamRanking(
-          totalRanking: nextHomeTotal,
-          teamSize: homeTargetSize,
-          opponentTeamSize: awayTargetSize,
-          playWithSubstitute: playWithSubstitute,
-        );
-
-        final effectiveAway = effectiveTeamRanking(
-          totalRanking: nextAwayTotal,
-          teamSize: awayTargetSize,
-          opponentTeamSize: homeTargetSize,
-          playWithSubstitute: playWithSubstitute,
-        );
-
-        final nextDiff = (effectiveHome - effectiveAway).abs();
-
-        final diffEps = 1e-9;
-        if (nextDiff > bestDiff + diffEps) {
-          continue;
-        }
-
-        // Only compute external balance when it can affect ordering.
-        final nextExternal = () {
-          final nextHome = [...home]..[i] = ap;
-          final nextAway = [...away]..[j] = hp;
-          return _calculateExternalBalance(nextHome, nextAway);
-        }();
-
-        final isBetterDiff = nextDiff < bestDiff - diffEps;
-        final isEqualDiff = (nextDiff - bestDiff).abs() <= diffEps;
-        final isBetterExternal =
-            isEqualDiff && nextExternal < bestExternal - diffEps;
-
-        if (isBetterDiff || isBetterExternal) {
-          improved = true;
-          bestHomeIdx = i;
-          bestAwayIdx = j;
-          bestDiff = nextDiff;
-          bestExternal = nextExternal;
-
-          // In odd-sized games, the substitute adjustment already skews the
-          // bigger team, so we accept the first strong improvement quickly.
-          if (isOdd) {
-            break;
-          }
-        }
-      }
-      if (improved && isOdd) {
+      noProgressIterations++;
+      if (generatedProposals.length >= input.requestedLimit &&
+          input.stopWhenStalled &&
+          noProgressIterations >=
+              GreedyDraftRepository._maxNoProgressIterations) {
         break;
       }
     }
 
-    if (!improved) {
+    if (yieldStopwatch.elapsed >= GreedyDraftRepository._uiYieldBudget) {
+      await Future<void>.delayed(Duration.zero);
+      yieldStopwatch.reset();
+    }
+  }
+
+  return generatedProposals;
+}
+
+int _candidatePoolSizeForIteration({
+  required _GreedyGenerationInput input,
+  required int iteration,
+}) {
+  final playersCount = input.sortedPlayers.length;
+  if (playersCount < AppConfig.greedyDraftThresholdPlayers) {
+    return input.candidatePoolSize;
+  }
+
+  if (iteration == 0) {
+    return playersCount;
+  }
+
+  final poolSize = playersCount ~/ GreedyDraftRepository._largeDraftPoolDivisor;
+  return poolSize > 0 ? poolSize : 1;
+}
+
+DraftProposal? _buildGreedyProposal({
+  required List<Player> sortedPlayers,
+  required List<NormalizedDraftRule> rules,
+  required Map<int, List<NormalizedDraftRule>> ruleIndexesByPlayer,
+  required List<int> teamSizes,
+  required int candidatePoolSize,
+  required int iterationSeed,
+  required bool playWithSubstitute,
+}) {
+  final random = Random(iterationSeed);
+  final teamCount = teamSizes.length;
+
+  final remainingIndexes = List<int>.generate(sortedPlayers.length, (i) => i)
+    ..shuffle(random);
+  final teamIndexes = List<List<int>>.generate(teamCount, (_) => <int>[]);
+  final teamPositionCounts = List<Map<String, int>>.generate(
+    teamCount,
+    (_) => <String, int>{},
+  );
+  final teamTotals = List<double>.filled(teamCount, 0.0);
+  final assignedTeamByPlayerIndex = List<int?>.filled(
+    sortedPlayers.length,
+    null,
+  );
+
+  var nextTeamIndex = iterationSeed % teamCount;
+
+  while (remainingIndexes.isNotEmpty) {
+    final currentTeamIndex = _findNextTeamWithCapacity(
+      startTeamIndex: nextTeamIndex,
+      teamIndexes: teamIndexes,
+      targetSizes: teamSizes,
+    );
+    if (currentTeamIndex < 0) {
       break;
     }
 
-    final hp = home[bestHomeIdx];
-    final ap = away[bestAwayIdx];
+    final pick = _pickCandidateForTeam(
+      sortedPlayers: sortedPlayers,
+      remainingIndexes: remainingIndexes,
+      candidatePoolSize: candidatePoolSize,
+      targetTeamIndex: currentTeamIndex,
+      teamPositionCounts: teamPositionCounts,
+      assignedTeamByPlayerIndex: assignedTeamByPlayerIndex,
+      ruleIndexesByPlayer: ruleIndexesByPlayer,
+      iterationSeed: iterationSeed,
+      pickIndex: teamIndexes[currentTeamIndex].length,
+    );
 
-    home[bestHomeIdx] = ap;
-    away[bestAwayIdx] = hp;
+    if (pick == null) {
+      break;
+    }
 
-    homeTotal = homeTotal - hp.ranking + ap.ranking;
-    awayTotal = awayTotal - ap.ranking + hp.ranking;
+    final player = sortedPlayers[pick.playerIndex];
+    final positionKey = _normalizePosition(player.position);
+
+    remainingIndexes.removeAt(pick.remainingPosition);
+    teamIndexes[currentTeamIndex].add(pick.playerIndex);
+    teamTotals[currentTeamIndex] += player.ranking;
+    assignedTeamByPlayerIndex[pick.playerIndex] = currentTeamIndex;
+    final currentPositionCount =
+        teamPositionCounts[currentTeamIndex][positionKey] ?? 0;
+    teamPositionCounts[currentTeamIndex][positionKey] =
+        currentPositionCount + 1;
+
+    nextTeamIndex = (currentTeamIndex + 1) % teamCount;
   }
 
-  home.sort((a, b) => a.playerId.compareTo(b.playerId));
-  away.sort((a, b) => a.playerId.compareTo(b.playerId));
+  final allAssigned = teamIndexes.fold<int>(
+    0,
+    (sum, team) => sum + team.length,
+  );
+  if (allAssigned != sortedPlayers.length) {
+    return null;
+  }
 
-  return Draft.twoTeams(
-    homePlayers: home,
-    awayPlayers: away,
-    homeTotalRanking: homeTotal,
-    awayTotalRanking: awayTotal,
+  final teams = _buildCanonicalTeams(
+    sortedPlayers: sortedPlayers,
+    teamIndexes: teamIndexes,
+    teamTotals: teamTotals,
+  );
+  final playerTeamIndex = _buildPlayerTeamIndex(
+    teams: teams,
+    sortedPlayers: sortedPlayers,
+  );
+
+  final effectiveTeamRankings = teams
+      .map(
+        (team) => _effectiveTeamRanking(
+          team: team,
+          allTeams: teams,
+          playWithSubstitute: playWithSubstitute,
+        ),
+      )
+      .toList(growable: false);
+
+  final avgTeamRanking =
+      effectiveTeamRankings.reduce((a, b) => a + b) /
+      effectiveTeamRankings.length;
+
+  var deviationScore = 0.0;
+  for (final effectiveRanking in effectiveTeamRankings) {
+    deviationScore += (effectiveRanking - avgTeamRanking).abs();
+  }
+
+  final positionWeight = _calculatePositionWeight(teams);
+  final rulePenalty = _calculateRulePenalty(
+    rules: rules,
+    playerTeamIndex: playerTeamIndex,
+  );
+  final penaltyScore = positionWeight + rulePenalty;
+  final tieBreaker = _calculateTieBreaker(teams);
+  final signature = _buildSignature(teams);
+
+  return DraftProposal(
+    draft: Draft(teams: teams),
+    score: 0.0,
+    deviationScore: deviationScore,
+    penaltyScore: penaltyScore,
+    rulePenalty: rulePenalty,
+    tieBreaker: tieBreaker,
+    signature: signature,
   );
 }
 
-Draft _canonicalizeDraft({
-  required List<Player> sortedById,
-  required Draft draft,
+_CandidatePick? _pickCandidateForTeam({
+  required List<Player> sortedPlayers,
+  required List<int> remainingIndexes,
+  required int candidatePoolSize,
+  required int targetTeamIndex,
+  required List<Map<String, int>> teamPositionCounts,
+  required List<int?> assignedTeamByPlayerIndex,
+  required Map<int, List<NormalizedDraftRule>> ruleIndexesByPlayer,
+  required int iterationSeed,
+  required int pickIndex,
 }) {
-  final n = sortedById.length;
-  if (n.isOdd) {
-    // For odd n, home/away are not symmetric due to team sizes, so we keep as-is.
-    return draft;
+  if (remainingIndexes.isEmpty) {
+    return null;
   }
 
-  final smallestId = sortedById.first.playerId;
-  final hasSmallestInHome = draft.homePlayers.any(
-    (p) => p.playerId == smallestId,
-  );
+  final poolLength = min(candidatePoolSize, remainingIndexes.length);
+  _CandidatePick? best;
 
-  if (hasSmallestInHome) {
-    return draft;
+  for (
+    var remainingPosition = 0;
+    remainingPosition < poolLength;
+    remainingPosition++
+  ) {
+    final playerIndex = remainingIndexes[remainingPosition];
+    final player = sortedPlayers[playerIndex];
+    final weight = _calculateCandidateWeight(
+      playerIndex: playerIndex,
+      position: player.position,
+      targetTeamIndex: targetTeamIndex,
+      teamPositionCounts: teamPositionCounts,
+      assignedTeamByPlayerIndex: assignedTeamByPlayerIndex,
+      rulesByPlayer: ruleIndexesByPlayer,
+    );
+    final ratio = player.ranking / weight;
+    final tieBreaker = _stableHash32(
+      input: player.playerId,
+      salt: iterationSeed ^ targetTeamIndex ^ pickIndex,
+    );
+
+    final candidate = _CandidatePick(
+      playerIndex: playerIndex,
+      remainingPosition: remainingPosition,
+      ratio: ratio,
+      weight: weight,
+      ranking: player.ranking,
+      tieBreaker: tieBreaker,
+    );
+
+    if (best == null || _isBetterCandidate(left: candidate, right: best)) {
+      best = candidate;
+    }
   }
 
-  return Draft.twoTeams(
-    homePlayers: draft.awayPlayers,
-    awayPlayers: draft.homePlayers,
-    homeTotalRanking: draft.awayTotalRanking,
-    awayTotalRanking: draft.homeTotalRanking,
+  return best;
+}
+
+bool _isBetterCandidate({
+  required _CandidatePick left,
+  required _CandidatePick right,
+}) {
+  const eps = 1e-9;
+
+  if (left.ratio > right.ratio + eps) {
+    return true;
+  }
+  if (left.ratio < right.ratio - eps) {
+    return false;
+  }
+
+  if (left.weight < right.weight - eps) {
+    return true;
+  }
+  if (left.weight > right.weight + eps) {
+    return false;
+  }
+
+  if (left.ranking > right.ranking + eps) {
+    return true;
+  }
+  if (left.ranking < right.ranking - eps) {
+    return false;
+  }
+
+  if (left.tieBreaker < right.tieBreaker) {
+    return true;
+  }
+  if (left.tieBreaker > right.tieBreaker) {
+    return false;
+  }
+
+  return left.playerIndex < right.playerIndex;
+}
+
+double _calculateCandidateWeight({
+  required int playerIndex,
+  required String? position,
+  required int targetTeamIndex,
+  required List<Map<String, int>> teamPositionCounts,
+  required List<int?> assignedTeamByPlayerIndex,
+  required Map<int, List<NormalizedDraftRule>> rulesByPlayer,
+}) {
+  final positionKey = _normalizePosition(position);
+  final samePositionCount =
+      teamPositionCounts[targetTeamIndex][positionKey] ?? 0;
+  var weight = 1.0 + samePositionCount * GreedyDraftRepository._positionPenalty;
+
+  final playerRules = rulesByPlayer[playerIndex];
+  if (playerRules == null || playerRules.isEmpty) {
+    return weight;
+  }
+
+  for (final rule in playerRules) {
+    final assignedOtherTeams = <int>{};
+    for (final memberIndex in rule.playerIndexes) {
+      if (memberIndex == playerIndex) {
+        continue;
+      }
+      final memberTeam = assignedTeamByPlayerIndex[memberIndex];
+      if (memberTeam != null) {
+        assignedOtherTeams.add(memberTeam);
+      }
+    }
+
+    if (assignedOtherTeams.isEmpty) {
+      continue;
+    }
+
+    switch (rule.type) {
+      case DraftRuleType.together:
+        final keepsTogether = assignedOtherTeams.every(
+          (teamIndex) => teamIndex == targetTeamIndex,
+        );
+        if (!keepsTogether) {
+          weight += GreedyDraftRepository._rulePenalty;
+        }
+        break;
+      case DraftRuleType.against:
+        final collides = assignedOtherTeams.any(
+          (teamIndex) => teamIndex == targetTeamIndex,
+        );
+        if (collides) {
+          weight += GreedyDraftRepository._rulePenalty;
+        }
+        break;
+    }
+  }
+
+  return weight;
+}
+
+List<DraftTeam> _buildCanonicalTeams({
+  required List<Player> sortedPlayers,
+  required List<List<int>> teamIndexes,
+  required List<double> teamTotals,
+}) {
+  final rawTeams = <_TeamWithKey>[];
+
+  for (var i = 0; i < teamIndexes.length; i++) {
+    final indexes = teamIndexes[i];
+    final players = indexes.map((index) => sortedPlayers[index]).toList()
+      ..sort((a, b) => a.playerId.compareTo(b.playerId));
+    final key = players.map((player) => player.playerId).join(',');
+    rawTeams.add(
+      _TeamWithKey(key: key, players: players, totalRanking: teamTotals[i]),
+    );
+  }
+
+  rawTeams.sort((a, b) => a.key.compareTo(b.key));
+
+  return List<DraftTeam>.generate(
+    rawTeams.length,
+    (index) => DraftTeam(
+      index: index,
+      players: rawTeams[index].players,
+      totalRanking: rawTeams[index].totalRanking,
+    ),
+    growable: false,
   );
 }
 
-String _draftSignature(Draft draft) {
-  final homeIds = draft.homePlayers.map((p) => p.playerId).join(',');
-  final awayIds = draft.awayPlayers.map((p) => p.playerId).join(',');
-  return '$homeIds|$awayIds';
+Map<int, int> _buildPlayerTeamIndex({
+  required List<DraftTeam> teams,
+  required List<Player> sortedPlayers,
+}) {
+  final idToIndex = <String, int>{
+    for (var i = 0; i < sortedPlayers.length; i++) sortedPlayers[i].playerId: i,
+  };
+  final playerTeamIndex = <int, int>{};
+
+  for (final team in teams) {
+    for (final player in team.players) {
+      final index = idToIndex[player.playerId];
+      if (index != null) {
+        playerTeamIndex[index] = team.index;
+      }
+    }
+  }
+
+  return playerTeamIndex;
 }
 
-int _stableSeed({required List<Player> sortedPlayers, required int attempt}) {
-  var hash = 0x811C9DC5; // FNV-1a 32-bit offset basis
-  hash = _fnv1a32Int(hash, attempt);
-  for (final p in sortedPlayers) {
-    hash = _fnv1a32String(hash, p.playerId);
-    hash = _fnv1a32Int(hash, 0xFF);
+int _findNextTeamWithCapacity({
+  required int startTeamIndex,
+  required List<List<int>> teamIndexes,
+  required List<int> targetSizes,
+}) {
+  for (var offset = 0; offset < teamIndexes.length; offset++) {
+    final teamIndex = (startTeamIndex + offset) % teamIndexes.length;
+    if (teamIndexes[teamIndex].length < targetSizes[teamIndex]) {
+      return teamIndex;
+    }
+  }
+  return -1;
+}
+
+Map<int, List<NormalizedDraftRule>> _groupRulesByPlayer({
+  required List<NormalizedDraftRule> rules,
+}) {
+  final grouped = <int, List<NormalizedDraftRule>>{};
+
+  for (final rule in rules) {
+    for (final playerIndex in rule.playerIndexes) {
+      grouped.putIfAbsent(playerIndex, () => <NormalizedDraftRule>[]).add(rule);
+    }
+  }
+
+  return grouped;
+}
+
+List<NormalizedDraftRule> _normalizeRules({
+  required List<DraftRule> rules,
+  required Map<String, Player> playersById,
+}) {
+  final byId = playersById.keys.toList(growable: false);
+  final idToIndex = <String, int>{
+    for (var i = 0; i < byId.length; i++) byId[i]: i,
+  };
+  final normalized = <NormalizedDraftRule>[];
+
+  for (final rule in rules) {
+    final uniquePlayerIds = <String>{};
+    final indexes = <int>[];
+
+    for (final playerId in rule.playerIds) {
+      if (!playersById.containsKey(playerId)) {
+        continue;
+      }
+      if (!uniquePlayerIds.add(playerId)) {
+        continue;
+      }
+      final idx = idToIndex[playerId];
+      if (idx != null) {
+        indexes.add(idx);
+      }
+    }
+
+    if (indexes.length < 2) {
+      continue;
+    }
+
+    indexes.sort();
+    normalized.add(
+      NormalizedDraftRule(type: rule.type, playerIndexes: indexes),
+    );
+  }
+
+  return normalized;
+}
+
+List<int> _calculateTeamSizes({
+  required int playerCount,
+  required int teamCount,
+}) {
+  final base = playerCount ~/ teamCount;
+  final remainder = playerCount % teamCount;
+
+  return List<int>.generate(
+    teamCount,
+    (index) => base + (index < remainder ? 1 : 0),
+    growable: false,
+  );
+}
+
+List<DraftProposal> _applyEqualWeightScoring(List<DraftProposal> proposals) {
+  if (proposals.isEmpty) {
+    return const <DraftProposal>[];
+  }
+
+  var minDeviation = proposals.first.deviationScore;
+  var maxDeviation = proposals.first.deviationScore;
+  var minPenalty = proposals.first.penaltyScore;
+  var maxPenalty = proposals.first.penaltyScore;
+
+  for (final proposal in proposals.skip(1)) {
+    if (proposal.deviationScore < minDeviation) {
+      minDeviation = proposal.deviationScore;
+    }
+    if (proposal.deviationScore > maxDeviation) {
+      maxDeviation = proposal.deviationScore;
+    }
+    if (proposal.penaltyScore < minPenalty) {
+      minPenalty = proposal.penaltyScore;
+    }
+    if (proposal.penaltyScore > maxPenalty) {
+      maxPenalty = proposal.penaltyScore;
+    }
+  }
+
+  final deviationRange = maxDeviation - minDeviation;
+  final penaltyRange = maxPenalty - minPenalty;
+
+  return proposals
+      .map((proposal) {
+        final normalizedDeviation = deviationRange == 0
+            ? 0.0
+            : (proposal.deviationScore - minDeviation) / deviationRange;
+        final normalizedPenalty = penaltyRange == 0
+            ? 0.0
+            : (proposal.penaltyScore - minPenalty) / penaltyRange;
+
+        final score = normalizedDeviation + normalizedPenalty;
+        return proposal.copyWith(score: score);
+      })
+      .toList(growable: false);
+}
+
+double _effectiveTeamRanking({
+  required DraftTeam team,
+  required List<DraftTeam> allTeams,
+  required bool playWithSubstitute,
+}) {
+  final minSize = allTeams
+      .map((t) => t.players.length)
+      .reduce((value, element) => value < element ? value : element);
+
+  return effectiveTeamRanking(
+    totalRanking: team.totalRanking,
+    teamSize: team.players.length,
+    opponentTeamSize: minSize,
+    playWithSubstitute: playWithSubstitute,
+  );
+}
+
+double _calculatePositionWeight(List<DraftTeam> teams) {
+  var totalWeight = 0.0;
+
+  for (final team in teams) {
+    final counts = <String, int>{};
+
+    for (final player in team.players) {
+      final key = _normalizePosition(player.position);
+      final count = (counts[key] ?? 0) + 1;
+      counts[key] = count;
+      totalWeight += count * GreedyDraftRepository._positionPenalty;
+    }
+  }
+
+  return totalWeight;
+}
+
+String _normalizePosition(String? position) {
+  final normalized = position?.trim().toLowerCase();
+  if (normalized == null || normalized.isEmpty) {
+    return 'none';
+  }
+  return normalized;
+}
+
+double _calculateRulePenalty({
+  required List<NormalizedDraftRule> rules,
+  required Map<int, int> playerTeamIndex,
+}) {
+  var penalty = 0.0;
+
+  for (final rule in rules) {
+    switch (rule.type) {
+      case DraftRuleType.together:
+        final firstTeam = playerTeamIndex[rule.playerIndexes.first];
+        if (firstTeam == null) {
+          break;
+        }
+
+        final satisfied = rule.playerIndexes
+            .skip(1)
+            .every((playerIndex) => playerTeamIndex[playerIndex] == firstTeam);
+
+        if (!satisfied) {
+          penalty += GreedyDraftRepository._rulePenalty;
+        }
+        break;
+      case DraftRuleType.against:
+        final teamIndexes = <int>{};
+        var satisfied = true;
+
+        for (final playerIndex in rule.playerIndexes) {
+          final teamIndex = playerTeamIndex[playerIndex];
+          if (teamIndex == null) {
+            continue;
+          }
+
+          if (!teamIndexes.add(teamIndex)) {
+            satisfied = false;
+            break;
+          }
+        }
+
+        if (!satisfied) {
+          penalty += GreedyDraftRepository._rulePenalty;
+        }
+        break;
+    }
+  }
+
+  return penalty;
+}
+
+double _calculateTieBreaker(List<DraftTeam> teams) {
+  if (teams.length < 2) {
+    return 0.0;
+  }
+
+  final sortedRankingsByTeam = teams
+      .map(
+        (team) =>
+            team.players.map((p) => p.ranking).toList(growable: false)
+              ..sort((a, b) => b.compareTo(a)),
+      )
+      .toList(growable: false);
+
+  final maxLength = sortedRankingsByTeam
+      .map((r) => r.length)
+      .reduce((value, element) => value > element ? value : element);
+
+  var sumSquares = 0.0;
+
+  for (var rankIndex = 0; rankIndex < maxLength; rankIndex++) {
+    final values = <double>[];
+
+    for (final teamRankings in sortedRankingsByTeam) {
+      if (rankIndex < teamRankings.length) {
+        values.add(teamRankings[rankIndex]);
+      }
+    }
+
+    for (var i = 0; i < values.length; i++) {
+      for (var j = i + 1; j < values.length; j++) {
+        final diff = values[i] - values[j];
+        sumSquares += diff * diff;
+      }
+    }
+  }
+
+  return sumSquares;
+}
+
+String _buildSignature(List<DraftTeam> teams) {
+  final teamKeys =
+      teams
+          .map(
+            (team) =>
+                team.players.map((p) => p.playerId).toList(growable: false)
+                  ..sort(),
+          )
+          .map((ids) => ids.join(','))
+          .toList(growable: false)
+        ..sort();
+
+  return teamKeys.join('|');
+}
+
+int _mixSeed(int seed, int iteration) {
+  var hash = 0x811C9DC5;
+  hash = _fnv1a32Int(hash, seed);
+  hash = _fnv1a32Int(hash, iteration);
+  return hash & 0x7FFFFFFF;
+}
+
+int _randomSeed() => Random().nextInt(0x7FFFFFFF);
+
+int _stableHash32({required String input, required int salt}) {
+  var hash = 0x811C9DC5;
+  hash = _fnv1a32Int(hash, salt);
+  for (final unit in input.codeUnits) {
+    hash ^= unit;
+    hash = (hash * 0x01000193) & 0xFFFFFFFF;
   }
   return hash & 0x7FFFFFFF;
 }
 
-int _stableHash32(String input, int salt) {
-  var hash = 0x811C9DC5;
-  hash = _fnv1a32Int(hash, salt);
-  hash = _fnv1a32String(hash, input);
-  return hash;
-}
-
-int _fnv1a32String(int hash, String input) {
-  var h = hash;
-  for (final unit in input.codeUnits) {
-    h ^= unit;
-    h = (h * 0x01000193) & 0xFFFFFFFF;
-  }
-  return h;
-}
-
 int _fnv1a32Int(int hash, int input) {
   var h = hash;
-  var v = input;
-  // Mix 4 bytes little-endian.
+  var value = input;
+
   for (var i = 0; i < 4; i++) {
-    h ^= (v & 0xFF);
+    h ^= (value & 0xFF);
     h = (h * 0x01000193) & 0xFFFFFFFF;
-    v >>= 8;
+    value >>= 8;
   }
+
   return h;
 }
 
-/// Calculates external balance between two teams.
-/// Compares corresponding player positions after sorting both teams.
-/// Lower external balance = better distribution of top talent between teams.
-double _calculateExternalBalance(
-  List<Player> homePlayers,
-  List<Player> awayPlayers,
-) {
-  if (homePlayers.isEmpty && awayPlayers.isEmpty) return 0.0;
-  if (homePlayers.isEmpty || awayPlayers.isEmpty) return double.infinity;
+class _CandidatePick {
+  final int playerIndex;
+  final int remainingPosition;
+  final double ratio;
+  final double weight;
+  final double ranking;
+  final int tieBreaker;
 
-  final homeRankings = homePlayers.map((p) => p.ranking).toList()
-    ..sort((a, b) => b.compareTo(a));
-  final awayRankings = awayPlayers.map((p) => p.ranking).toList()
-    ..sort((a, b) => b.compareTo(a));
+  const _CandidatePick({
+    required this.playerIndex,
+    required this.remainingPosition,
+    required this.ratio,
+    required this.weight,
+    required this.ranking,
+    required this.tieBreaker,
+  });
+}
 
-  var totalDifference = 0.0;
-  final minLength = homeRankings.length < awayRankings.length
-      ? homeRankings.length
-      : awayRankings.length;
+class _TeamWithKey {
+  final String key;
+  final List<Player> players;
+  final double totalRanking;
 
-  for (var i = 0; i < minLength; i++) {
-    totalDifference += (homeRankings[i] - awayRankings[i]).abs();
-  }
+  const _TeamWithKey({
+    required this.key,
+    required this.players,
+    required this.totalRanking,
+  });
+}
 
-  return totalDifference;
+class _GreedyGenerationInput {
+  final List<Player> sortedPlayers;
+  final List<NormalizedDraftRule> normalizedRules;
+  final Map<int, List<NormalizedDraftRule>> rulesByPlayer;
+  final List<int> targetTeamSizes;
+  final int candidatePoolSize;
+  final bool playWithSubstitute;
+  final int processSeed;
+  final int iterations;
+  final int requestedLimit;
+  final bool stopWhenStalled;
+
+  const _GreedyGenerationInput({
+    required this.sortedPlayers,
+    required this.normalizedRules,
+    required this.rulesByPlayer,
+    required this.targetTeamSizes,
+    required this.candidatePoolSize,
+    required this.playWithSubstitute,
+    required this.processSeed,
+    required this.iterations,
+    required this.requestedLimit,
+    required this.stopWhenStalled,
+  });
 }

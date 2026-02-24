@@ -9,5 +9,6 @@ abstract class DraftRepository {
     List<DraftRule> rules = const [],
     int limit = 20,
     bool playWithSubstitute = true,
+    int? seed,
   });
 }

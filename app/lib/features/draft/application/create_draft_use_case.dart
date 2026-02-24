@@ -11,8 +11,12 @@ import 'package:app/features/players/domain/entities/player.dart';
 
 class CreateDraftUseCase {
   final DraftRepository _draftRepository;
+  final bool _enforceMaxPlayers;
 
-  const CreateDraftUseCase(this._draftRepository);
+  const CreateDraftUseCase(
+    this._draftRepository, {
+    bool enforceMaxPlayers = true,
+  }) : _enforceMaxPlayers = enforceMaxPlayers;
 
   Future<List<Draft>> execute({
     required List<Player> players,
@@ -20,8 +24,9 @@ class CreateDraftUseCase {
     List<DraftRule> rules = const [],
     int limit = 20,
     bool playWithSubstitute = true,
+    int? seed,
   }) async {
-    if (players.length > AppConfig.maxPlayersPerMatch) {
+    if (_enforceMaxPlayers && players.length > AppConfig.maxPlayersPerMatch) {
       throw ValidationFailure(
         'Draft supports up to ${AppConfig.maxPlayersPerMatch} players per match.',
       );
@@ -33,6 +38,7 @@ class CreateDraftUseCase {
       rules: rules,
       limit: limit,
       playWithSubstitute: playWithSubstitute,
+      seed: seed,
     );
   }
 }
@@ -51,17 +57,17 @@ final greedyDraftRepositoryProvider = Provider<DraftRepository>((ref) {
 
 final createDraftUseCaseProvider = Provider<CreateDraftUseCase>((ref) {
   final repository = ref.read(draftRepositoryProvider);
-  return CreateDraftUseCase(repository);
+  return CreateDraftUseCase(repository, enforceMaxPlayers: true);
 });
 
 final combinatoryCreateDraftUseCaseProvider = Provider<CreateDraftUseCase>((
   ref,
 ) {
   final repository = ref.read(combinatoryDraftRepositoryProvider);
-  return CreateDraftUseCase(repository);
+  return CreateDraftUseCase(repository, enforceMaxPlayers: true);
 });
 
 final greedyCreateDraftUseCaseProvider = Provider<CreateDraftUseCase>((ref) {
   final repository = ref.read(greedyDraftRepositoryProvider);
-  return CreateDraftUseCase(repository);
+  return CreateDraftUseCase(repository, enforceMaxPlayers: false);
 });

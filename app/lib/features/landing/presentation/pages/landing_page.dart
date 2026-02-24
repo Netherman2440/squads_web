@@ -272,7 +272,7 @@ class _LandingPageState extends State<LandingPage> {
                           fontWeight: FontWeight.w700,
                         ),
                       ),
-                      const TextSpan(text: ' wybranych z ponad '),
+                      const TextSpan(text: ' wybranych z nawet '),
                       TextSpan(
                         text: '50 tysięcy',
                         style: leadStyle.copyWith(
@@ -553,8 +553,9 @@ class _LandingPageState extends State<LandingPage> {
             LayoutBuilder(
               builder: (context, constraints) {
                 final isNarrow = constraints.maxWidth < 600;
-                final cardWidth =
-                    isNarrow ? constraints.maxWidth : _FeatureCard.defaultWidth;
+                final cardWidth = isNarrow
+                    ? constraints.maxWidth
+                    : _FeatureCard.defaultWidth;
                 return Wrap(
                   alignment: WrapAlignment.center,
                   spacing: 16,

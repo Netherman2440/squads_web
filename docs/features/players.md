@@ -144,17 +144,11 @@ W kodzie mapowane jako:
 - `score` -> `Player.ranking`.
 
 ### 6.2 `ranking_history`
-Kluczowe pola:
-- `ranking_history_id` (PK),
-- `player_id` (FK -> `players`),
-- `match_id` (nullable FK -> `matches`),
-- `ranking` (snapshot przed zmiana),
-- `change` (delta, nullable),
-- `match_score` (JSONB),
-- `created_at`, `updated_at`.
-
-W encji:
-- `currentRanking = ranking + (change ?? 0)`.
+- Feature `players` korzysta z `ranking_history` do:
+  - wykresu historii rankingu,
+  - recznych korekt rankingu,
+  - wyliczania listy meczow zawodnika.
+- Pelny kontrakt DB/RLS i lifecycle wpisow jest utrzymywany w [ranking_history.md](./ranking_history.md).
 
 ### 6.3 RPC uzywane przez feature
 - `get_player_stats(p_player_id uuid)`
@@ -164,18 +158,16 @@ Migracje:
 - `supabase/migrations/20251202125000_add_player_stats_function.sql`
 - `supabase/migrations/20251202120000_add_player_head_to_head_stats_function.sql`
 
-## 7. Integracja z feature `matches`
-Feature `matches` korzysta z `RankingRepository` i `PlayerRepository`, przez co bezposrednio wplywa na dane `players`:
-- tworzenie meczu: zakladanie wpisow `ranking_history` dla zawodnikow meczu,
-- update wyniku meczu: wyliczanie delty i aktualizacja `ranking_history.change` + `players.score`,
-- zmiana skladow meczu bez wyniku: dodawanie/usuwanie wpisow `ranking_history`,
-- usuniecie meczu: usuwanie wpisow `ranking_history` i rollback score.
-
-Powiazane use case (w `features/matches/application/usecases`):
-- `create_match_usecase.dart`
-- `update_match_score_usecase.dart`
-- `update_match_teams_usecase.dart`
-- `delete_match_usecase.dart`
+## 7. Integracje / punkty styku
+- `matches`:
+  - `CreateMatchUseCase`, `UpdateMatchScoreUseCase`, `UpdateMatchTeamsUseCase`, `DeleteMatchUseCase` korzystaja z `PlayerRepository` i `RankingRepository`.
+  - Szczegoly flow meczowego sa utrzymywane w [matches.md](./matches.md).
+- `ranking_history`:
+  - `players` jest glownym konsumentem odczytu historii (`PlayerDetailsPage`, `RankingHistoryGraphWidget`, `PlayerMatchesPage`),
+  - ale definicja aktualizacji i rollbacku rankingu jest utrzymywana w [ranking_history.md](./ranking_history.md).
+- `stats`:
+  - `PlayerStatsPage` i `PlayerHeadToHeadTable` korzystaja z metryk z RPC `get_player_stats` i `get_player_head_to_head_stats`,
+  - definicja metryk i kontrakt stats sa utrzymywane w [stats.md](./stats.md).
 
 ## 8. Walidacje i obsluga bledow
 - `AddPlayerUseCase`:

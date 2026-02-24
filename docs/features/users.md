@@ -122,11 +122,13 @@ Zakres techniczny:
     - `MembershipRepository.getMembershipsForUser(...)`,
     - `SquadRepository.getSquadsByIds(...)`.
   - `UserPage` korzysta ze stanu `squadsNotifierProvider` i widgetu `SquadListItem`.
+  - Definicja membership i zarzadzania skladem jest utrzymywana po stronie [squads.md](./squads.md).
 - `auth`:
   - `AuthPage` po udanym logowaniu kieruje na `/me` (dla usera nieanonimowego).
   - `CompleteOAuthSignInUseCase` wywoluje `UserRepository.getCurrentUser()`, co przy okazji moze uzupelnic `public.users`.
 - `squads settings`:
   - `GetSquadSettingsMembersUseCase` korzysta z `UserRepository.getUsers(...)` do wzbogacania `SquadMember` o `email/fullName`.
+  - Logika ekranu settings jest opisana po stronie [squads.md](./squads.md).
 
 ## 7. Szybka mapa plikow
 - Najwazniejsze pliki w feature:

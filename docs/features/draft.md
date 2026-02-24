@@ -12,6 +12,8 @@ Feature `draft` odpowiada za:
 
 Zakres obejmuje warstwy `domain`, `application`, `infrastructure` i `presentation` w `app/lib/features/draft` oraz tabele `drafts`/`draft_payloads` w Supabase.
 
+Ten dokument jest source of truth dla flow draftu, algorytmow i persystencji payloadu draftu. W `matches.md` draft jest opisywany tylko przez punkty styku.
+
 ## 2. Co jest zaimplementowane
 
 ### 2.1 Wybieranie zawodnikow do draftu
@@ -177,6 +179,7 @@ UI operuje na modelu home/away (`DraftSessionState.home`, `away`), mimo ze `Draf
   - `CreateMatchController.createMatch` i `updateMatch`,
   - `GetMatchUseCase` (fallback do graczy meczu),
   - `matchDetailsProvider` i `squadMatchesProvider` invalidowane po zapisie.
+  - Punkty styku po stronie consumer: [matches.md](./matches.md).
 - `core`:
   - `effectiveTeamRanking` do obliczen rankingowych i UI,
   - `AppConfig` (`maxPlayersPerMatch`, `greedyDraftThresholdPlayers`, `greedyDraftVariantChecks`).

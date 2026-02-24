@@ -22,13 +22,9 @@ Zakres obejmuje `app/lib/features/matches` oraz integracje z `draft`, `players`,
   - edycje skladow przez drag-and-drop (przenoszenie i usuwanie zawodnikow),
   - aktualizacje wyniku,
   - redraft, rewanz i usuwanie meczu.
-- Aktualizacja wyniku (`UpdateMatchScoreUseCase`) obsluguje logike rankingu:
-  - odczyt ustawien rankingu skladu (`ranking_update`, `ranking_multiplier`, `use_experience_factor`),
-  - aktualizacje `ranking_history.change`,
-  - aktualizacje `players.score` z clampem do `0..100`.
-- Tworzenie meczu (`CreateMatchUseCase`) tworzy rekord meczu, zespoly, sklady i wpisy `ranking_history` dla wskazanych graczy.
-- Aktualizacja skladow (`UpdateMatchTeamsUseCase`) synchronizuje `team_players`, dopisuje/usuwa wpisy `ranking_history` i odswieza `home_win_prob`.
-- `DeleteMatchUseCase` usuwa powiazane wpisy rankingowe (z rollbackiem score) i dopiero potem usuwa mecz.
+- Aktualizacja wyniku (`UpdateMatchScoreUseCase`) deleguje logike zmian rankingu do warstwy `ranking_history` (source of truth: [ranking_history.md](./ranking_history.md)).
+- `CreateMatchUseCase`, `UpdateMatchTeamsUseCase` i `DeleteMatchUseCase` deleguja tworzenie/aktualizacje/usuwanie wpisow historii rankingu do warstwy `ranking_history`.
+- `CreateMatchUseCase` i `UpdateMatchTeamsUseCase` odswiezaja `home_win_prob`; definicja metryk i probabilistyki jest opisana w [stats.md](./stats.md).
 - `RematchUseCase` tworzy nowy mecz z zamienionymi stronami (stary away -> nowy home).
 
 ## 3. Routing
@@ -61,11 +57,10 @@ Tabele i pola kluczowe:
   - PK `(match_id, team_id, player_id)`,
   - `UNIQUE (match_id, player_id)` (gracz tylko raz w meczu),
   - FK do `players` z `on delete cascade` (migracja `20251202110000`).
-- `ranking_history` (uzywane przez flow meczu i score)
-  - `player_id`, `match_id`, `ranking`, `change`,
-  - unikalnosc `(player_id, match_id)` dla `match_id is not null`.
+- `ranking_history`
+  - tabela uzywana przez flow match score i rollback; pelny kontrakt jest opisany w [ranking_history.md](./ranking_history.md).
 - `drafts` i `draft_payloads`
-  - persystencja propozycji draftu powiazanych 1:1 z meczem (`UNIQUE (match_id)`).
+  - tabele wspierajace persystencje propozycji draftu; pelny kontrakt jest opisany w [draft.md](./draft.md).
 
 Istotne indeksy/constrainty:
 - `matches_squad_played_at_idx` (sortowanie listy meczow po `played_at`, potem `created_at`),
@@ -74,14 +69,15 @@ Istotne indeksy/constrainty:
 - `matches_home_win_prob_range_chk`.
 
 Funkcje SQL (RPC) uzywane przez feature:
-- `refresh_match_win_probability(p_match_id uuid)` - zapisywanie `home_win_prob` do `matches`,
-- `get_match_win_probability(p_match_id uuid)` - estymacja na bazie historycznych head-to-head.
+- `refresh_match_win_probability(p_match_id uuid)`
+- `get_match_win_probability(p_match_id uuid)`
+- Kontrakt i znaczenie metryk prawdopodobienstwa sa opisane w [stats.md](./stats.md).
 
 RLS (kto czyta / kto modyfikuje):
 - `matches`, `teams`, `team_players`, `ranking_history`, `drafts`, `draft_payloads`:
   - `SELECT`: czlonkowie skladu (`owner/admin/member`) lub widok publicznego skladu,
   - `INSERT/UPDATE/DELETE`: `owner/admin`.
-- Walidacje polityk wymuszaja tez spojnosc gracza z skladem meczu (np. `team_players`, `ranking_history`).
+- Szczegolowe reguly dla `ranking_history` i draft tables sa opisane odpowiednio w [ranking_history.md](./ranking_history.md) i [draft.md](./draft.md).
 
 ## 5. Architektura
 ### 5.1 Domain
@@ -135,12 +131,16 @@ RLS (kto czyta / kto modyfikuje):
 
 ## 6. Integracje / punkty styku
 - `draft`:
-  - `DraftSelectionPage` i `DraftResultsPage` obsluguja tworzenie/aktualizacje skladow meczu,
-  - zapis/odczyt propozycji draftu w `drafts` + `draft_payloads`.
+  - `DraftSelectionPage` i `DraftResultsPage` obsluguja tworzenie/aktualizacje skladow meczu.
+  - Definicja flow draftu, algorytmow i payloadu jest utrzymywana w [draft.md](./draft.md).
 - `players`:
   - `CreateMatchUseCase`, `UpdateMatchTeamsUseCase`, `UpdateMatchScoreUseCase`, `DeleteMatchUseCase`
     korzystaja z `PlayerRepository` i `RankingRepository`,
   - `GetPlayerMatchesUseCase` korzysta z `MatchRepository.getMatches`.
+- `ranking_history`:
+  - wszystkie reguly tworzenia, aktualizacji i rollbacku wpisow rankingowych sa utrzymywane w [ranking_history.md](./ranking_history.md).
+- `stats`:
+  - metryki statystyczne i definicja probabilistyki (`home_win_prob`) sa utrzymywane w [stats.md](./stats.md).
 - `squads`:
   - uprawnienia UI (`SquadRole`) z `squadDetailProvider`,
   - ustawienia rankingu skladu (`GetSquadUseCase`) steruja logika `UpdateMatchScoreUseCase`.

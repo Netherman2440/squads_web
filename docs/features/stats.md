@@ -18,6 +18,8 @@ Zakres techniczny:
 - odczyt przez repozytoria i use case w Flutterze,
 - prezentacja w stronach `SquadStatsPage`, `PlayerStatsPage`, `MatchDetailsPage`, `DraftResultsPage`.
 
+Ten dokument jest source of truth dla metryk i kontraktow stats. Inne feature opisuja stats tylko jako punkty styku.
+
 ## 2. Co jest zaimplementowane
 - Statystyki skladu (`/squads/:squadId/stats`):
   - `SquadStatsPage` pobiera dane przez `squadStatsProvider` -> `GetSquadStatsUseCase` -> `SquadRepository.getSquadStats` -> RPC `get_squad_stats`.
@@ -122,15 +124,20 @@ UI powiazane (bez osobnej trasy stats):
 ## 6. Integracje / punkty styku
 - `stats` <-> `squads`:
   - strona statystyk skladu jest implementowana calkowicie w module `squads`.
+  - Punkty styku po stronie consumer: [squads.md](./squads.md).
 - `stats` <-> `players`:
   - statystyki zawodnika i head-to-head sa implementowane w module `players`.
+  - Punkty styku po stronie consumer: [players.md](./players.md).
 - `stats` <-> `matches`:
   - encja `Match` i DTO niosa `home_win_prob`,
   - `MatchDetailsPage` pokazuje wynik estymacji.
+  - Punkty styku po stronie consumer: [matches.md](./matches.md).
 - `stats` <-> `draft`:
   - draft pobiera pairwise win-rate i buduje probabilistyczny podglad dla proponowanych druzyn.
+  - Punkty styku po stronie consumer: [draft.md](./draft.md).
 - `stats` <-> `ranking_history`:
   - zmiany wynikow meczow aktualizuja rankingi graczy; to bezposrednio wplywa na `top_player`, `rising_star`, `avg_player_score` i statystyki zawodnika.
+  - Szczegoly aktualizacji rankingu sa utrzymywane w [ranking_history.md](./ranking_history.md).
 
 ## 7. Szybka mapa plikow
 - Najwazniejsze pliki (Flutter):

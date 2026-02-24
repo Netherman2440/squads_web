@@ -86,7 +86,7 @@ Dodatkowo `AuthPage` po udanym logowaniu probuje wykonac pending join z invite c
 Ekran: `SquadStatsPage` (`/squads/:squadId/stats`)
 - pobieranie przez `GetSquadStatsUseCase`,
 - backend RPC `get_squad_stats`,
-- prezentacja agregatow: top player, rising star, liczba meczow, gole, srednie, liczba graczy.
+- szczegoly metryk i kontraktu stats sa utrzymywane w [stats.md](./stats.md).
 
 ## 3. Routing
 Definicje tras sa w `app/lib/core/app_router.dart`:
@@ -131,7 +131,7 @@ Najwazniejsze wejscia do feature:
   - dodaje usera do `user_squads` jako `member` (idempotentnie),
   - zwraca `squad_id`.
 - `get_squad_stats(p_squad_id uuid)`:
-  - zwraca agregaty meczowe i graczy dla dashboardu stats.
+  - endpoint statystyk skladu; szczegoly kontraktu sa utrzymywane w [stats.md](./stats.md).
 
 ### 4.4 Polityki RLS (kto czyta, kto modyfikuje)
 - `squads`:
@@ -154,8 +154,7 @@ Dodatkowy kontekst pod `get_squad_stats`:
   - `membership.dart`,
   - `user_squad_role.dart`,
   - `squad_member.dart`,
-  - `invite_link.dart`,
-  - `squad_stats.dart`.
+  - `invite_link.dart`.
 - repozytoria:
   - `squad_repository.dart`,
   - `membership_repository.dart`,
@@ -180,10 +179,11 @@ Glowne use case:
   - `change_squad_visibility_use_case.dart`,
   - `delete_squad_use_case.dart`,
   - `update_squad_ranking_settings_use_case.dart`.
-- invite links i stats:
+- invite links:
   - `generate_invite_link_use_case.dart`,
-  - `get_squad_invite_link_use_case.dart`,
-  - `get_squad_stats_use_case.dart`.
+  - `get_squad_invite_link_use_case.dart`.
+- stats:
+  - implementacja ekranu i use case stats dla squadu jest opisana centralnie w [stats.md](./stats.md).
 
 ### 5.3 Infrastructure
 - `SupabaseSquadRepository`:
@@ -205,21 +205,19 @@ Glowne use case:
   - `squads_notifier.dart`,
   - `squad_detail_notifier.dart`,
   - `squad_settings_notifier.dart`,
-  - `squad_invite_link_provider.dart`,
-  - `squad_stats_provider.dart`.
+  - `squad_invite_link_provider.dart`.
 - pages:
   - `squads_page.dart`,
   - `squad_shell_page.dart`,
   - `squad_home_page.dart`,
   - `squad_settings_page.dart`,
   - `squad_ranking_settings_page.dart`,
-  - `squad_stats_page.dart`,
   - `invite_page.dart`.
 - widgets:
   - `squad_list_item.dart`,
   - `member_tile.dart`,
-  - `danger_zone_section.dart`,
-  - `stat_tile.dart`.
+  - `danger_zone_section.dart`.
+- stats UI (`squad_stats_page.dart`, `squad_stats_provider.dart`, `stat_tile.dart`) opisujemy w [stats.md](./stats.md).
 
 ## 6. Integracje / punkty styku
 - `auth`:
@@ -228,11 +226,14 @@ Glowne use case:
 - `users`:
   - `GetCurrentUserUseCase` laczy `MembershipRepository` + `SquadRepository.getSquadsByIds`,
   - `UserPage` pokazuje "My squads" przez `squadsNotifierProvider`.
+  - Profil usera i agregacja "My squads" sa opisane po stronie [users.md](./users.md).
 - `players`:
   - `PlayersPage` i `PlayerDetailsPage` uzywaja `squadDetailProvider` do kontroli uprawnien owner/admin.
 - `matches`:
   - `SquadMatchesPage` i `MatchDetailsPage` uzywaja `squadDetailProvider` do kontroli akcji administracyjnych,
   - `UpdateMatchScoreUseCase` pobiera ustawienia rankingu skladu przez `GetSquadUseCase`.
+- `stats`:
+  - `SquadStatsPage` zyje w module `squads`, ale definicje metryk stats sa utrzymywane centralnie w [stats.md](./stats.md).
 - `core`:
   - `RootShell` uzywa `squadDetailProvider` do nazwy skladu i menu sekcji squad.
 
@@ -248,11 +249,9 @@ Glowne use case:
   - `supabase/migrations/20251201091000_create_invite_links_table.sql`
   - `supabase/migrations/20251202100000_allow_select_on_squads.sql`
   - `supabase/migrations/20251202101500_request_squad_access.sql`
-  - `supabase/migrations/20251202124000_add_squad_stats_function.sql`
 - testy feature:
-  - `app/test/squads/application/get_squad_stats_use_case_test.dart`
   - `app/test/squads/application/join_squad_from_invite_use_case_test.dart`
-  - `app/test/squads/presentation/state/squad_stats_provider_test.dart`
+- testy i migracje stats sa opisane centralnie w [stats.md](./stats.md).
 
 ## 8. Ograniczenia i status (opcjonalnie, ale zalecane)
 - `Transfer ownership` w `DangerZoneSection` jest placeholderem (`TODO` snackbar).
@@ -261,4 +260,5 @@ Glowne use case:
 - `RemoveMemberUseCase` oznacza uzytkownika rola `removed`; nie usuwa fizycznie rekordu membership.
 - Limit "1 squad per owner" jest egzekwowany w `CreateSquadUseCase` (aplikacyjnie), bez dedykowanego constraintu DB.
 - `SquadsPage` nie ma osobnej obslugi roli `invited`; taka rola w liscie wpada do galezi domyslnej i konczy sie wyjatkiem.
-- Testy `squads` pokrywaja obecnie glownie flow stats i invite join; brak szerszych testow UI/settings/listing.
+- Testy `squads` pokrywaja obecnie glownie flow invite join; brak szerszych testow UI/settings/listing.
+- Ograniczenia i zaleglosci dla stats sa opisane centralnie w [stats.md](./stats.md).

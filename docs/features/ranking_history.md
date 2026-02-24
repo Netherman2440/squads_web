@@ -13,6 +13,8 @@ Zakres implementacji obejmuje:
 
 Technicznie logika jest ulokowana glownie w `app/lib/features/players`, ale jest wywolywana takze z `features/matches` i `features/draft`.
 
+Ten dokument jest source of truth dla aktualizacji rankingu i lifecycle wpisow `ranking_history`. Inne feature opisuja ten obszar tylko jako punkty styku.
+
 ## 2. Co jest zaimplementowane
 
 ### 2.1 Tworzenie wpisow historii dla meczu
@@ -149,12 +151,19 @@ Kluczowe indeksy/ograniczenia:
   - aktualizuje delty i rankingi po wpisaniu/edycji wyniku,
   - zarzadza wpisami historii przy edycji skladow (gdy brak wyniku),
   - usuwa wpisy historii przy usuwaniu meczu.
+  - Punkty styku po stronie consumer: [matches.md](./matches.md).
 - `squads`:
   - ustawienia rankingu skladu steruja tym, czy i jak wynik meczu zmienia ranking.
+  - Punkty styku po stronie consumer: [squads.md](./squads.md).
 - `draft`:
   - `DraftSessionNotifier` i `DraftResultsPage` odczytuja `getMatchRankingHistory(matchId)` do odtworzenia listy zawodnikow dla draftu meczu.
+  - Punkty styku po stronie consumer: [draft.md](./draft.md).
 - `players`:
   - widok szczegolow i podstrona meczow zawodnika opieraja sie o `ranking_history`.
+  - Punkty styku po stronie consumer: [players.md](./players.md).
+- `stats`:
+  - statystyki sa pochodna danych rankingowych i wynikow meczow.
+  - Definicja metryk stats jest utrzymywana w [stats.md](./stats.md).
 
 ## 7. Szybka mapa plikow
 - `app/lib/features/players/domain/entities/ranking_history_entry.dart`

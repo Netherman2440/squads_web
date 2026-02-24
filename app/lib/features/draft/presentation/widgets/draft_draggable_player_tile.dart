@@ -25,7 +25,6 @@ class DraftDraggablePlayerTile extends StatelessWidget {
     final theme = Theme.of(context);
     final difference = player.ranking - player.baseRanking;
     final positionText = playerPositionPolishLabel(player.position);
-    final hasPosition = positionText != null;
 
     final tile = Card(
       child: ListTile(
@@ -56,7 +55,7 @@ class DraftDraggablePlayerTile extends StatelessWidget {
                 spacing: 12,
                 runSpacing: 4,
                 children: [
-                  if (hasPosition) ...[
+                  if (positionText != null) ...[
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [

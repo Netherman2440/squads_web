@@ -9,6 +9,7 @@ import 'package:app/features/draft/domain/entities/draft_rule.dart';
 import 'package:app/features/draft/presentation/controllers/draft_selection_controller.dart';
 import 'package:app/features/draft/presentation/state/draft_selection_state.dart';
 import 'package:app/features/draft/presentation/widgets/draft_draggable_player_tile.dart';
+import 'package:app/features/draft/presentation/widgets/draft_relation_widgets.dart';
 import 'package:app/features/matches/presentation/controllers/create_match_controller.dart';
 import 'package:app/features/matches/presentation/controllers/squad_matches_notifier.dart';
 import 'package:app/features/players/domain/entities/player.dart';
@@ -93,7 +94,7 @@ class _DraftSelectionPageState extends ConsumerState<DraftSelectionPage> {
                                   'selectedIds': ids,
                                   'matchId': widget.matchId,
                                   'playWithSubstitute': _playWithSubstitute,
-                                  'draftRules': _serializeDraftRules(
+                                  'draftRules': serializeDraftRules(
                                     data.draftRules,
                                   ),
                                 },
@@ -481,13 +482,6 @@ List<Player> _filterAvailable({
       .where((p) => !selectedPlayerIds.contains(p.playerId))
       .where((p) => q.isEmpty || p.name.toLowerCase().contains(q))
       .toList(growable: false);
-}
-
-List<Map<String, dynamic>> _serializeDraftRules(List<DraftRule> rules) {
-  return [
-    for (final rule in rules)
-      {'type': rule.type.name, 'playerIds': rule.playerIds},
-  ];
 }
 
 enum _SelectionMenuAction { toggleSubstitute }

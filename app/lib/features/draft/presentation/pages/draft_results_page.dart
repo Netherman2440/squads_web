@@ -14,6 +14,7 @@ import 'package:app/features/draft/application/get_match_draft_use_case.dart';
 import 'package:app/features/draft/application/save_match_draft_use_case.dart';
 import 'package:app/features/draft/presentation/controllers/draft_session_notifier.dart';
 import 'package:app/features/draft/presentation/widgets/draft_draggable_player_tile.dart';
+import 'package:app/features/draft/presentation/widgets/draft_relation_widgets.dart';
 import 'package:app/features/matches/application/dto/match_details_dto.dart';
 import 'package:app/features/matches/application/usecases/get_match_usecase.dart';
 import 'package:app/features/matches/presentation/controllers/create_match_controller.dart';
@@ -806,7 +807,7 @@ class _ErrorBody extends StatelessWidget {
                     'selectedIds': selectedPlayerIds,
                     'matchId': matchId,
                     'playWithSubstitute': playWithSubstitute,
-                    'draftRules': _serializeDraftRules(draftRules),
+                    'draftRules': serializeDraftRules(draftRules),
                   },
                 );
               },
@@ -818,13 +819,6 @@ class _ErrorBody extends StatelessWidget {
       ),
     );
   }
-}
-
-List<Map<String, dynamic>> _serializeDraftRules(List<DraftRule> rules) {
-  return [
-    for (final rule in rules)
-      {'type': rule.type.name, 'playerIds': rule.playerIds},
-  ];
 }
 
 BigInt? _estimatedCheckedDraftCount({

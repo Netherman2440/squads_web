@@ -14,7 +14,9 @@ class UpdatePlayerPositionUseCase {
     required String? newPosition,
   }) async {
     final trimmedPosition = newPosition?.trim();
-    final hasPosition = trimmedPosition != null && trimmedPosition.isNotEmpty;
+    final rawValue = trimmedPosition?.toLowerCase();
+    final hasPosition =
+        rawValue != null && rawValue.isNotEmpty && rawValue != 'none';
     final normalizedPosition = normalizePlayerPositionStorageValue(
       trimmedPosition,
     );

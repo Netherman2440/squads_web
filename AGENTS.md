@@ -4,7 +4,7 @@
 - `app/` hosts the Flutter web client; follow the feature-first layout in `app/lib/` (`features/auth`, `features/squads`, shared `core/`).
 - UI assets live under `app/web/` and generated db mocks in `app/db/`; keep tests in `app/test/` mirrored to the feature they cover.
 - Supabase SQL, migrations, and seed scripts go in `supabase/`; keep one migration per change request and document schema decisions in migration headers.
-- Product direction and architecture references live in `.ai/`; skim `prd.md` before starting large efforts so UX/role constraints stay aligned.
+- Product direction and architecture references live in `docs/`; skim `prd.md` before starting large efforts so UX/role constraints stay aligned.
 
 ## Build, Test, and Development Commands
 - `cd app && flutter pub get` installs packages.

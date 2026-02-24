@@ -1,108 +1,163 @@
-# Users Feature Implementation Plan
+# users - dokumentacja feature (stan aktualny)
 
-## Overview
-This feature handles the current user's profile management. It is designed to be minimal for the MVP, focusing on identity (email, id) and serving as the context for the "My Profile" page.
+Stan na: **24 lutego 2026**
 
-## Directory Structure
-`lib/features/users/`
-- `domain/`
-    - `entities/`
-        - `user.dart`
-    - `repositories/`
-        - `user_repository.dart`
-- `application/`
-    - `get_current_user_use_case.dart`
-    - `update_user_use_case.dart`
-- `infrastructure/`
-    - `repositories/`
-        - `supabase_user_repository.dart`
-- `presentation/`
-    - `pages/`
-        - `user_page.dart`
-    - `widgets/`
-        - `user_profile_card.dart`
-    - `state/`
-        - `user_notifier.dart`
-        - `user_state.dart`
+## 1. Cel i zakres
+Feature `users` odpowiada za profil biezacego uzytkownika (`/me`) i publiczny model danych uzytkownika wykorzystywany w innych feature.
 
-## Detailed Plan
+Zakres techniczny:
+- pobranie aktualnie zalogowanego uzytkownika (`id`, `email`, `fullName`),
+- zlozenie podsumowania profilu z lista przynaleznosci do squad-ow,
+- zapis/uzupelnianie rekordu w `public.users`,
+- udostepnienie API `getUsers(...)` do wzbogacania danych czlonkow w `squads`.
 
-### 1. Domain Layer
-**Entities:**
-- `User`:
-    - `id`: String (UUID)
-    - `email`: String
-    - Note: `User` is intentionally **not** coupled to squads or roles; the
-      user–squad relation is modeled in the `squads` feature as the
-      `Membership` entity.
+## 2. Co jest zaimplementowane
+- Ekran profilu: `UserPage` (`/me`) z sekcja profilu i sekcja "My squads".
+- Widok profilu (`UserProfileCard`) z obsluga stanow:
+  - loading,
+  - blad,
+  - brak sesji ("You are not logged in."),
+  - dane uzytkownika (preferowany `fullName`, fallback do `email`).
+- Ladowanie danych przy starcie ekranu:
+  - `userNotifierProvider.notifier.loadUser()`,
+  - `squadsNotifierProvider.notifier.loadSquads()`.
+- Odswiezanie pull-to-refresh laduje ponownie profil i liste squad-ow.
+- Nasluch zmian auth w `UserPage`:
+  - przy przejsciu `niezalogowany -> zalogowany` odswiezany jest profil i squads.
+- Sekcja "My squads":
+  - bazuje na `UserProfileSummary.memberships`,
+  - renderuje `SquadListItem`,
+  - przejscie do `/squads/:squadId`.
+- CTA dodawania squadu zawsze jest dostepne i prowadzi do `/squads` (label zalezy od tego, czy user ma jakakolwiek role rozna od `none`).
 
-**Repositories (Interface):**
-- `UserRepository`:
-    - `Future<User?> getCurrentUser()`
-    - `Future<void> updateUser(User user)` (Mock for MVP, as email/password changes are handled by Auth feature usually, or not in MVP scope)
+## 3. Routing
+- Trasa feature:
+  - `/me` -> `UserPage` (`AppRoute.profile`) w `ShellRoute`.
+- Wejscie do feature:
+  - menu profilowe w `RootShell` (`context.go('/me')`),
+  - pozycja "Profil" w sidebarze (`/me`),
+  - po udanym logowaniu email/haslo w `AuthPage` (dla nie-guest, jesli brak pending invite) -> `context.go('/me')`.
+- Wyjscia/nawigacja z feature:
+  - "Add more"/"Add your first squad" -> `context.pushNamed(AppRoute.squads.name)`,
+  - klik na squad -> `context.pushNamed(AppRoute.squadDetails.name, pathParameters: {'squadId': ...})`.
 
-### 2. Infrastructure Layer
-**SupabaseUserRepository:**
-- Implements `UserRepository`.
-- Uses `SupabaseClient`.
-- **Get Current User**:
-    - Access `supabase.auth.currentUser`.
-    - Map the Supabase `User` object to our Domain `User` entity.
-- **Update User**:
-    - Mock implementation for now (or simple metadata update if needed later).
+## 4. DB i RLS (zbiorczo)
+- Tabele uzywane bezposrednio lub posrednio przez feature:
+  - `public.users`:
+    - `user_id` (PK, FK -> `auth.users(id)`, `on delete cascade`),
+    - `email` (`not null`, unique),
+    - `full_name` (nullable),
+    - `created_at` (default `now()`).
+  - `public.user_squads` (dla "My squads"):
+    - klucz glowny `(user_id, squad_id)`,
+    - `role` (`public.user_squad_role`),
+    - indeksy: `user_squads_user_idx`, `user_squads_squad_idx`.
+  - `public.squads` (dla nazw squad-ow w podsumowaniu):
+    - `squad_id`, `name`, `visibility`, `owner_id`, pola rankingowe.
+- Funkcje/trigger SQL:
+  - `public.sync_public_user()` (security definer, `row_security = off`) synchronizuje `public.users` z `auth.users`,
+  - trigger `on_auth_user_sync` na `auth.users` (`after insert or update of email, raw_user_meta_data`).
+- RPC:
+  - feature `users` nie wywoluje dedykowanych RPC.
+- RLS:
+  - `public.users`:
+    - user moze czytac/insert/update/delete wlasny profil (`auth.uid() = user_id`),
+    - owner squadu moze czytac profile uzytkownikow nalezacych do jego squadu ("Owners can read profiles of squad members").
+  - `public.user_squads`:
+    - user moze czytac swoje membershipy; owner moze czytac membershipy swojego squadu.
+  - `public.squads`:
+    - aktywna polityka select: "Anyone can read squads" (`using (true)`).
 
-### 3. Application Layer
-**Use Cases:**
+## 5. Architektura
+### 5.1 Domain
+- Encja:
+  - `app/lib/features/users/domain/entities/user.dart` (`id`, `email`, `fullName`).
+- Repozytorium:
+  - `UserRepository`:
+    - `getCurrentUser()`,
+    - `updateUser(User user)`,
+    - `getUsers(List<String> userIds)`,
+    - `upsertUser(User user)`.
+
+### 5.2 Application
 - `GetCurrentUserUseCase`:
-    - Returns the currently authenticated user entity.
-    - Returns `null` if not logged in.
+  - pobiera `User` z `UserRepository`,
+  - pobiera membershipy usera z `MembershipRepository`,
+  - pobiera odpowiadajace squady z `SquadRepository.getSquadsByIds(...)`,
+  - sklada `UserProfileSummary` (`user` + `List<UserMembershipItem>`).
+- DTO/summary:
+  - `UserMembershipItem` (`squadId`, `squadName`, `role`),
+  - `UserProfileSummary` (`user`, `memberships`).
+- Provider use case:
+  - `getCurrentUserUseCaseProvider` sklada zaleznosci z users+squads.
 
-- `UpdateUserUseCase`:
-    - Accepts `User` entity.
-    - Calls `repository.updateUser()`.
-    - (Currently a placeholder for future profile editing).
+### 5.3 Infrastructure
+- `SupabaseUserRepository`:
+  - `getCurrentUser()`:
+    - czyta `supabase.auth.currentUser`,
+    - probuje odczytac rekord z `public.users`,
+    - fallback dla `fullName` z `userMetadata` (`full_name`/`name`/`display_name`),
+    - jesli `fullName` jest tylko w metadata, wykonuje `upsertUser(...)`.
+  - `getUsers(...)`:
+    - select z `public.users` przez `inFilter('user_id', userIds)`.
+  - `upsertUser(...)`:
+    - upsert po `user_id`,
+    - zapisuje `full_name` tylko gdy po trim nie jest pusty.
+  - `updateUser(...)` deleguje do `upsertUser(...)`.
+- Provider infrastruktury:
+  - `userRepositoryProvider` -> `SupabaseUserRepository`.
 
-### 4. Presentation Layer
-**State Management (Riverpod):**
-- `UserState`:
-    - `isLoading`: bool
-    - `user`: User?
-    - `error`: String?
-- `UserNotifier` (Notifier/AsyncNotifier):
-    - `loadUser()`: Calls `GetCurrentUserUseCase`.
+### 5.4 Presentation
+- Stan:
+  - `UserState` (`isLoading`, `profile`, `error`).
+- Notifier:
+  - `UserNotifier.loadUser()` wywoluje `GetCurrentUserUseCase.execute()` i mapuje wynik do stanu.
+- UI:
+  - `UserPage` koordynuje ladowanie profilu i squads, odswiezanie, oraz nawigacje.
+  - `UserProfileCard` renderuje szczegoly usera lub stany fallback.
 
-**UI Components:**
-- `UserPage` (`/me`):
-    - **Orchestration Role**:
-        - Watches `UserNotifier` to display user details (Email).
-        - Watches `SquadsNotifier` (from `features/squads`) to display "My Squads".
-    - **Layout**:
-        - `UserProfileCard`: Displays email and avatar placeholder.
-        - `SquadQuickList` (or reused `SquadListItem`): Displays list of squads where user is a member/owner.
-        - CTA: "Create Squad" (Navigates to Create Squad flow).
+## 6. Integracje / punkty styku
+- `squads`:
+  - `GetCurrentUserUseCase` korzysta z:
+    - `MembershipRepository.getMembershipsForUser(...)`,
+    - `SquadRepository.getSquadsByIds(...)`.
+  - `UserPage` korzysta ze stanu `squadsNotifierProvider` i widgetu `SquadListItem`.
+  - Definicja membership i zarzadzania skladem jest utrzymywana po stronie [squads.md](./squads.md).
+- `auth`:
+  - `AuthPage` po udanym logowaniu kieruje na `/me` (dla usera nieanonimowego).
+  - `CompleteOAuthSignInUseCase` wywoluje `UserRepository.getCurrentUser()`, co przy okazji moze uzupelnic `public.users`.
+- `squads settings`:
+  - `GetSquadSettingsMembersUseCase` korzysta z `UserRepository.getUsers(...)` do wzbogacania `SquadMember` o `email/fullName`.
+  - Logika ekranu settings jest opisana po stronie [squads.md](./squads.md).
 
-## Dependencies
-- `supabase_flutter`
-- `flutter_riverpod`
-- `features/squads` (Presentation layer dependency only, for displaying squad lists)
+## 7. Szybka mapa plikow
+- Najwazniejsze pliki w feature:
+  - `app/lib/features/users/domain/entities/user.dart`
+  - `app/lib/features/users/domain/repositories/user_repository.dart`
+  - `app/lib/features/users/application/get_current_user_use_case.dart`
+  - `app/lib/features/users/application/user_profile_summary.dart`
+  - `app/lib/features/users/infrastructure/repositories/supabase_user_repository.dart`
+  - `app/lib/features/users/presentation/state/user_state.dart`
+  - `app/lib/features/users/presentation/state/user_notifier.dart`
+  - `app/lib/features/users/presentation/pages/user_page.dart`
+  - `app/lib/features/users/presentation/widgets/user_profile_card.dart`
+- Najwazniejsze pliki poza feature:
+  - `app/lib/core/app_router.dart` (`/me`)
+  - `app/lib/core/root_shell.dart` (wejscie do profilu z UI shella)
+  - `app/lib/features/auth/presentation/pages/auth_page.dart` (nawigacja po loginie)
+  - `app/lib/features/auth/application/complete_oauth_sign_in_use_case.dart`
+  - `app/lib/features/squads/infrastructure/repositories/supabase_membership_repository.dart`
+  - `app/lib/features/squads/infrastructure/repositories/supabase_squad_repository.dart`
+  - `supabase/migrations/20251201090100_create_users_table.sql`
+  - `supabase/migrations/20251201092000_sync_public_users_from_auth.sql`
+  - `supabase/migrations/20251202090000_add_full_name_to_public_users.sql`
+  - `supabase/migrations/20251201090300_create_user_squads_table.sql`
+  - `supabase/migrations/20251201090200_create_squads_table.sql`
+  - `supabase/migrations/20251202100000_allow_select_on_squads.sql`
+  - `supabase/tests/users_sync_trigger_test.sql`
+  - `supabase/tests/users_full_name_column_test.sql`
 
-### Design updates (user profile + memberships)
-
-- The `User` entity in `features/users/domain/entities/user.dart` now contains only
-  identity data (`id`, `email`). It does **not** store squad roles or memberships;
-  the many-to-many relation lives in the squads feature as the `Membership` entity.
-- `UserRepository` exposes only user-centric operations:
-  `getCurrentUser()` and `updateUser(User user)` (still a mock for MVP).
-- `GetCurrentUserUseCase` has been extended to compose data from three repositories:
-  `UserRepository`, `MembershipRepository` and `SquadRepository`. It returns a
-  `UserProfileSummary` that contains the current `User` plus a list of
-  `UserMembershipItem` objects (each with `squadId`, `squadName`, `memberCount`
-  and the user's `SquadRole` in that squad).
-- `UserState` in presentation now holds `UserProfileSummary?` instead of just `User?`,
-  and `UserNotifier.loadUser()` writes the full summary into the state.
-- `UserPage` (`/me`) renders:
-  - `UserProfileCard` based on `UserProfileSummary.user`,
-  - a "My Squads" section based on `UserMembershipItem` list,
-  - a "Create Squad" CTA only when the user does **not** already own a squad
-    (no membership with `role == owner`), mirroring the domain owner-limit rule.
-
+## 8. Ograniczenia i status
+- Brak dedykowanego ekranu edycji profilu; `updateUser(...)` istnieje tylko jako warstwa repozytorium/upsert.
+- W `UserPage` lista "My squads" bazuje na membershipach z `GetCurrentUserUseCase`; `SquadsNotifier` jest uzyty glownie do odswiezania i fallbacku danych tile.
+- Brak testow Dart (`app/test`) dedykowanych feature `users` (stan na 24.02.2026).

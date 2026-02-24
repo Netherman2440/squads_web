@@ -1,225 +1,195 @@
-### Ranking History — plan implementacji (US-012) jako część featuru Players
+# ranking_history - dokumentacja feature (stan aktualny)
 
-Ten dokument opisuje plan wdrożenia **ranking history** (event‑sourcing rankingów),
-który jest powiązany z meczami, ale **ląduje w featurze Players** (zgodnie z
-`plan.md` 129–155).
+Stan na: **24 lutego 2026**
 
-Kluczowa motywacja (legacy): możemy edytować wynik starszego meczu, więc musimy umieć
-**przeliczyć cały score gracza**, a nie tylko “dodać kolejną deltę”.
+## 1. Cel i zakres
+Feature `ranking_history` odpowiada za rejestrowanie zmian rankingu zawodnikow oraz odtwarzanie ich w UI i logice meczow.
 
----
+Zakres implementacji obejmuje:
+- zapisy historii rankingu powiazane z meczami i recznymi korektami,
+- aktualizacje `players.score` na podstawie zmian delty,
+- odczyt historii na ekranie szczegolow zawodnika,
+- integracje z flow meczowym (`create/update/delete match`, edycja skladow) i draftem.
 
-## Stories / wymagania (źródła)
+Technicznie logika jest ulokowana glownie w `app/lib/features/players`, ale jest wywolywana takze z `features/matches` i `features/draft`.
 
-### US-012: Wprowadzenie wyniku meczu (`prd.md`)
-- “Zapis home_score i away_score + score_meta.”
-- “Po zapisie generowana jest delta wpływająca na ranking graczy, którzy zagrali.”
-- “Edycja wyniku aktualizuje właściwą deltę i statystyki.”
+Ten dokument jest source of truth dla aktualizacji rankingu i lifecycle wpisow `ranking_history`. Inne feature opisuja ten obszar tylko jako punkty styku.
 
-### Notatki architektoniczne (źródło: `plan.md` 129–155)
-- Score history jest powiązany z meczami.
-- Po każdym meczu aktualizujemy score graczy biorących udział w meczu.
-- Początkowy przykład algorytmu (uproszczenie): różnica bramek → delta dla wszystkich
-  zawodników.
-- Presentation: na razie brak osobnego ekranu; później w Player Details.
-- To ma być w featurze Players, ale jako osobny doc.
+## 2. Co jest zaimplementowane
 
----
+### 2.1 Tworzenie wpisow historii dla meczu
+- `CreateMatchUseCase` tworzy wpis `ranking_history` dla kazdego zawodnika meczu przez `createMatchRankingEntry`.
+- Wpis startowy ma:
+  - `ranking` = biezacy ranking gracza,
+  - `change` = `null`,
+  - `match_id` = ID meczu.
+- `UpdateMatchTeamsUseCase` (tylko gdy mecz nie ma wyniku) dopina wpisy dla nowo dodanych graczy i usuwa wpisy dla usunietych graczy.
 
-## Kontrakt DB (źródło: `.ai/db_plan.md` 1.12)
+### 2.2 Aktualizacja rankingu po wpisaniu wyniku meczu
+- `UpdateMatchScoreUseCase` aktualizuje wynik meczu i, gdy `squad.rankingUpdate == true`, wylicza delty:
+  - `delta = (homeScore - awayScore) * rankingMultiplier`,
+  - gracze home dostaja `+delta`, away `-delta`.
+- Jesli `useExperienceFactor == true`, delta dzielona jest przez liczbe wpisow meczowych gracza (`ranking_history` z `match_id != null`, clamp `1..10`).
+- Dla kazdego gracza:
+  - pobierany jest wpis historii `(player_id, match_id)`,
+  - liczona jest roznica wzgledem poprzedniej delty,
+  - docelowy ranking jest clampowany do `0..100`,
+  - aktualizowane sa `ranking_history.change`, `ranking_history.updated_at` oraz `players.score`.
 
-Tabela `ranking_history`:
-- `ranking_history_id` UUID (PK)
-- `player_id` UUID (FK → `players`)
-- `match_id` UUID NULLABLE (FK → `matches`, ON DELETE SET NULL)
-- `ranking` NUMERIC(6,3) (snapshot przed zmianą)
-- `change` NUMERIC(6,3) NULLABLE (delta)
-- `match_score` JSONB NULLABLE
-- `created_at` TIMESTAMPTZ
-- `updated_at` TIMESTAMPTZ NULLABLE
+### 2.3 Reczna korekta rankingu
+- Z `PlayerDetailsPage` (dialog `EditPlayerRankingDialog`) mozna recznie ustawic ranking.
+- `UpdatePlayerRankingUseCase` wywoluje `RankingRepository.updatePlayerRanking(..., matchId: null)`.
+- Repozytorium:
+  - pobiera biezace `players.score`,
+  - zapisuje manualny wpis historii (`match_id = null`, `ranking = oldScore`, `change = new-old`),
+  - aktualizuje `players.score`.
 
-Unikalność warunkowa:
-- UNIQUE `(player_id, match_id)` **WHERE `match_id` IS NOT NULL**
+### 2.4 Odczyt i wizualizacja historii
+- `GetPlayerRankingHistoryUseCase` zwraca historie gracza malejaco po `created_at`.
+- `playerDetailsProvider` laduje rownolegle dane gracza i historie.
+- `RankingHistoryGraphWidget`:
+  - sortuje historie rosnaco po `created_at`,
+  - zaczyna wykres od `baseRanking`,
+  - buduje przebieg przez kumulacje `change` (dla `null` traktuje `0`).
+- `GetPlayerMatchesUseCase` wykorzystuje `ranking_history.match_id` do pobrania listy meczow zawodnika.
 
-Konsekwencje dla implementacji:
-- dla wpisów powiązanych z meczem robimy **upsert** per `(player_id, match_id)`
-- manualne korekty (match_id = NULL) są możliwe
+### 2.5 Usuwanie i rollback
+- `DeleteMatchUseCase` usuwa wpisy rankingowe meczu dla wszystkich jego zawodnikow.
+- `deleteMatchRankingEntry`:
+  - odejmuje stara delte od `players.score` (jesli `change != null`),
+  - usuwa wpis z `ranking_history`.
+- Usuniecie zawodnika usuwa jego historie automatycznie przez FK `ranking_history.player_id -> players.player_id ON DELETE CASCADE`.
 
----
+## 3. Routing
+- Feature nie ma osobnej trasy typu `/ranking-history`.
+- Historia rankingu jest dostepna w:
+  - `/squads/:squadId/players/:playerId` (`PlayerDetailsPage`).
+- Wejscia do widoku szczegolow zawodnika:
+  - lista graczy (`PlayersListWidget`),
+  - widok szczegolow meczu (`MatchDetailsPage`, klik na zawodnika).
+- Powiazana podstrona oparta o historie:
+  - `/squads/:squadId/players/:playerId/matches` (lista meczow wyliczana przez `ranking_history.match_id`).
 
-## Decyzje i założenia
+## 4. DB i RLS (zbiorczo)
 
-- Score history implementujemy w **Players** (nie w Matches).
-- `players.score` nadal istnieje i jest wykorzystywane w UI, ale aktualizacja
-  przebiega przez **recompute** z historii (żeby obsłużyć edycje starych meczów).
-- Na MVP nie pokazujemy jeszcze historii w UI (tylko logika + gotowość pod Player Details).
-- “match_score tuple [player score : enemy team score]”:
-  - nie dodajemy nowej kolumny w `ranking_history` na MVP,
-  - tę informację możemy wyliczać przez join do `matches` + przynależność gracza do teamu,
-    lub trzymać w `matches.score_meta` jeśli będzie potrzebna do debugowania.
+### 4.1 Tabela `ranking_history`
+Migracja: `supabase/migrations/20251201090900_create_ranking_history_table.sql`
 
----
+Kluczowe pola:
+- `ranking_history_id` UUID PK,
+- `player_id` UUID FK -> `players(player_id)` `ON DELETE CASCADE`,
+- `match_id` UUID NULL FK -> `matches(match_id)` `ON DELETE SET NULL`,
+- `ranking` numeric(6,3) (snapshot rankingu przed zmiana),
+- `change` numeric(6,3) NULL (delta),
+- `match_score` JSONB NULL,
+- `created_at`, `updated_at`.
 
-## Model domenowy (Players / Score History)
+Kluczowe indeksy/ograniczenia:
+- unique partial index `(player_id, match_id)` gdzie `match_id is not null`,
+- indeks po `player_id`,
+- indeks po `match_id` (partial).
 
-Encja:
-- `RankingHistoryEntry`
-  - `scoreHistoryId`
-  - `playerId`
-  - `matchId?`
-  - `delta` (double)
-  - `previousRating` (double)
-  - `newRating` (double)
-  - `createdAt`
+### 4.2 RLS dla `ranking_history`
+- `SELECT`: czlonkowie skladu lub kazdy dla skladu publicznego.
+- `INSERT/UPDATE/DELETE`: tylko `owner/admin`.
+- Dla operacji zapisu dodatkowo sprawdzana jest spojnosc `player_id` z `match_id` (zawodnik nalezy do skladu meczu).
 
-Ważne: `previousRating/newRating` są danymi pochodnymi, więc muszą być spójne z
-przyjętym porządkiem “replay” (patrz niżej).
+### 4.3 Powiazane kontrakty DB
+- `players.score` ma check `0..100` (migracja `20251201090400_create_players_table.sql`) i jest aktualizowane razem z historia.
+- `squads` trzyma ustawienia wplywajace na delty:
+  - `ranking_update`,
+  - `ranking_multiplier` (`1..10`),
+  - `use_experience_factor`
+  (migracja `20251201090200_create_squads_table.sql`).
 
----
+### 4.4 RPC/Funkcje SQL
+- W aktualnej implementacji ranking history nie korzysta z dedykowanej funkcji RPC do atomowego przeliczania.
+- Aktualizacje sa wykonywane przez sekwencje operacji z poziomu repozytoriow.
 
-## Interfejsy i granice (Clean Architecture)
+## 5. Architektura
 
-### Gdzie to żyje?
-Propozycja struktury:
+### 5.1 Domain
+- Encja: `RankingHistoryEntry`.
+- Repozytorium: `RankingRepository`.
+- Wyjatki domenowe:
+  - `RankingHistoryNotFoundException`,
+  - `RankingUpdateConflictException`.
 
-`app/lib/features/players/`
-- `domain/entities/ranking_history_entry.dart`
-- `domain/repositories/player_repository.dart` (rozszerzony)
-- `application/usecases/`
-  - `apply_match_score_to_players_use_case.dart`
-  - `recompute_player_score_use_case.dart`
-  - (opcjonalnie) `get_player_ranking_history_use_case.dart`
-- `infrastructure/repositories/supabase_player_repository.dart` (rozszerzony)
+### 5.2 Application
+- Odczyt historii:
+  - `GetPlayerRankingHistoryUseCase`.
+- Reczna korekta:
+  - `UpdatePlayerRankingUseCase`.
+- Integracje z meczami:
+  - `CreateMatchUseCase` (zakladanie wpisow),
+  - `UpdateMatchScoreUseCase` (aktualizacja delty i score),
+  - `UpdateMatchTeamsUseCase` (dodawanie/usuwanie wpisow przy zmianie skladow bez wyniku),
+  - `DeleteMatchUseCase` (rollback + usuniecie wpisow).
+- Integracja posrednia:
+  - `GetPlayerMatchesUseCase` (match IDs z historii).
 
-### Zależności między feature’ami
-Score history potrzebuje danych o meczu (kto grał, wynik):
-- `Players` use case może zależeć od `MatchRepository` (feature Matches) **na poziomie application**,
-  lub
-- logika może być wywoływana z `UpdateMatchScoreUseCase` (Matches) i przekazywać już
-  “listę playerId + delta” do Players.
+### 5.3 Infrastructure
+- `SupabaseRankingRepository`:
+  - odczyt historii dla gracza i meczu,
+  - aktualizacje manualne i meczowe,
+  - tworzenie/usuwanie wpisow meczowych,
+  - aktualizacja `change` przez `updateMatchRankingChange`.
+- `SupabasePlayerRepository`:
+  - zapis finalnego `players.score` (`updatePlayerRanking`).
+- `SupabaseTeamRepository`:
+  - podczas odczytu zespolow meczu laczy dane z `ranking_history`, aby pokazac ranking zwiazany z danym meczem.
 
-Rekomendacja MVP:
-- `UpdateMatchScoreUseCase` (Matches) po zapisie wyniku woła
-  `ApplyMatchScoreToPlayersUseCase` (Players) z parametrami:
-  - `matchId`
-  - `homeScore`, `awayScore`
-  - roster: `homePlayerIds`, `awayPlayerIds`
+### 5.4 Presentation
+- `PlayerDetailsPage` + `playerDetailsProvider` pobieraja i renderuja historie.
+- `RankingHistoryGraphWidget` pokazuje przebieg zmian.
+- `EditPlayerRankingDialog` uruchamia manualna korekte.
+- `MatchDetailsNotifier.updateScore` po aktualizacji wyniku invaliduje `playerDetailsProvider` dla graczy meczu, aby odswiezyc historie i ranking.
 
-To minimalizuje cross-feature query w Players.
+## 6. Integracje / punkty styku
+- `matches`:
+  - tworzy wpisy historii przy tworzeniu meczu,
+  - aktualizuje delty i rankingi po wpisaniu/edycji wyniku,
+  - zarzadza wpisami historii przy edycji skladow (gdy brak wyniku),
+  - usuwa wpisy historii przy usuwaniu meczu.
+  - Punkty styku po stronie consumer: [matches.md](./matches.md).
+- `squads`:
+  - ustawienia rankingu skladu steruja tym, czy i jak wynik meczu zmienia ranking.
+  - Punkty styku po stronie consumer: [squads.md](./squads.md).
+- `draft`:
+  - `DraftSessionNotifier` i `DraftResultsPage` odczytuja `getMatchRankingHistory(matchId)` do odtworzenia listy zawodnikow dla draftu meczu.
+  - Punkty styku po stronie consumer: [draft.md](./draft.md).
+- `players`:
+  - widok szczegolow i podstrona meczow zawodnika opieraja sie o `ranking_history`.
+  - Punkty styku po stronie consumer: [players.md](./players.md).
+- `stats`:
+  - statystyki sa pochodna danych rankingowych i wynikow meczow.
+  - Definicja metryk stats jest utrzymywana w [stats.md](./stats.md).
 
----
+## 7. Szybka mapa plikow
+- `app/lib/features/players/domain/entities/ranking_history_entry.dart`
+- `app/lib/features/players/domain/repositories/ranking_repository.dart`
+- `app/lib/features/players/domain/exceptions/ranking_exceptions.dart`
+- `app/lib/features/players/infrastructure/repositories/supabase_ranking_repository.dart`
+- `app/lib/features/players/application/usecases/get_player_ranking_history_usecase.dart`
+- `app/lib/features/players/application/usecases/update_player_ranking_usecase.dart`
+- `app/lib/features/players/application/usecases/get_player_matches_usecase.dart`
+- `app/lib/features/players/presentation/controllers/player_details_controller.dart`
+- `app/lib/features/players/presentation/pages/player_details_page.dart`
+- `app/lib/features/players/presentation/widgets/ranking_history_graph_widget.dart`
+- `app/lib/features/players/presentation/widgets/edit_player_ranking_dialog.dart`
+- `app/lib/features/matches/application/usecases/create_match_usecase.dart`
+- `app/lib/features/matches/application/usecases/update_match_score_usecase.dart`
+- `app/lib/features/matches/application/usecases/update_match_teams_usecase.dart`
+- `app/lib/features/matches/application/usecases/delete_match_usecase.dart`
+- `app/lib/features/draft/presentation/controllers/draft_session_notifier.dart`
+- `supabase/migrations/20251201090900_create_ranking_history_table.sql`
+- `supabase/migrations/20251201090400_create_players_table.sql`
+- `supabase/migrations/20251201090200_create_squads_table.sql`
 
-## Repozytorium (PlayerRepository) — zmiany
-
-Zgodnie z `plan.md` dodajemy metodę w `PlayerRepository`:
-
-- `Future<void> updatePlayerMatchScore({required String playerId, required String matchId, required double delta, required int playerTeamScore, required int enemyTeamScore})`
-
-Uwaga: w DB nie trzymamy `playerTeamScore/enemyTeamScore` w `ranking_history` w MVP.
-Te wartości są:
-- wejściem do algorytmu (obliczanie `delta`), albo
-- pomocniczym kontekstem do ewentualnego zapisu w `matches.score_meta`
-
-Żeby spełnić “recompute całego score”, repo powinno też wspierać:
-
-- `Future<void> recomputeAndPersistPlayerScore({required String playerId})`
-  - pobiera `players.base_score`
-  - pobiera całą historię `ranking_history` dla gracza (łącznie z manualnymi korektami)
-  - **replay** w deterministycznym porządku, aktualizuje `previous_rating/new_rating`
-  - aktualizuje `players.score` na wynik końcowy
-
-Oraz wersję batch (ważne wydajnościowo):
-- `Future<void> recomputeAndPersistPlayersScore({required List<String> playerIds})`
-
----
-
-## Use case’y (Players)
-
-### 1) `ApplyMatchScoreToPlayersUseCase`
-Cel: po wprowadzeniu/edycji wyniku meczu zaktualizować `ranking_history` i score graczy.
-
-Wejście:
-- `matchId`
-- `homePlayerIds`, `awayPlayerIds`
-- `homeScore`, `awayScore`
-- (opcjonalnie) `scoreType`, `scoreMeta`
-
-Kroki:
-1) oblicz `goalDiff = abs(homeScore - awayScore)`
-2) zidentyfikuj zwycięzców/przegranych (albo remis)
-3) dla każdego gracza wylicz `delta`:
-   - uproszczenie (MVP): winners `+goalDiff`, losers `-goalDiff`, draw `0`
-4) dla każdego gracza:
-   - `playerRepository.updatePlayerMatchScore(...)` (upsert do `ranking_history`)
-5) na końcu:
-   - `playerRepository.recomputeAndPersistPlayersScore(playerIds)` (pełny recompute)
-
-### 2) `RecomputePlayerScoreUseCase`
-Cel: manualny recompute (np. gdy zmieniły się zasady liczenia lub korekty historyczne).
-
-Wejście:
-- `playerId` albo `squadId` (batch)
-
-Kroki:
-- pobiera historię, replay, aktualizuje `ranking_history` i `players.score`
-
-### 3) (opcjonalnie) `GetPlayerRankingHistoryUseCase`
-Na potrzeby przyszłego Player Details:
-- pobranie listy `RankingHistoryEntry` posortowanej rosnąco po “czasie meczu”
-
----
-
-## Infrastructure (Supabase) — jak to spiąć bez “pół-transakcji”
-
-Problem: aktualizacja `ranking_history` + recompute `players.score` to kilka operacji.
-
-Rekomendacja: docelowo zrobić to jako **SQL funkcję (RPC)** w Postgres:
-- `upsert_ranking_history_for_match(...)`
-- `recompute_player_score(...)`
-
-Na MVP (bez RPC) możemy:
-- robić sekwencję operacji w Supabase i zaakceptować brak transakcyjności,
-  bo to admin-only flow i mamy możliwość ponownego recompute.
-
-Docelowe RPC ma sens, bo:
-- edycja starego meczu wymaga spójnego “replay”
-- unikamy stanów pośrednich w `players.score`
-
----
-
-## Presentation
-
-Na MVP: brak osobnej strony.
-
-Później:
-- w Player Details pokazujemy wykres/rozbicie (legacy `PlayerDetailPage` ma już “ranking history graph”),
-  ale to będzie osobna iteracja po wdrożeniu logiki.
-
----
-
-## Iteracyjny plan implementacji
-
-### Etap A — Minimalna integracja z meczami (US-012 happy path)
-- po `UpdateMatchScore` wywołujemy `ApplyMatchScoreToPlayersUseCase`
-- generujemy wpisy `ranking_history` dla graczy w meczu
-- przeliczamy `players.score` dla tych graczy
-
-### Etap B — Obsługa edycji wyniku starszego meczu
-- update istniejących wpisów `ranking_history` dla `(player_id, match_id)`
-- pełny recompute `previous_rating/new_rating` i `players.score`
-
-### Etap C — Przygotowanie pod Player Details
-- `GetPlayerRankingHistoryUseCase` + mapowanie do UI
-
-### Etap D — RPC / spójność (opcjonalnie, ale docelowo)
-- migracja z funkcją SQL + ewentualny trigger/constrainty
-
----
-
-## Otwarte punkty (do doprecyzowania przy implementacji)
-
-- Porządek replay:
-  - czy replay opieramy o `matches.created_at` (MVP),
-  - czy dodajemy `matches.played_at` i replay po `played_at` (bardziej poprawne długofalowo).
-- Jak traktujemy `score_type = cancelled/walkover`:
-  - czy generuje wpisy `ranking_history`, czy pomijamy.
+## 8. Ograniczenia i status (opcjonalnie, ale zalecane)
+- Brak osobnego ekranu/zakladki dedykowanej tylko historii rankingu; historia jest czescia `PlayerDetailsPage`.
+- Brak atomowej transakcji DB/RPC dla operacji typu "update wpisu historii + update players.score"; operacje sa wykonywane sekwencyjnie.
+- Brak pelnego recompute calej historii gracza po zmianie starego wyniku; obecny flow stosuje roznice delty (`newDelta - oldDelta`) do biezacego rankingu.
+- Kolumna `ranking_history.match_score` istnieje w DB i encji, ale aktualny kod jej nie zapisuje.
+- Wykres historii opiera sie na `baseRanking + suma(change)`; nie renderuje osi czasu i nie wykorzystuje bezposrednio pola `ranking` jako punktow wykresu.
+- Brak dedykowanych testow SQL i testow Flutter skoncentrowanych wylacznie na `ranking_history`.

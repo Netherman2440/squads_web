@@ -1,434 +1,224 @@
+# Draft - dokumentacja feature (stan aktualny)
 
-### Draft — plan implementacji (US-010…US-011)
+Stan na: **24 lutego 2026**
 
-Ten dokument opisuje **plan wdrożenia featuru Draft** (generowanie propozycji drużyn
-oraz utworzenie meczu z wybranej propozycji), zgodnie z ustaleniami w
-`.ai/features/matches.md`:
+## 1. Cel i zakres
+Feature `draft` odpowiada za:
+- wybor puli zawodnikow do losowania skladu,
+- wygenerowanie i przeglad propozycji podzialu skladu,
+- manualne przesuwanie zawodnikow miedzy stronami draftu,
+- utworzenie lub aktualizacje meczu na bazie wybranej propozycji,
+- zapis/odczyt payloadu draftu powiazanego z meczem.
 
-- Flow zaczyna sie na `/squads/:squadId/matches/draft` (wybor graczy) i konczy na `/squads/:squadId/matches/create` (podglad propozycji + finalizacja).
-- Draft korzysta z istniejacych encji **`Player`** (bez `MatchPlayer`).
-- Drafty **nie sa zapisywane w DB** (to nadal obiekt tymczasowy/obliczeniowy).
-- Algorytm jest **deterministyczny** (bez seed/losowosci).
-- Stan w UI: **Riverpod + AsyncValue + AsyncValue.guard** (jak w `PlayersNotifier`).
+Zakres obejmuje warstwy `domain`, `application`, `infrastructure` i `presentation` w `app/lib/features/draft` oraz tabele `drafts`/`draft_payloads` w Supabase.
 
----
+Ten dokument jest source of truth dla flow draftu, algorytmow i persystencji payloadu draftu. W `matches.md` draft jest opisywany tylko przez punkty styku.
 
-## Stories (źródło: `prd.md` US-010, US-011)
+## 2. Co jest zaimplementowane
 
-### US-010: Draft zbalansowanych drużyn
-- “Mogę swobodnie dodawać i usuwać graczy do draftu.”
-- “Z wybranej puli graczy losowanych jest do 20 propozycji…”
-- “Propozycje są posortowane od najlepszej do najgorszej.”
-- “Propozycje są deterministyczne, można je odtworzyć.”
+### 2.1 Wybieranie zawodnikow do draftu
+Ekran: `DraftSelectionPage`
+- laduje zawodnikow skladu przez `GetSquadPlayersUseCase`,
+- pokazuje dwie listy: `Selected players` i `Available players`,
+- obsluguje wyszukiwarke po nazwie i czyszczenie selekcji,
+- pozwala przelaczac tryb `Gra ze zmianami` (`playWithSubstitute`),
+- uruchamia draft od minimum 2 wybranych zawodnikow.
 
-### US-011: Utworzenie meczu z draftu
-- “Wybór propozycji tworzy mecz z przypisanymi drużynami.”
+### 2.2 Tworzenie meczu przed generowaniem draftu
+W `DraftSelectionPage`:
+- gdy nie ma `matchId`, najpierw wywolywany jest `CreateMatchController.createMatch` z pustymi skladami,
+- do meczu zapisywane sa `rankingHistoryPlayerIds` (wybrane ID graczy),
+- po sukcesie nastepuje przejscie do ekranu wynikow draftu (`matchDraft`) z `matchId`.
 
-Referencja UI (legacy):
-- `DraftPage` generuje drafty i przechodzi do `CreateMatchPage`.
-- `CreateMatchPage` pokazuje jedną propozycję naraz, ma strzałki lewo/prawo,
-  reset zmian przy przełączeniu, edycję składów i przycisk “Create Match”.
+### 2.3 Generowanie propozycji draftu
+Stan: `DraftSessionNotifier`
+- pobiera zawodnikow skladu,
+- wybiera algorytm (`combinatory` lub `greedy`) zaleznie od liczby zawodnikow,
+- generuje do 20 propozycji (limit domyslny repozytorium),
+- pobiera macierz win-rate par graczy przez RPC `get_player_pair_win_rates`,
+- wylicza `homeWinProbability` jako srednia wartosci head-to-head home vs away.
 
----
+### 2.4 Odczyt zapisanego draftu dla meczu
+Scenariusz `matchId` bez `selectedPlayerIds`:
+- `GetMatchDraftUseCase` pobiera zapis z `drafts` + `draft_payloads`,
+- jesli payload istnieje i status to `completed`, propozycje sa odtwarzane do `Draft`,
+- jesli payload nie istnieje, stan jest regenerowany z `ranking_history`/druzyn meczu,
+- jesli status to `error`, UI dostaje blad walidacyjny.
 
-## Routing i integracja z Matches
+### 2.5 Ekran wynikow draftu i finalizacja
+Ekran: `DraftResultsPage`
+- pokazuje nawigator propozycji (`Draft i of N`),
+- pokazuje ranking home/away po korekcie `effectiveTeamRanking`,
+- wspiera drag & drop zawodnikow miedzy panelami home/away,
+- zapisuje wynik jako `Create Match` (nowy mecz) lub `Update Match` (istniejacy mecz),
+- po zapisie przechodzi do `MatchDetailsPage`.
 
-Docelowe trasy (ustalone):
-- `/squads/:squadId/matches/draft`
-  - ekran wyboru graczy (available/selected) + search + akcja przejscia do draftu.
-  - tutaj prowadzi przycisk `+` z `/squads/:squadId/matches`.
-- `/squads/:squadId/matches/create`
-  - ekran propozycji draftu z mozliwoscia edycji rosterow i przyciskiem `Create Match`.
-  - korzysta z wyniku `createDraftUseCase` dla przekazanych graczy.
+## 3. Routing
+Definicje tras sa w `app/lib/core/app_router.dart`:
+- `/squads/:squadId/matches/draft` -> `DraftSelectionPage` (`AppRoute.draftSelection`)
+- `/squads/:squadId/matches/create` -> `DraftSelectionPage` (`AppRoute.draftCreate`)
+- `/squads/:squadId/matches/:matchId/draft` -> `DraftResultsPage` (`AppRoute.matchDraft`)
 
-Kontrakt nawigacji i odpowiedzialnosci:
-- `matches/draft` po kliknieciu "Generate draft" przekazuje `squadId` oraz `selectedPlayerIds` (IDs, a odczyt Playerow robimy z providerow Players) do `matches/create`.
-- `matches/create` po "Create Match" wywoluje `CreateMatchUseCase` (Matches) z aktualnym stanem obu list i po sukcesie przechodzi do `/squads/:squadId/matches/:matchId`.
-- Feature Draft konczy sie na wyborze finalnego zestawu druzyn; przejscie do szczegolow meczu jest juz czescia featuru Matches.
----
+Nawigacja do feature:
+- `SquadMatchesPage` (FAB `+`) prowadzi do `AppRoute.draftCreate`,
+- `MatchDetailsPage`:
+  - `Wylosuj jeszcze raz` -> `AppRoute.draftCreate` z `selectedIds` i `matchId`,
+  - `Wybierz druzyny` -> `AppRoute.draftCreate`,
+  - `Podglad propozycji` -> `AppRoute.matchDraft`.
 
-## Model domenowy (Draft)
+## 4. DB i RLS (zbiorczo)
 
-Draft to czysta logika generowania propozycji.
+### 4.1 Tabele
+Migracja: `supabase/migrations/20260219110000_create_drafts_tables.sql`
 
-### Encje
-- `Draft`
-  - `homePlayers: List<Player>`
-  - `awayPlayers: List<Player>`
-  - `homeTotalScore: double` (suma `player.score`)
-  - `awayTotalScore: double`
+`drafts`:
+- `draft_id` (PK, `gen_random_uuid()`),
+- `squad_id` (FK -> `squads`, `on delete cascade`),
+- `match_id` (FK -> `matches`, `on delete cascade`, `unique`),
+- `status` (`completed`/`error`),
+- `team_count` (`2..4`),
+- `proposals_count` (`>= 0`),
+- `error_message`, `created_at`, `updated_at`.
 
+Indeksy:
+- `drafts_squad_idx (squad_id)`,
+- `drafts_created_at_idx (created_at desc)`.
 
----
+`draft_payloads`:
+- `draft_id` (PK + FK 1:1 -> `drafts.draft_id`, `on delete cascade`),
+- `proposals` (`jsonb`, musi byc tablica),
+- `win_rate_matrix` (`jsonb`, musi byc obiekt),
+- `created_at`, `updated_at`.
 
-## `DraftRepository` (Domain) i implementacja (Infrastructure)
+### 4.2 RLS
+`drafts`:
+- `Members can read drafts`: odczyt dla publicznego skladu lub czlonka (`owner/admin/member`),
+- `Admins can insert/update/delete drafts`: zapis tylko `owner/admin`.
 
-### Interfejs domenowy
-- `Future<List<Draft>> createDraft({required List<Player> players, int limit = 20})`
+`draft_payloads`:
+- `Members can read draft payloads`: odczyt po relacji do `drafts` + `squads`,
+- `Admins can insert/update/delete draft payloads`: zapis tylko `owner/admin`.
 
-### Infrastructure: brak DB
-Nie tworzymy tabel i migracji. Implementacja to lokalny “engine”:
-- `DeterministicDraftEngine` / `LocalDraftRepository`
-  - wejście: lista `Player` (z aktualnymi `score`)
-  - wyjście: lista `Draft`
+### 4.3 RPC/Funkcje SQL uzywane przez feature
+- `public.get_player_pair_win_rates(p_player_ids uuid[])`
+  - migracja: `supabase/migrations/20251202123000_add_player_pair_win_rates_function.sql`,
+  - zwraca pary `(player_id, opp_player_id, win_rate)`,
+  - fallback `0.5` gdy brak historii.
 
-### Deterministyczny algorytm (MVP/target)
+### 4.4 Testy SQL
+- `supabase/tests/drafts_table_test.sql`
+- `supabase/tests/draft_payloads_table_test.sql`
 
-Wymaganie: brak losowości, powtarzalność wyników.
+To sa testy smoke (istnienie tabel/constraintow), bez pelnej walidacji polityk RLS.
 
-1) **Normalizacja wejścia**
-- sortujemy wejściowych graczy deterministycznie (np. po `playerId`)
+## 5. Architektura
 
-2) **Limit wejścia**
-- dla N > 16: zwracamy błąd/Failure i UI pokazuje komunikat o limicie
-  (zachowanie jak w story o limicie; szczegóły UX w Presentation)
+### 5.1 Domain
+Encje:
+- `draft.dart` (`Draft`, `DraftTeam`, helpery `homePlayers`/`awayPlayers`),
+- `draft_rule.dart` (`DraftRuleType.together`, `DraftRuleType.against`),
+- `normalized_draft_rule.dart`,
+- `draft_proposal.dart` (wynik scoringu i tie-break),
+- `head_to_head_win_rate.dart`,
+- `stored_draft_payload.dart`.
 
-3) **Generowanie podziałów**
-- przy N parzystym: rozmiary drużyn \(k = N/2\)
-- przy N nieparzystym: dopuszczamy nierówne rozmiary drużyn i zmieniamy sposób
-  liczenia “mocy” drużyny do oceny balansu (szczegóły niżej)
+Repozytoria:
+- `DraftRepository`,
+- `DraftPersistenceRepository`,
+- `DraftStatsRepository`.
 
-Technicznie:
-- enumerujemy kombinacje wyboru \(k\) graczy do home team,
-  away team to “reszta”
-- aby uniknąć duplikatów (home/away swap):
-  - kanonizacja: np. wymagamy, by “najmniejszy playerId” zawsze należał do home
+### 5.2 Application
+Use case:
+- `CreateDraftUseCase` (walidacja max graczy + delegacja do repozytorium),
+- `GetPlayerPairWinRatesUseCase`,
+- `SaveMatchDraftUseCase`,
+- `GetMatchDraftUseCase`.
 
-4) **Scoring propozycji**
-- `homeTotalScore` i `awayTotalScore` trzymamy w obiekcie `Draft`.
-- Do sortowania liczymy “effective total” (wartość tymczasowa):
-  - **N parzyste**: `effective = sum(player.score)`
-  - **N nieparzyste**: `effective = sum(player.score) - min(player.score)`
-    (nie bierzemy pod uwagę najsłabszego zawodnika w drużynie)
-- “Balance” liczymy jako wartość tymczasową do rankingu:
-  - `balance = abs(effectiveHome - effectiveAway)`
+Providery:
+- osobne providery dla repo `combinatory` i `greedy`,
+- `createDraftUseCaseProvider`, `combinatoryCreateDraftUseCaseProvider`,
+  `greedyCreateDraftUseCaseProvider`.
 
-5) **Sortowanie i tie-break**
-- sort: `balance ASC` (liczone tylko na potrzeby rankingu, nie przechowujemy pola diff)
-- tie-break deterministyczny:
-  - np. lista ID w home jako string (zawsze posortowana) `ASC`
+### 5.3 Infrastructure
+`CombinatoryDraftRepository`:
+- przeglad wszystkich partycji zespolow przez maski bitowe + Gosper,
+- wsparcie `teamCount` od 2 do 4,
+- scoring = odchylenie + kara za pozycje + kara za reguly,
+- deterministyczne sortowanie (score, tieBreaker, signature).
 
-6) **Top-N**
-- zwracamy do `limit` (domyślnie 20)
+`GreedyDraftRepository`:
+- iteracyjny heurystyczny przydzial graczy (ratio `ranking / weight`),
+- dynamiczny budzet iteracji, seed i deduplikacja sygnatur,
+- wsparcie `teamCount` od 2 do 4 i regul `together/against`.
 
-Złożoność:
-- dla 16 graczy: \(C(16,8)=12870\) propozycji — OK na client-side.
+`SupabaseDraftPersistenceRepository`:
+- upsert do `drafts` (`onConflict: match_id`) i `draft_payloads` (`onConflict: draft_id`),
+- serializacja propozycji jako `teams -> [player_id]`,
+- metadane seeda w pierwszym elemencie `proposals` pod kluczem `_meta.seed`.
 
-### MVP fallback (jeśli chcemy szybko UI)
-Na start możemy zwrócić 1–3 propozycje:
-- split na pół po sortowaniu (lub prosty “zig-zag” po score),
-żeby szybciej spiąć UX. Docelowo jednak trzymamy algorytm powyżej.
+`SupabaseDraftStatsRepository`:
+- wywolanie RPC `get_player_pair_win_rates`.
 
----
-
-## Use case’y (Application)
-
-- `CreateDraftUseCase`
-  - `execute({required List<Player> players}) -> List<Draft>`
-  - wywołuje `DraftRepository.createDraft(...)`
-
-> `CreateMatchUseCase` należy do featuru Matches; Draft tylko go używa w UI.
-
----
-
-## Presentation (UI)
-
-### 1) `/matches/draft` - DraftSelectionPage
-Cel: odtworzyc legacy UX wyboru zawodnikow przed wygenerowaniem draftu.
-- `available players` + `selected players` (tap/drag pomiedzy listami)
-- search dla listy available
-- layout responsywny: narrow -> selected na gorze, available na dole; wide -> available po lewej, selected po prawej
-- AppBar: tytul "Draft" + akcja "Generate draft" aktywna tylko gdy `selectedPlayerIds.isNotEmpty`
-
-Stan i logika:
-- `DraftSelectionController extends Notifier<AsyncValue<DraftSelectionState>>`
-  - `selectedPlayerIds`
-  - `searchQuery`
-  - `availablePlayers` (najlepiej reuse `playersNotifierProvider` / `GetSquadPlayersUseCase`)
-  - metody: `loadPlayers(squadId)`, `togglePlayer(playerId)` (walidacja limitu <= 16), `setSearchQuery(...)`, `clearSelection()`
-  - `generateDraft()` -> `context.go('/squads/$squadId/matches/create', extra: selectedPlayerIds);`
-- UI pokazuje komunikat limitu >16 jeszcze przed przejsciem na kolejny ekran
-
-### 2) `/matches/create` - DraftResultsPage
-Inspiracja: legacy `CreateMatchPage`.
-- strzalki lewo/prawo zmieniaja propozycje
-- przy zmianie propozycji resetujemy edycje do oryginalu
-- dwa scrollowalne sklady obok siebie (wide) lub jeden pod drugim (narrow)
-- `Create Match` bierze aktualny stan kolumn
-
-Struktura:
-- AppBar: tytul "Draft" + akcja "Create Match"
-- Gora: nawigacja propozycji: `<< [Draft i z N] >>`
-- Nad rosterami: podsumowanie `Home total` i `Away total`
-- Body: dwa panele, drag & drop, wypis graczy
-
+### 5.4 Presentation
 Stan:
-- `DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>>`
-  - `proposals: List<Draft>`
-  - `selectedIndex: int`
-  - `home: List<Player>`
-  - `away: List<Player>`
-  - brak edycji nazw/kolorow w MVP
-  - `load({required squadId, required selectedPlayerIds})` -> `AsyncValue.guard(() => createDraftUseCase.execute(players: ...))` i inicjalizuje `home/away` stanem z proposal[0]
-  - `selectProposal(index)` resetuje `home/away`
-  - `movePlayer(playerId, toSide)` / `swapPlayer(...)`
-  - `createMatch()` -> `CreateMatchUseCase.execute(...)`, po sukcesie: `context.go('/squads/$squadId/matches/$matchId')` + invalidacja listy (`squadMatchesProvider`)
-
-Obsluga bledow i empty state:
-- `AsyncValue.error`: pokazujemy `SelectableText.rich` (czerwony tekst)
-- `proposals.isEmpty`: komunikat "Brak propozycji - wroc do /squads/:squadId/matches/draft"
-- limit >16: dedykowany komunikat (rowniez gdy stan wejscia zostal podmieniony na wiekszy)
-
-Uprawnienia:
-- oba ekrany dostepne tylko dla owner/admin (spojne z Matches).
----
-
-## Integracja z "dodawaniem/odejmowaniem graczy do draftu" (US-010)
-
-Ta czesc jest realizowana glownie w `/matches/draft`:
-- tam uzytkownik dobiera pule graczy (selected/available) i pilnuje limitu + walidacji
-- `/matches/create` jest juz "wynikiem" dla przygotowanej puli (edycja rosterow + Create Match)
-
-Opcjonalnie (nie MVP):
-- na `/matches/create` dodajemy akcje "Back to selection" jezeli chcemy latwo zmienic pule bez recznego cofania.
----
-
-## Iteracyjny plan implementacji
-
-### Etap A - `/matches/draft` (selection)
-- routing `/matches/draft`
-- `DraftSelectionController` + ladowanie graczy z Players
-- walidacja limitu <=16 i akcja "Generate draft" przekazujaca IDs do `/matches/create`
-
-### Etap B - `/matches/create` skeleton (bez DnD)
-- routing `/matches/create`
-- `DraftSessionNotifier` + ladowanie proposals
-- nawigacja strzalkami, reset zmian, stub `Create Match`
-
-### Etap C - Deterministyczny engine + top 20
-- implementacja enumeracji kombinacji + sort/tie-break
-- limit >16 + komunikat (spojny miedzy ekranami)
-
-### Etap D - Edycja skladow (drag & drop)
-- przenoszenie zawodnikow miedzy listami
-- walidacja: gracz nie moze byc w obu teamach
-
-### Etap E - Integracja `Create Match`
-- wywolanie `CreateMatchUseCase` z aktualnymi rosterami
-- invalidacja listy matches + nawigacja do `/matches/:matchId`
----
-
-## Ustalenia (po review)
-
-- Dopuszczamy **nieparzystą** liczbę graczy.
-  - Ranking draftów liczymy na “effective total”, gdzie z sumy drużyny
-    odejmujemy wynik najsłabszego zawodnika (żeby wyrównać wpływ dodatkowego gracza).
-- W MVP **nie edytujemy** `teamAName/teamBName` na draft screenie.
-  - Domyślne nazwy: “FC Biali” i “Czarni United”.
-  - Edycja nazw/kolorów dopiero później w match view (US-013).
-
-
-
-
------
-
-DRAFT REFACTOR:
-
-Musimy dostosować draft do zwiększonych potrzeb:
-
-1. Użytkownik chce dzielić daną pulę graczy na więcej równych drużyn niż tylko dwie .
-
-2. Użytkownik chce aby przy wyborze były brane pod uwagę pozycje zawodników.
-
-3. Użytkownik chce móc zdecydować że jacyś zawodnicy muszą być razem w składzie a inni muszą być przeciwko sobie
-
-// NEwton + Gosper
-//todo: gosper hack (iterowanie przez symbole newtonowskie zamiast przez 2^N)
-
-Żeby ograniczyć ilość przeglądanych opcji w combinatory service chcemy ograniczyć się do gosper hack.
-
-Mając wszystkie kombinacje następnym krokiem jest ocena składów.
-
-Definicje
-team score - sumaryczny ranking wszystkich graczy w danej drużynie (z uwzględnieniem rezerwy)
-
-avg team score - ranking "idealnej drużyny", czyli all players score / teamCount
-
-avg player - średni ranking w danym meczu
-
-waga drużyny:
-To dzięki niej będziemy w stanie wziąć pod uwagę pkt. 2 i 3 w user stories.
-Obliczana jest na podstawie doboru wszystkich zawodników do danej drużyny.
-Na wejściu do algorytmu otrzymujemy dwie listy z zasadami:
-- lista z grupami zawodników którzy muszą być RAZEM
-- lista z grupami zawodników którzy muszą być PRZECIWKO SOBIE
-
-
-
-Każdy zawodnik bazowo ma wagę 1.
-Za każdą niespełnioną regułę durzycaym 100 do wagi całego podziału?
-
-edge case: mam w regule 3 graczy, wszyscy chcą być przeciwko sobie, a mam tylko dwie drużyny, 
-wtedy dla jednego gracza reguła jest spełniona - jemu się to podoba
-solution: - blokujemy designem dodawanie takich reguł. Jeśli tworzymy podział na dwie drużyny do reguł 'przeciwko' można dodać maksymalnie 2 graczy.
-Podobnie ograniczamy reguły 'razem' - w jednej regule może być maksymalnie tylko zaowdników ile ostatecznie będzie w jednym składzie - czyli np. jak wybieramy 3 skład y i mamy 15 zawodników to w jednej regule razem może byc tylko 5 graczy.
-
-Do tego pozycje.
-Jeśli w danej drużynie znajduje się już zawodnik z daną pozycją (również bierzemy pod uwagę 'none' czyli brak pozycji jako pozycję)
-wtedy waga tego zawodnika rośnie o tyle ilu już jest zawodników na takie pozycji
-
-np. pierwszy bramkarz w składzie do waga 1, drugi to 2 trzeci to 3 itd. Podbnie - pierwszy gracz bez pozycji to waga 1, drugi 2 itd.
-
-Ocena podziału to:
-
-- suma odchyłu team score od średniej [ abs( team A score - avg team score) + aabs(team B score - avg team score) + ... ]
-POMNOŻONA RAZY:
--  sumaryczna waga wszystkich drużyn
-
-w przypadku remisów decyduje:
-- suma kwadratów różnic między graczami na poszczególnych pozycjach w rankingu:
-(ranking najlepszego gracza A - ranking najlepszego gracza B)^2 + (ranking drugiego gracza A - ranking drugiego gracza B)^2 + ...
-
-
-Przechowujemy tylko current 20 najlepszych zestawień. - Jeśli jakieś jest słabe to skip i lecimy dalej
-
-
-
----
-
-W taki sposób jesteśmy gotowi na:
-- więcej drużyn
-- pozycje graczy
-- grupy reguł
-
-
-Chce żebyś zaimplementował ten algorytm w `app/lib/features/draft/infrastructure/repositories/combinatory_draft_repository.dart`
-Potrzeba też dostosować od razu metodę createDraft żeby przyjmowała też parametr liczby drużyn i listę reguł.
-
-co do reguł też potrzebujemy jakiegoś sposobu na przechowywanie ich. 
-
-Proponuję taką strukturę:
-
-enum DraftRuleType:
-- together
-- against
-
-class DraftRule
-DraftRuleType type
-list<playerId> playerIds
-
-W taki sposób przekazujemy list<Rule>
-
-
-----
-
-Tworzenie skomplikowanych draftów trwa długo, ale na ten moment **nie przenosimy logiki do RPC**.
-
-Zostawiamy algorytm w:
-- `app/lib/features/draft/infrastructure/repositories/combinatory_draft_repository.dart`
-
-I dokładamy:
-- trwały zapis wyniku draftu do DB (payload 20 propozycji),
-- powiązanie draftu z meczem.
-
----
-do tego w matches i tournament dodajemy kolumnę `draft_id`
-
-create match use case:
-- tworzy mecz,
-- tworzy wpis draftu powiązany z `match_id`,
-- liczy combinatory draft lokalnie (jak teraz),
-- zapisuje wynik draftu do DB,
-- zwraca mecz.
-
-UI:
-
-/matches/draft -- zmiana adresu na matches/create
-
-Po wybraniu zawodników prowadzi od razu do utworzonego meczu
-
-/matches/id
-
-jeśli brakuje teams zmieniamy widok:
-
-zaraz pod title meczu dajemy opcję przejrzenia draftu - kliknięcie przenosi nas do
-
-
-/matches/id/draft
-przejście jest możliwe tylko jeśli draft ma wynik zapisany w DB
-możemy tutaj przeglądać gotowe drafty - tutaj wyświetlamy stary ekran matches/create
-
-
-
-## Ustalenia implementacyjne (2026-02-19) - aktualizacja
-
-### 1) Backend
-- Bez RPC dla obliczeń draftu.
-- Algorytm zostaje w `CombinatoryDraftRepository`.
-- Zmieniamy tylko persistence: wynik draftu zapisujemy do DB.
-- `playerIds` zostają formatem w regułach (nie całe obiekty graczy).
-
-### 2) Tryb działania
-- Flow pozostaje synchroniczny z perspektywy aplikacji:
-  - liczymy draft lokalnie,
-  - zapisujemy rezultat,
-  - pokazujemy mecz.
-- Rezygnujemy z jobów async, pollingu i osobnych endpointów statusowych.
-
-### 3) Relacje i nadpisywanie
-- Relacja `match` <-> `draft` to `1:1`.
-- `redraft` dla meczu nadpisuje aktualny draft (ten sam rekord draftu / upsert).
-
-### 4) Zakres domeny match
-- Domena meczu bez zmian (nadal model 2 drużyn: home/away).
-- Obsługa draftu dla >2 drużyn będzie wykorzystana później przy turniejach.
-
-### 5) Walidacje
-- `teamCount` musi być w zakresie `2..4`.
-- `playersCount >= teamCount`.
-
-### 6) Obsługa błędów
-- Jeśli obliczenie lub zapis draftu się nie uda, mecz nadal istnieje.
-- UI pokazuje możliwość ponowienia draftu.
-
-### 7) Payload draftu
-- `payload` przechowuje `json array` 20 propozycji draftów.
-
-### 8) Routing (cutover)
-- Usuwamy stare route'y draftowe.
-- Docelowy flow:
-  - tworzenie draftu startuje z flow tworzenia meczu,
-  - wynik draftu oglądamy pod `/matches/:id/draft`.
-
----
-
-## TODO: schemat DB (miejsce na Twój input)
-
-Do uzupełnienia przez autora:
-- dokładne kolumny i typy tabel draftowych,
-- indexy i FK,
-- format `payload` (szczegóły JSON),
-- zasady nadpisywania draftu przy `redraft`.
-
-drafts:
-draft_id
-squad_id
-match_id (1:1 z meczem)
-status (opcjonalnie: completed/error)
-proposals (int)
-
-draft_payloads:
-draft_id
-payload
-tablica z prawdopodobieństwem?
-
-## TODO: dodatkowy pomysł DB (miejsce na dopisanie)
-
-Opis pomysłu:
-- przy errorze draftu moglibyśmy stracić informacje o tym jacy gracze są w meczu - trzeba zatem przed stworzeniem draftu utworzyć mecz i dla każdego gracza w meczu dodać ranking history entry (tak jak już się to dzieje w create match use case)
-jednak teraz trzeba to zrobić przed draftem.
-Wpływ na migracje:
-- ... żaden
-
-Wpływ na API:
-- ... żaden
+- `DraftSelectionController` + `DraftSelectionState`,
+- `DraftSessionNotifier` + `DraftSessionState`.
+
+Widoki:
+- `draft_selection_page.dart`,
+- `draft_results_page.dart`,
+- `draft_draggable_player_tile.dart`.
+
+UI operuje na modelu home/away (`DraftSessionState.home`, `away`), mimo ze `Draft` wspiera wiele druzyn.
+
+## 6. Integracje / punkty styku
+- `players`:
+  - `GetSquadPlayersUseCase`,
+  - `rankingRepositoryProvider.getMatchRankingHistory` (fallback odtwarzania draftu).
+- `matches`:
+  - `CreateMatchController.createMatch` i `updateMatch`,
+  - `GetMatchUseCase` (fallback do graczy meczu),
+  - `matchDetailsProvider` i `squadMatchesProvider` invalidowane po zapisie.
+  - Punkty styku po stronie consumer: [matches.md](./matches.md).
+- `core`:
+  - `effectiveTeamRanking` do obliczen rankingowych i UI,
+  - `AppConfig` (`maxPlayersPerMatch`, `greedyDraftThresholdPlayers`, `greedyDraftVariantChecks`).
+- `supabase`:
+  - tabele `drafts`, `draft_payloads`,
+  - RPC `get_player_pair_win_rates`.
+
+## 7. Szybka mapa plikow
+- root feature: `app/lib/features/draft/`
+- domain:
+  - `app/lib/features/draft/domain/entities/*.dart`
+  - `app/lib/features/draft/domain/repositories/*.dart`
+- application:
+  - `app/lib/features/draft/application/create_draft_use_case.dart`
+  - `app/lib/features/draft/application/get_match_draft_use_case.dart`
+  - `app/lib/features/draft/application/save_match_draft_use_case.dart`
+  - `app/lib/features/draft/application/get_player_pair_win_rates_use_case.dart`
+- infrastructure:
+  - `app/lib/features/draft/infrastructure/repositories/combinatory_draft_repository.dart`
+  - `app/lib/features/draft/infrastructure/repositories/greedy_draft_repository.dart`
+  - `app/lib/features/draft/infrastructure/repositories/supabase_draft_persistence_repository.dart`
+  - `app/lib/features/draft/infrastructure/repositories/supabase_draft_stats_repository.dart`
+- presentation:
+  - `app/lib/features/draft/presentation/pages/draft_selection_page.dart`
+  - `app/lib/features/draft/presentation/pages/draft_results_page.dart`
+  - `app/lib/features/draft/presentation/controllers/draft_session_notifier.dart`
+  - `app/lib/features/draft/presentation/controllers/draft_selection_controller.dart`
+- pliki poza feature:
+  - `app/lib/core/app_router.dart`
+  - `app/lib/features/matches/presentation/pages/squad_matches_page.dart`
+  - `app/lib/features/matches/presentation/pages/match_details_page.dart`
+  - `supabase/migrations/20260219110000_create_drafts_tables.sql`
+  - `supabase/migrations/20251202123000_add_player_pair_win_rates_function.sql`
+  - `supabase/tests/drafts_table_test.sql`
+  - `supabase/tests/draft_payloads_table_test.sql`
+
+## 8. Ograniczenia i status
+- Aktualny flow UI jest dwudruzynowy (home/away), mimo ze repozytoria draftu obsluguja `teamCount` do 4.
+- UI nie wystawia konfiguracji `teamCount` ani regul `DraftRule` (`together`/`against`), chociaz modele i algorytmy to wspieraja.
+- `DraftSelectionController.validateSelection()` obecnie tylko czysci komunikat; brak dodatkowych walidacji biznesowych.
+- `AppRoute.draftCreate` i `AppRoute.draftSelection` prowadza do tego samego ekranu (`DraftSelectionPage`).
+- Draft pages nie maja wlasnego route-guardu roli; kontrola dostepu opiera sie glownie o miejsca wejscia w feature (`matches` UI) oraz RLS po stronie DB.

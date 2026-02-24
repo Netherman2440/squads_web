@@ -1,196 +1,195 @@
-## Plan implementacji feature'u Players
+# Players - dokumentacja feature (stan aktualny)
 
-### 1. Cel feature'u
-- **Opis biznesowy**: Zarządzanie zawodnikami (`players`) w obrębie konkretnego składu (`squad`): lista, filtrowanie/sortowanie oraz CRUD dla uprawnionych ról (Admin/Owner).
-- **Powiązane wymagania**:
-  - **UI**: `PlayersPage` pod ścieżką `/squads/:squadId/players`, lista graczy z filtrem/sortem, pozycja, `score`, `base_score`, licznik graczy, komponenty: `PlayersListWidget`, `SearchBar`, `SortMenu`, `CreatePlayerDialog`.
-  - **PRD**: US-005 – CRUD graczy w składzie, ograniczenie do ról Admin/Owner, walidacja duplikatów nazw w obrębie składu (best effort).
-  - **DB**: Tabela `players` (`player_id`, `squad_id`, `name`, `position`, `base_score`, `score`, `created_at`).
+Stan na: **24 lutego 2026**
 
-### 2. Struktura katalogów feature'u `players`
-Wszystko w `app/lib/features/players`:
+## 1. Cel i zakres
+Feature `players` odpowiada za:
+- zarzadzanie lista zawodnikow w skladzie,
+- przeglad szczegolow zawodnika,
+- historie rankingu zawodnika,
+- statystyki zawodnika i head-to-head,
+- liste meczow zawodnika.
 
-- **domain/**
-  - **entities/**
-    - `player.dart` – encja domenowa gracza.
-  - **repositories/**
-    - `player_repository.dart` – interfejs repozytorium graczy.
+Zakres obejmuje warstwy `domain`, `application`, `infrastructure` i `presentation` w `app/lib/features/players`.
 
-- **application/**
-  - **usecases/**
-    - `get_squad_players_usecase.dart`
-    - `get_player_details_usecase.dart` (**TODO** – pusta implementacja logiki).
-    - `add_player_usecase.dart`
-    - `update_player_usecase.dart`
-    - `delete_player_usecase.dart`
+## 2. Co jest zaimplementowane
 
-- **infrastructure/**
-  - **models/**
-    - `player_model.dart` – DTO ↔ Supabase (`players` table), `@JsonSerializable(fieldRename: FieldRename.snake)`.
-  - **datasources/**
-    - `players_remote_data_source.dart` – niskopoziomowe wywołania Supabase.
-  - **repositories/**
-    - `player_repository_impl.dart` – implementacja `PlayerRepository` oparta na `PlayersRemoteDataSource`.
+### 2.1 Lista zawodnikow
+Ekran: `PlayersPage` (`/squads/:squadId/players`)
+- pobranie listy graczy dla skladu,
+- wyszukiwanie po nazwie,
+- sortowanie po rankingu i nazwie,
+- pull-to-refresh,
+- przejscie do szczegolow zawodnika po kliknieciu na tile.
 
-- **presentation/**
-  - **pages/**
-    - `players_page.dart` – główny widok PlayersPage (ścieżka `/squads/:squadId/players`).
-  - **controllers/**
-    - `players_notifier.dart` – `@riverpod` notifier z `AsyncValue` dla listy graczy.
-    - (opcjonalnie na później) `player_details_notifier.dart` – pod szczegóły gracza.
-  - **widgets/**
-    - `players_list_widget.dart` – lista/karty/tabela graczy.
-    - `players_search_bar.dart` – wyszukiwanie po nazwie.
-    - `players_sort_menu.dart` – sortowanie po pozycji / score / nazwie.
-    - `create_player_dialog.dart` – dialog do tworzenia gracza.
-    - `empty_players_state.dart` – widok pustej listy.
-    - `players_error_view.dart` – wrapper na błędy (`SelectableText.rich`).
+### 2.2 Dodawanie zawodnika
+Dialog: `CreatePlayerDialog`
+- pola: `name`, `position` (opcjonalne), `base ranking`,
+- slider `1..100` + pole tekstowe z synchronizacja,
+- podglad najblizszego slabszego i silniejszego gracza,
+- walidacja nazwy i duplikatu po stronie UI oraz constraint po stronie DB.
 
-### 3. Model domenowy i repozytorium
-- **Encja `Player` (`domain/entities/player.dart`)**:
-- Pola: `id` (UUID), `squadId` (UUID), `name` (String), `position` (String?), `baseScore` (int), `score` (double), `createdAt`.
-  - Immutable, `const` konstruktor, bez zależności od warstw niższych.
+### 2.3 Szczegoly zawodnika
+Ekran: `PlayerDetailsPage` (`/squads/:squadId/players/:playerId`)
+- profil zawodnika (nazwa, aktualny ranking, roznica do base),
+- wykres historii rankingu (`RankingHistoryGraphWidget`),
+- edycja nazwy (admin/owner),
+- reczna edycja rankingu (admin/owner),
+- usuwanie zawodnika (admin/owner),
+- sekcja nawigacyjna do:
+  - `Matches`,
+  - `Stats`,
+  - `Tournaments` (na razie placeholder "Coming soon").
 
-- **Interfejs repozytorium (`domain/repositories/player_repository.dart`)**:
-  - `Future<List<Player>> getSquadPlayers({required String squadId});`
-  - `Future<Player> getPlayer({required String playerId});`
-  - `Future<Player> addPlayer({required String squadId, required String name, String? position, int baseScore});`
-  - `Future<void> deletePlayer({required String playerId});`
-  - `Future<Player> updatePlayer({required String playerId, String? name, int? baseScore, double? score});`
-  - Zwracanie błędów poprzez `Failure` (z `core/error/failure.dart`); w warstwie presentation notifiery będą używać `AsyncValue.guard` do opakowywania operacji asynchronicznych.
+### 2.4 Mecze zawodnika
+Ekran: `PlayerMatchesPage` (`/squads/:squadId/players/:playerId/matches`)
+- lista meczow wyliczana na podstawie `ranking_history.match_id`,
+- render przez wspolny `MatchTile`.
 
-### 4. Warstwa infrastructure (Supabase)
-- **Supabase `SupabasePlayerRepository` (`infrastructure/repositories/supabase_player_repository.dart`)**:
-  - Bezpośrednia integracja z `SupabaseClient` z `core/global_dependencies.dart`.
-  - Operuje wyłącznie na encji domenowej `Player` – pomijamy osobne DTO / modele.
-  - Odpowiada za:
-    - Wywołania na tabeli `players` (`insert` / `select` / `update` / `delete`) z użyciem `from`, `eq` itd.
-    - Mapowanie `Map<String, dynamic>` ↔ `Player` bezpośrednio wewnątrz repozytorium.
-    - Obsługę i mapowanie błędów Supabase na `Failure` (w tym konflikt nazwy w obrębie `squad_id` na `Failure.duplicateName`).
-    - Respektowanie RLS (Admin/Owner) – błędy 401/403/itp. konwertowane na odpowiednie typy `Failure`.
+### 2.5 Statystyki zawodnika
+Ekran: `PlayerStatsPage` (`/squads/:squadId/players/:playerId/stats`)
+- kafelki statystyk agregowanych (`get_player_stats`),
+- tabela head-to-head (`get_player_head_to_head_stats`),
+- sortowanie kolumn w tabeli.
 
-### 5. Warstwa application – use case'y
-- **`GetSquadPlayersUseCase`**:
-  - Wejście: `squadId`.
-  - Wyjście: `List<Player>`.
-  - Używany przez `PlayersNotifier` przy init/refresh.
+## 3. Routing
+Definicje tras sa w `app/lib/core/app_router.dart`:
+- `/squads/:squadId/players` -> `PlayersPage`
+- `/squads/:squadId/players/:playerId` -> `PlayerDetailsPage`
+- `/squads/:squadId/players/:playerId/matches` -> `PlayerMatchesPage`
+- `/squads/:squadId/players/:playerId/stats` -> `PlayerStatsPage`
 
-- **`GetPlayerDetailsUseCase`**:
-  - Definicja klasy, wstrzyknięcie `PlayerRepository`, sygnatura metody `call`, ale **bez implementacji** (TODO – zaimplementujemy przy tworzeniu PlayersDetailsPage).
+## 4. Uprawnienia
 
-- **`AddPlayerUseCase`**:
-  - Wejście: `squadId`, `name`, `position?`, `baseScore`.
-  - Walidacje po stronie use case:
-    - Proste sprawdzenia (np. `name.isNotEmpty`), reszta na backendzie (constraint/409).
-  - Po sukcesie: zwrócenie nowego `Player` (lub tylko `void` + odświeżenie listy w notifierze).
+### 4.1 Widok UI
+- przycisk `Add Player` jest widoczny tylko dla `owner/admin`,
+- edycja nazwy/rankingu i usuwanie na details tylko dla `owner/admin`.
 
-- **`UpdatePlayerUseCase`**:
-  - Wejście: `playerId`, opcjonalnie `name`, `baseScore`, `score`.
-  - Implementacja w pełni, ale **nie używana jeszcze na `PlayersPage`**, tylko przygotowana pod przyszły `PlayerDetailsPage`.
+### 4.2 RLS (Supabase)
+- `players`: odczyt dla czlonkow/public, modyfikacja tylko `owner/admin`,
+- `ranking_history`: odczyt dla czlonkow/public, modyfikacja tylko `owner/admin`.
 
-- **`DeletePlayerUseCase`**:
-  - Wejście: `playerId`.
-  - Po sukcesie: notifier odświeża listę (`ref.invalidate` lub lokalny update stanu).
+Polityki sa w migracjach:
+- `supabase/migrations/20251201090400_create_players_table.sql`
+- `supabase/migrations/20251201090900_create_ranking_history_table.sql`
 
-### 6. Warstwa presentation – stan i notifiery
-- **`PlayersNotifier` (`presentation/controllers/players_notifier.dart`)**:
-  - `@riverpod` / `AsyncNotifier<List<Player>>`.
-  - Zależności: `GetSquadPlayersUseCase`, `AddPlayerUseCase`, `DeletePlayerUseCase`.
-  - API:
-    - `Future<void> loadPlayers(String squadId);`
-    - `Future<void> refreshPlayers();`
-    - `Future<void> addPlayer({...});`
-    - `Future<void> deletePlayer(String playerId);`
-  - Stan dodatkowy:
-    - Filtry/sortowanie (np. `searchQuery`, `sortOption`) – osobny notifier lub dodatkowe pola w stanie (np. dedykowana klasa `PlayersState` zamiast samego `List<Player>`).
-  - Obsługa:
-    - `AsyncValue.loading` / `AsyncValue.data` / `AsyncValue.error`.
-    - Błędy renderowane na UI przez `SelectableText.rich` w `PlayersErrorView`.
+## 5. Architektura (kod)
 
-- **(na później) `PlayerDetailsNotifier`**:
-  - `AsyncNotifier<Player>`, wykorzysta `GetPlayerDetailsUseCase` i `UpdatePlayerUseCase`.
+### 5.1 Domain
+- encje:
+  - `player.dart`
+  - `ranking_history_entry.dart`
+  - `player_stats.dart`
+  - `player_head_to_head_stat.dart`
+- repozytoria:
+  - `player_repository.dart`
+  - `ranking_repository.dart`
 
-### 7. Warstwa presentation – UI (`PlayersPage` i widżety)
-- **Routing**:
-  - Dodanie wpisu do konfiguracji routera (np. GoRouter) z path: `/squads/:squadId/players`.
-  - Ekstrakcja `squadId` z parametrów trasy, przekazanie do `PlayersNotifier`.
+### 5.2 Application (use case)
+- lista i CRUD:
+  - `get_squad_players_usecase.dart`
+  - `add_player_usecase.dart`
+  - `delete_player_usecase.dart`
+  - `get_player_details_usecase.dart`
+  - `update_player_name_usecase.dart`
+  - `update_player_position_usecase.dart`
+  - `update_player_ranking_usecase.dart`
+- historia/statystyki:
+  - `get_player_ranking_history_usecase.dart`
+  - `get_player_matches_usecase.dart`
+  - `get_player_stats_usecase.dart`
+  - `get_player_head_to_head_stats_usecase.dart`
 
-- **`PlayersPage` (`presentation/pages/players_page.dart`)**:
-  - Layout:
-    - AppBar / nagłówek z nazwą składu i liczbą graczy.
-    - Pasek wyszukiwarki (`PlayersSearchBar`).
-    - Menu sortowania (`PlayersSortMenu`).
-    - Przycisk **Add Player** (widoczny tylko dla ról Admin/Owner – bazując na globalnym stanie auth/role).
-    - Główna lista (`PlayersListWidget`) z `RefreshIndicator`.
-  - Renderowanie `AsyncValue`:
-    - `loading`: wskaźnik ładowania (np. `CircularProgressIndicator` lub skeleton listy).
-    - `error`: `PlayersErrorView` z `SelectableText.rich` w kolorze czerwonym.
-    - `data`: lista lub `EmptyPlayersState` (gdy brak graczy).
+### 5.3 Infrastructure
+- `SupabasePlayerRepository`:
+  - CRUD na tabeli `players`,
+  - `updatePlayerRanking` przez update `players.score`,
+  - RPC: `get_player_stats`, `get_player_head_to_head_stats`.
+- `SupabaseRankingRepository`:
+  - odczyt historii rankingu,
+  - reczna korekta rankingu (manual entry + update `players.score`),
+  - operacje na wpisach meczowych (`create/update/delete` wpisow rankingowych).
 
-- **Dialog dodawania gracza (`CreatePlayerDialog`)**:
-  - Formularz:
-    - `TextField` dla `name` (walidacja: niepusty).
-    - `TextField` dla `position` (opcjonalny).
-    - `TextField` / `TextFormField` dla `baseScore` (tylko liczby całkowite).
-  - Po submit:
-    - Wywołanie `PlayersNotifier.addPlayer`.
-    - Obsługa błędów, w tym duplikatu nazwy (komunikat w UI na podstawie `Failure.duplicateName`).
+### 5.4 Presentation
+- stan listy: `players_notifier.dart`,
+- stan details: `player_details_controller.dart`,
+- stan podstron:
+  - `player_matches_provider.dart`,
+  - `player_stats_provider.dart`,
+- widoki i widgety:
+  - `players_page.dart`,
+  - `player_details_page.dart`,
+  - `player_matches_page.dart`,
+  - `player_stats_page.dart`,
+  - `players_list_widget.dart`,
+  - `create_player_dialog.dart`,
+  - `edit_player_name_dialog.dart`,
+  - `edit_player_ranking_dialog.dart`,
+  - `ranking_history_graph_widget.dart`,
+  - `player_head_to_head_table.dart`.
 
-- **Lista graczy (`PlayersListWidget`)**:
-  - `ListView.builder` / responsywne karty lub tabela (w zależności od szerokości ekranu).
-  - Element listy:
-    - Nazwa, pozycja, `baseScore`, `score`.
-    - Akcje:
-      - `Delete` (tylko Admin/Owner) – potwierdzenie przed wywołaniem `deletePlayer`.
-      - (na później) `Details` – nawigacja do `PlayerDetailsPage`.
+## 6. Kontrakty danych (DB/RPC)
 
-### 8. Flow danych (end-to-end)
-- **Kierunek przepływu**:
-  - `PlayersPage` (UI) → `PlayersNotifier` (presentation/controller) → Use case'y (application) → `PlayerRepository` (domain) → `PlayerRepositoryImpl` + `PlayersRemoteDataSource` (infrastructure) → Supabase.
-  - Odpowiedzi z Supabase → `PlayersRemoteDataSource` → `PlayerRepositoryImpl` → encje `Player` → Use case'y → `PlayersNotifier` (`AsyncValue`) → `PlayersPage` / widżety.
+### 6.1 `players`
+Kluczowe pola:
+- `player_id` (PK),
+- `squad_id` (FK -> `squads`),
+- `name`,
+- `position` (nullable),
+- `base_score` (`0..100`),
+- `score` (`0..100`, numeric).
 
-- **Typowe scenariusze**:
-  - **Wejście na `/squads/:squadId/players`**:
-    - Router tworzy `PlayersPage`, ta odczytuje `squadId`.
-    - `PlayersNotifier.loadPlayers(squadId)` wywołuje `GetSquadPlayersUseCase`.
-  - **Dodanie gracza**:
-    - Użytkownik (Admin/Owner) otwiera `CreatePlayerDialog`.
-    - Po submit: `PlayersNotifier.addPlayer` → `AddPlayerUseCase` → repo/infra → po sukcesie odświeżenie listy (`loadPlayers` lub lokalny update).
-  - **Usunięcie gracza**:
-    - Z elementu listy wywołanie `deletePlayer` → `DeletePlayerUseCase` → repo/infra → po sukcesie aktualizacja stanu listy.
+W kodzie mapowane jako:
+- `base_score` -> `Player.baseRanking`,
+- `score` -> `Player.ranking`.
 
-### 9. Techniczne kroki implementacji (kolejność)
-- **Krok 1 – Domain**:
-  - Stworzenie `Player` entity oraz `PlayerRepository` interface.
+### 6.2 `ranking_history`
+- Feature `players` korzysta z `ranking_history` do:
+  - wykresu historii rankingu,
+  - recznych korekt rankingu,
+  - wyliczania listy meczow zawodnika.
+- Pelny kontrakt DB/RLS i lifecycle wpisow jest utrzymywany w [ranking_history.md](./ranking_history.md).
 
-- **Krok 2 – Infrastructure**:
-  - Implementacja `PlayerModel`, `PlayersRemoteDataSource` i `PlayerRepositoryImpl`.
-  - Dodanie integracji z `SupabaseClient` i mapowań błędów na `Failure`.
+### 6.3 RPC uzywane przez feature
+- `get_player_stats(p_player_id uuid)`
+- `get_player_head_to_head_stats(p_player_id uuid)`
 
-- **Krok 3 – Application**:
-  - Implementacja use case'ów:
-    - `GetSquadPlayersUseCase`, `AddPlayerUseCase`, `DeletePlayerUseCase`, `UpdatePlayerUseCase`.
-    - `GetPlayerDetailsUseCase` jako szkielet (bez realnej logiki, tylko TODO).
+Migracje:
+- `supabase/migrations/20251202125000_add_player_stats_function.sql`
+- `supabase/migrations/20251202120000_add_player_head_to_head_stats_function.sql`
 
-- **Krok 4 – Presentation (stan)**:
-  - Implementacja `PlayersNotifier` z `AsyncValue`.
-  - Ewentualny prosty stan na filtry/sortowanie (lub TODO, jeśli nie zdążymy).
+## 7. Integracje / punkty styku
+- `matches`:
+  - `CreateMatchUseCase`, `UpdateMatchScoreUseCase`, `UpdateMatchTeamsUseCase`, `DeleteMatchUseCase` korzystaja z `PlayerRepository` i `RankingRepository`.
+  - Szczegoly flow meczowego sa utrzymywane w [matches.md](./matches.md).
+- `ranking_history`:
+  - `players` jest glownym konsumentem odczytu historii (`PlayerDetailsPage`, `RankingHistoryGraphWidget`, `PlayerMatchesPage`),
+  - ale definicja aktualizacji i rollbacku rankingu jest utrzymywana w [ranking_history.md](./ranking_history.md).
+- `stats`:
+  - `PlayerStatsPage` i `PlayerHeadToHeadTable` korzystaja z metryk z RPC `get_player_stats` i `get_player_head_to_head_stats`,
+  - definicja metryk i kontrakt stats sa utrzymywane w [stats.md](./stats.md).
 
-- **Krok 5 – Presentation (UI)**:
-  - `PlayersPage` + routing.
-  - Widżety: `PlayersListWidget`, `PlayersSearchBar`, `PlayersSortMenu`, `CreatePlayerDialog`, `EmptyPlayersState`, `PlayersErrorView`.
-  - Odtworzenie UX z legacy `players_page.dart`, ale zgodnie z nowym designem (responsywne karty/tabela, SelectableText dla błędów).
+## 8. Walidacje i obsluga bledow
+- `AddPlayerUseCase`:
+  - nazwa nie moze byc pusta,
+  - `baseRanking` nie moze byc ujemny.
+- UI tworzenia gracza:
+  - slider ogranicza ranking do `1..100`,
+  - lokalny check duplikatu nazwy (best effort).
+- DB wymusza unikalnosc `(squad_id, name)` i zakresy score/base_score.
+- bledy Supabase mapowane sa przez `supabase_error_extension.dart` na `Failure`.
 
-- **Krok 6 – Integracja i testy**:
-  - Podpięcie feature'u do globalnej nawigacji (panel Players z widoku squadu).
-  - Testy:
-    - Unit testy use case'ów (happy/failure path).
-    - Testy repozytorium z mockowanym `SupabaseClient`.
-    - Testy notifiera (zmiany `AsyncValue`).
+## 9. Ograniczenia i status
+- `Tournaments` na `PlayerDetailsPage` nie jest jeszcze zaimplementowane.
+- `UpdatePlayerPositionUseCase` istnieje, ale brak dedykowanego UI do edycji pozycji.
+- `GetPlayerDetailsUseCase` zwraca obecnie tylko `Player` (bez dodatkowych agregatow).
+- `app/test` nie zawiera aktualnie testow dedykowanych feature `players`.
 
-### 10. Rzeczy oznaczone jako TODO / później
-- Implementacja faktycznej logiki w `GetPlayerDetailsUseCase` i budowa `PlayerDetailsPage`.
-- Zaawansowane filtrowanie/sortowanie (po wielu polach, wielokryterialne).
-- Paginations / infinite scroll (jeśli zajdzie potrzeba).
-- Dopracowanie roli i uprawnień na poziomie UI (np. ukrywanie akcji w zależności od roli).
-
+## 10. Szybka mapa plikow
+- root feature: `app/lib/features/players/`
+- router: `app/lib/core/app_router.dart`
+- migracje SQL:
+  - `supabase/migrations/20251201090400_create_players_table.sql`
+  - `supabase/migrations/20251201090900_create_ranking_history_table.sql`
+  - `supabase/migrations/20251202120000_add_player_head_to_head_stats_function.sql`
+  - `supabase/migrations/20251202125000_add_player_stats_function.sql`

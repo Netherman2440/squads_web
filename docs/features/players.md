@@ -34,6 +34,7 @@ Ekran: `PlayerDetailsPage` (`/squads/:squadId/players/:playerId`)
 - profil zawodnika (nazwa, aktualny ranking, roznica do base),
 - wykres historii rankingu (`RankingHistoryGraphWidget`),
 - edycja nazwy (admin/owner),
+- edycja pozycji (admin/owner),
 - reczna edycja rankingu (admin/owner),
 - usuwanie zawodnika (admin/owner),
 - sekcja nawigacyjna do:
@@ -63,7 +64,7 @@ Definicje tras sa w `app/lib/core/app_router.dart`:
 
 ### 4.1 Widok UI
 - przycisk `Add Player` jest widoczny tylko dla `owner/admin`,
-- edycja nazwy/rankingu i usuwanie na details tylko dla `owner/admin`.
+- edycja nazwy/pozycji/rankingu i usuwanie na details tylko dla `owner/admin`.
 
 ### 4.2 RLS (Supabase)
 - `players`: odczyt dla czlonkow/public, modyfikacja tylko `owner/admin`,
@@ -124,6 +125,7 @@ Polityki sa w migracjach:
   - `players_list_widget.dart`,
   - `create_player_dialog.dart`,
   - `edit_player_name_dialog.dart`,
+  - `edit_player_position_dialog.dart`,
   - `edit_player_ranking_dialog.dart`,
   - `ranking_history_graph_widget.dart`,
   - `player_head_to_head_table.dart`.
@@ -142,6 +144,10 @@ Kluczowe pola:
 W kodzie mapowane jako:
 - `base_score` -> `Player.baseRanking`,
 - `score` -> `Player.ranking`.
+- `position` -> `Player.position` (nullable), interpretowane przez enum `PlayerPosition`
+  (`goalkeeper`, `defender`, `midfielder`, `attacker`).
+- mapowanie storage utrzymuje legacy wartosc `middlefielder` dla
+  `PlayerPosition.midfielder` (kompatybilnosc danych historycznych).
 
 ### 6.2 `ranking_history`
 - Feature `players` korzysta z `ranking_history` do:
@@ -181,7 +187,7 @@ Migracje:
 
 ## 9. Ograniczenia i status
 - `Tournaments` na `PlayerDetailsPage` nie jest jeszcze zaimplementowane.
-- `UpdatePlayerPositionUseCase` istnieje, ale brak dedykowanego UI do edycji pozycji.
+- Edycja pozycji jest dostepna na `PlayerDetailsPage`; brak edycji pozycji bezposrednio z listy `PlayersPage`.
 - `GetPlayerDetailsUseCase` zwraca obecnie tylko `Player` (bez dodatkowych agregatow).
 - `app/test` nie zawiera aktualnie testow dedykowanych feature `players`.
 

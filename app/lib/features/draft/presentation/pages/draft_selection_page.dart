@@ -5,8 +5,11 @@ import 'package:go_router/go_router.dart';
 import 'package:app/core/app_config.dart';
 import 'package:app/core/app_router.dart';
 import 'package:app/core/error/failure.dart';
+import 'package:app/features/draft/domain/entities/draft_rule.dart';
 import 'package:app/features/draft/presentation/controllers/draft_selection_controller.dart';
+import 'package:app/features/draft/presentation/state/draft_selection_state.dart';
 import 'package:app/features/draft/presentation/widgets/draft_draggable_player_tile.dart';
+import 'package:app/features/draft/presentation/widgets/draft_relation_widgets.dart';
 import 'package:app/features/matches/presentation/controllers/create_match_controller.dart';
 import 'package:app/features/matches/presentation/controllers/squad_matches_notifier.dart';
 import 'package:app/features/players/domain/entities/player.dart';
@@ -16,11 +19,13 @@ class DraftSelectionPage extends ConsumerStatefulWidget {
     super.key,
     required this.squadId,
     this.initialSelectedIds,
+    this.initialDraftRules = const [],
     this.matchId,
   });
 
   final String squadId;
   final List<String>? initialSelectedIds;
+  final List<DraftRule> initialDraftRules;
   final String? matchId;
 
   @override
@@ -39,6 +44,7 @@ class _DraftSelectionPageState extends ConsumerState<DraftSelectionPage> {
           .loadPlayers(
             squadId: widget.squadId,
             initialSelectedIds: widget.initialSelectedIds,
+            initialRules: widget.initialDraftRules,
           ),
     );
   }
@@ -50,79 +56,84 @@ class _DraftSelectionPageState extends ConsumerState<DraftSelectionPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Draft'),
+        title: const Text('Draft - wybór graczy'),
         actions: [
           state.when(
             data: (data) {
               final selectedCount = data.selectedPlayerIds.length;
               final hasMinimumPlayers = selectedCount >= 2;
-              final canGenerate = hasMinimumPlayers;
               final isCreatingMatch = createMatchState.isLoading;
-              final tooltip = !hasMinimumPlayers
-                  ? 'Select at least 2 players to generate draft'
-                  : 'Generate draft';
 
-              return IconButton(
-                tooltip: tooltip,
-                onPressed: canGenerate && !isCreatingMatch
-                    ? () async {
-                        final ids = data.selectedPlayerIds.toList(
-                          growable: false,
-                        );
-
-                        var targetMatchId = widget.matchId;
-                        if (targetMatchId == null || targetMatchId.isEmpty) {
-                          final createdMatch = await ref
-                              .read(createMatchControllerProvider.notifier)
-                              .createMatch(
-                                squadId: widget.squadId,
-                                homePlayers: const <Player>[],
-                                awayPlayers: const <Player>[],
-                                rankingHistoryPlayerIds: ids,
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextButton(
+                      onPressed: hasMinimumPlayers && !isCreatingMatch
+                          ? () => _generateWithoutRelations(data)
+                          : null,
+                      child: isCreatingMatch
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Wygeneruj draft'),
+                    ),
+                    TextButton(
+                      onPressed: hasMinimumPlayers
+                          ? () {
+                              final ids = data.selectedPlayerIds.toList(
+                                growable: false,
                               );
-                          targetMatchId = createdMatch?.matchId;
-
-                          if (targetMatchId == null || targetMatchId.isEmpty) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Nie udało się utworzyć meczu.',
+                              context.pushNamed(
+                                AppRoute.draftRelations.name,
+                                pathParameters: {'squadId': widget.squadId},
+                                extra: {
+                                  'selectedIds': ids,
+                                  'matchId': widget.matchId,
+                                  'playWithSubstitute': _playWithSubstitute,
+                                  'draftRules': serializeDraftRules(
+                                    data.draftRules,
                                   ),
-                                  backgroundColor: Colors.red,
-                                ),
+                                },
                               );
                             }
-                            return;
-                          }
-
-                          ref.invalidate(squadMatchesProvider(widget.squadId));
+                          : null,
+                      child: const Text('Przejdź do relacji'),
+                    ),
+                    PopupMenuButton<_SelectionMenuAction>(
+                      tooltip: 'Ustawienia draftu',
+                      onSelected: (value) {
+                        switch (value) {
+                          case _SelectionMenuAction.toggleSubstitute:
+                            setState(() {
+                              _playWithSubstitute = !_playWithSubstitute;
+                            });
+                            break;
                         }
-
-                        if (!context.mounted) {
-                          return;
-                        }
-
-                        context.pushNamed(
-                          AppRoute.matchDraft.name,
-                          pathParameters: {
-                            'squadId': widget.squadId,
-                            'matchId': targetMatchId,
-                          },
-                          extra: {
-                            'selectedIds': ids,
-                            'playWithSubstitute': _playWithSubstitute,
-                          },
-                        );
-                      }
-                    : null,
-                icon: isCreatingMatch
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.auto_awesome),
+                      },
+                      itemBuilder: (context) => [
+                        const PopupMenuItem<_SelectionMenuAction>(
+                          enabled: false,
+                          child: SizedBox(
+                            width: 280,
+                            child: Text(
+                              'Gra ze zmianami: przy nieparzystej liczbie '
+                              'graczy większa drużyna gra ze zmianą.',
+                            ),
+                          ),
+                        ),
+                        CheckedPopupMenuItem<_SelectionMenuAction>(
+                          value: _SelectionMenuAction.toggleSubstitute,
+                          checked: _playWithSubstitute,
+                          child: const Text('Gra ze zmianami'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               );
             },
             error: (_, _) => const SizedBox.shrink(),
@@ -183,35 +194,6 @@ class _DraftSelectionPageState extends ConsumerState<DraftSelectionPage> {
 
                 return Column(
                   children: [
-                    Card(
-                      child: SwitchListTile.adaptive(
-                        title: const Text('Gra ze zmianami'),
-                        subtitle: const Text(
-                          'Przy nieparzystej liczbie graczy większa drużyna '
-                          'gra ze zmianą.',
-                        ),
-                        value: _playWithSubstitute,
-                        onChanged: (value) {
-                          setState(() {
-                            _playWithSubstitute = value;
-                          });
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    if (data.selectedPlayerIds.length >=
-                        AppConfig.greedyDraftThresholdPlayers) ...[
-                      Text(
-                        'Uwaga: przy większej liczbie graczy wynik draftu '
-                        'może być mniej dokładny.',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 8),
-                    ],
-                    const SizedBox(height: 12),
                     if (data.validationMessage != null)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 12),
@@ -235,6 +217,48 @@ class _DraftSelectionPageState extends ConsumerState<DraftSelectionPage> {
           );
         },
       ),
+    );
+  }
+
+  Future<void> _generateWithoutRelations(DraftSelectionState data) async {
+    final ids = data.selectedPlayerIds.toList(growable: false);
+
+    var targetMatchId = widget.matchId;
+    if (targetMatchId == null || targetMatchId.isEmpty) {
+      final createdMatch = await ref
+          .read(createMatchControllerProvider.notifier)
+          .createMatch(
+            squadId: widget.squadId,
+            homePlayers: const <Player>[],
+            awayPlayers: const <Player>[],
+            rankingHistoryPlayerIds: ids,
+          );
+      targetMatchId = createdMatch?.matchId;
+
+      if (targetMatchId == null || targetMatchId.isEmpty) {
+        if (!mounted) {
+          return;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Nie udało się utworzyć meczu.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      ref.invalidate(squadMatchesProvider(widget.squadId));
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    context.pushNamed(
+      AppRoute.matchDraft.name,
+      pathParameters: {'squadId': widget.squadId, 'matchId': targetMatchId},
+      extra: {'selectedIds': ids, 'playWithSubstitute': _playWithSubstitute},
     );
   }
 }
@@ -284,13 +308,13 @@ class _AvailablePlayersPanelState extends State<_AvailablePlayersPanel> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Available players',
+              'Dostępni gracze',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
             TextField(
               decoration: const InputDecoration(
-                labelText: 'Search',
+                labelText: 'Szukaj',
                 prefixIcon: Icon(Icons.search),
               ),
               textCapitalization: TextCapitalization.none,
@@ -299,7 +323,7 @@ class _AvailablePlayersPanelState extends State<_AvailablePlayersPanel> {
             const SizedBox(height: 8),
             Expanded(
               child: widget.players.isEmpty
-                  ? const Center(child: Text('No available players.'))
+                  ? const Center(child: Text('Brak dostępnych graczy.'))
                   : Scrollbar(
                       controller: _scrollController,
                       child: ListView.builder(
@@ -371,19 +395,19 @@ class _SelectedPlayersPanelState extends State<_SelectedPlayersPanel> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Selected players (${widget.selectedCount})',
+                  'Wybrani gracze (${widget.selectedCount})',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 TextButton(
                   onPressed: widget.selectedCount == 0 ? null : widget.onClear,
-                  child: const Text('Clear'),
+                  child: const Text('Wyczyść'),
                 ),
               ],
             ),
             const SizedBox(height: 8),
             Expanded(
               child: widget.players.isEmpty
-                  ? const Center(child: Text('No players selected yet.'))
+                  ? const Center(child: Text('Nie wybrano jeszcze graczy.'))
                   : Scrollbar(
                       controller: _scrollController,
                       child: ListView.builder(
@@ -459,3 +483,5 @@ List<Player> _filterAvailable({
       .where((p) => q.isEmpty || p.name.toLowerCase().contains(q))
       .toList(growable: false);
 }
+
+enum _SelectionMenuAction { toggleSubstitute }

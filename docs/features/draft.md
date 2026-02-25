@@ -53,10 +53,18 @@ Ekran: `DraftResultsPage`
 - zapisuje wynik jako `Create Match` (nowy mecz) lub `Update Match` (istniejacy mecz),
 - po zapisie przechodzi do `MatchDetailsPage`.
 
+### 2.6 Konfiguracja relacji draftu
+Ekrany: `DraftRelationsPage` i `DraftAgainstRelationsPage`
+- pozwalaja dodawac, edytowac i usuwac grupy relacji `together` oraz `against`,
+- korzystaja ze wspolnego stanu `DraftSelectionController` / `DraftSelectionState`,
+- przekazuja relacje dalej do generowania draftu przez `draftRules` w `extra` i serializacje `serializeDraftRules`.
+
 ## 3. Routing
 Definicje tras sa w `app/lib/core/app_router.dart`:
 - `/squads/:squadId/matches/draft` -> `DraftSelectionPage` (`AppRoute.draftSelection`)
 - `/squads/:squadId/matches/create` -> `DraftSelectionPage` (`AppRoute.draftCreate`)
+- `/squads/:squadId/matches/relations` -> `DraftRelationsPage` (`AppRoute.draftRelations`)
+- `/squads/:squadId/matches/relations/against` -> `DraftAgainstRelationsPage` (`AppRoute.draftAgainstRelations`)
 - `/squads/:squadId/matches/:matchId/draft` -> `DraftResultsPage` (`AppRoute.matchDraft`)
 
 Nawigacja do feature:
@@ -166,8 +174,11 @@ Stan:
 
 Widoki:
 - `draft_selection_page.dart`,
+- `draft_relations_page.dart`,
+- `draft_against_relations_page.dart`,
 - `draft_results_page.dart`,
-- `draft_draggable_player_tile.dart`.
+- `draft_draggable_player_tile.dart`,
+- `draft_relation_widgets.dart`.
 
 UI operuje na modelu home/away (`DraftSessionState.home`, `away`), mimo ze `Draft` wspiera wiele druzyn.
 
@@ -204,7 +215,10 @@ UI operuje na modelu home/away (`DraftSessionState.home`, `away`), mimo ze `Draf
   - `app/lib/features/draft/infrastructure/repositories/supabase_draft_stats_repository.dart`
 - presentation:
   - `app/lib/features/draft/presentation/pages/draft_selection_page.dart`
+  - `app/lib/features/draft/presentation/pages/draft_relations_page.dart`
+  - `app/lib/features/draft/presentation/pages/draft_against_relations_page.dart`
   - `app/lib/features/draft/presentation/pages/draft_results_page.dart`
+  - `app/lib/features/draft/presentation/widgets/draft_relation_widgets.dart`
   - `app/lib/features/draft/presentation/controllers/draft_session_notifier.dart`
   - `app/lib/features/draft/presentation/controllers/draft_selection_controller.dart`
 - pliki poza feature:
@@ -218,7 +232,7 @@ UI operuje na modelu home/away (`DraftSessionState.home`, `away`), mimo ze `Draf
 
 ## 8. Ograniczenia i status
 - Aktualny flow UI jest dwudruzynowy (home/away), mimo ze repozytoria draftu obsluguja `teamCount` do 4.
-- UI nie wystawia konfiguracji `teamCount` ani regul `DraftRule` (`together`/`against`), chociaz modele i algorytmy to wspieraja.
+- UI nie wystawia konfiguracji `teamCount`, chociaz modele i algorytmy wspieraja zakres `2..4`.
 - `DraftSelectionController.validateSelection()` obecnie tylko czysci komunikat; brak dodatkowych walidacji biznesowych.
 - `AppRoute.draftCreate` i `AppRoute.draftSelection` prowadza do tego samego ekranu (`DraftSelectionPage`).
 - Draft pages nie maja wlasnego route-guardu roli; kontrola dostepu opiera sie glownie o miejsca wejscia w feature (`matches` UI) oraz RLS po stronie DB.

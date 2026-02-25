@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:app/features/players/domain/entities/player.dart';
+import 'package:app/features/players/domain/entities/player_position.dart';
 import 'package:app/features/players/presentation/controllers/players_notifier.dart';
 
 class CreatePlayerDialog extends ConsumerStatefulWidget {
@@ -16,8 +17,8 @@ class CreatePlayerDialog extends ConsumerStatefulWidget {
 
 class _CreatePlayerDialogState extends ConsumerState<CreatePlayerDialog> {
   late final TextEditingController _nameController;
-  late final TextEditingController _positionController;
   late final TextEditingController _baseRankingController;
+  PlayerPosition? _selectedPosition;
 
   int _sliderValue = 50;
   bool _isSubmitting = false;
@@ -29,21 +30,18 @@ class _CreatePlayerDialogState extends ConsumerState<CreatePlayerDialog> {
   void initState() {
     super.initState();
     _nameController = TextEditingController();
-    _positionController = TextEditingController();
     _baseRankingController = TextEditingController(text: '50');
   }
 
   @override
   void dispose() {
     _nameController.dispose();
-    _positionController.dispose();
     _baseRankingController.dispose();
     super.dispose();
   }
 
   Future<void> _handleSubmit() async {
     final name = _nameController.text.trim();
-    final position = _positionController.text.trim();
 
     if (name.isEmpty) {
       setState(() {
@@ -84,7 +82,7 @@ class _CreatePlayerDialogState extends ConsumerState<CreatePlayerDialog> {
           .addPlayer(
             squadId: widget.squadId,
             name: name,
-            position: position.isEmpty ? null : position,
+            position: _selectedPosition?.storageValue,
             baseRanking: baseRanking,
           );
 
@@ -180,14 +178,31 @@ class _CreatePlayerDialogState extends ConsumerState<CreatePlayerDialog> {
                 textCapitalization: TextCapitalization.words,
               ),
               const SizedBox(height: 12),
-              TextField(
-                controller: _positionController,
+              DropdownButtonFormField<PlayerPosition?>(
+                initialValue: _selectedPosition,
                 decoration: const InputDecoration(
-                  labelText: 'Position (optional)',
+                  labelText: 'Pozycja (opcjonalnie)',
                   border: OutlineInputBorder(),
                 ),
-                textInputAction: TextInputAction.next,
-                textCapitalization: TextCapitalization.words,
+                items: [
+                  const DropdownMenuItem<PlayerPosition?>(
+                    value: null,
+                    child: Text('Brak pozycji'),
+                  ),
+                  ...PlayerPosition.values.map(
+                    (position) => DropdownMenuItem<PlayerPosition?>(
+                      value: position,
+                      child: Text(position.polishLabel),
+                    ),
+                  ),
+                ],
+                onChanged: _isSubmitting
+                    ? null
+                    : (value) {
+                        setState(() {
+                          _selectedPosition = value;
+                        });
+                      },
               ),
               const SizedBox(height: 12),
               TextField(

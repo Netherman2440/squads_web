@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:app/features/players/domain/entities/player.dart';
+import 'package:app/features/players/domain/entities/player_position.dart';
 
 class DraftDraggablePlayerTile extends StatelessWidget {
   const DraftDraggablePlayerTile({
@@ -23,11 +24,7 @@ class DraftDraggablePlayerTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final difference = player.ranking - player.baseRanking;
-    final positionText = player.position?.trim();
-    final hasPosition =
-        positionText != null &&
-        positionText.isNotEmpty &&
-        positionText.toLowerCase() != 'none';
+    final positionText = playerPositionPolishLabel(player.position);
 
     final tile = Card(
       child: ListTile(
@@ -58,7 +55,7 @@ class DraftDraggablePlayerTile extends StatelessWidget {
                 spacing: 12,
                 runSpacing: 4,
                 children: [
-                  if (hasPosition) ...[
+                  if (positionText != null) ...[
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [

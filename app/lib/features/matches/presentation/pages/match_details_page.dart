@@ -581,7 +581,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
                           },
                         );
                       },
-                      child: const Text('Wybierz drużyny'),
+                      child: const Text('Zmień drużyny'),
                     ),
                   TextButton(
                     onPressed: () {

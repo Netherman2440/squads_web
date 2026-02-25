@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:app/core/error/failure.dart';
+import 'package:app/features/players/domain/entities/player_position.dart';
 import 'package:app/features/players/infrastructure/repositories/supabase_player_repository.dart';
 
 import '../../domain/entities/player.dart';
@@ -25,10 +26,22 @@ class AddPlayerUseCase {
       throw const ValidationFailure('Base ranking cannot be negative.');
     }
 
+    final trimmedPosition = position?.trim();
+    final hasPosition = trimmedPosition != null && trimmedPosition.isNotEmpty;
+    final normalizedPosition = normalizePlayerPositionStorageValue(
+      trimmedPosition,
+    );
+
+    if (hasPosition && normalizedPosition == null) {
+      throw const ValidationFailure(
+        'Invalid position. Allowed values: goalkeeper, defender, middlefielder, attacker.',
+      );
+    }
+
     return await _playerRepository.addPlayer(
       squadId: squadId,
       name: name.trim(),
-      position: position?.trim(),
+      position: normalizedPosition,
       baseRanking: baseRanking,
     );
   }

@@ -14,7 +14,11 @@ class RankingHistoryGraphWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (history.isEmpty) {
+    final historyWithChange = history
+        .where((entry) => entry.change != null)
+        .toList(growable: false);
+
+    if (historyWithChange.isEmpty) {
       return const SizedBox(
         height: 200,
         child: Center(child: Text('No ranking changes')),
@@ -22,7 +26,7 @@ class RankingHistoryGraphWidget extends StatelessWidget {
     }
 
     // Sort by created_at ASC for display on graph
-    final sortedHistory = [...history]
+    final sortedHistory = [...historyWithChange]
       ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
     final spots = <FlSpot>[];
@@ -39,10 +43,7 @@ class RankingHistoryGraphWidget extends StatelessWidget {
 
     for (var i = 0; i < sortedHistory.length; i++) {
       final entry = sortedHistory[i];
-      // The entry.ranking is the ranking BEFORE the change.
-      // But we want to show the progression.
-      // If we have history, it means there was a change.
-      currentRanking += entry.change ?? 0;
+      currentRanking += entry.change!;
       spots.add(FlSpot((i + 1).toDouble(), currentRanking));
     }
 

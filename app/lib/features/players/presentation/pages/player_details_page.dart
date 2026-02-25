@@ -5,11 +5,13 @@ import 'package:go_router/go_router.dart';
 import 'package:app/core/error/failure.dart';
 import 'package:app/core/app_router.dart';
 import 'package:app/features/players/application/usecases/delete_player_usecase.dart';
+import 'package:app/features/players/domain/entities/player_position.dart';
 import 'package:app/features/players/presentation/controllers/players_notifier.dart';
 import 'package:app/features/squads/domain/entities/user_squad_role.dart';
 import 'package:app/features/squads/presentation/state/squad_detail_notifier.dart';
 
 import '../controllers/player_details_controller.dart';
+import '../widgets/edit_player_position_dialog.dart';
 import '../widgets/ranking_history_graph_widget.dart';
 import '../widgets/edit_player_name_dialog.dart';
 import '../widgets/edit_player_ranking_dialog.dart';
@@ -73,6 +75,8 @@ class PlayerDetailsPage extends ConsumerWidget {
           final history = state.rankingHistory;
           final difference = player.ranking - player.baseRanking;
           final isPositive = difference >= 0;
+          final positionLabel =
+              playerPositionPolishLabel(player.position) ?? 'Brak pozycji';
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
@@ -149,6 +153,37 @@ class PlayerDetailsPage extends ConsumerWidget {
                                           EditPlayerRankingDialog(
                                             playerId: playerId,
                                             currentRanking: player.ranking,
+                                          ),
+                                    );
+                                    if (result == true) {
+                                      ref.invalidate(
+                                        playerDetailsProvider(playerId),
+                                      );
+                                    }
+                                  },
+                                  icon: const Icon(Icons.edit),
+                                ),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Text(
+                                'Pozycja: $positionLabel',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              if (canEdit) ...[
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  tooltip: 'Edytuj pozycję',
+                                  onPressed: () async {
+                                    final result = await showDialog<bool>(
+                                      context: context,
+                                      builder: (context) =>
+                                          EditPlayerPositionDialog(
+                                            playerId: playerId,
+                                            initialPosition: player.position,
                                           ),
                                     );
                                     if (result == true) {

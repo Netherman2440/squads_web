@@ -2,6 +2,7 @@ class RankingHistoryEntry {
   final String rankingHistoryId;
   final String playerId;
   final String? matchId;
+  final String? tournamentId;
   final double ranking;
   final double? change;
   final Map<String, dynamic>? matchScore; // JSONB from matches feature
@@ -15,6 +16,7 @@ class RankingHistoryEntry {
     required this.rankingHistoryId,
     required this.playerId,
     this.matchId,
+    this.tournamentId,
     required this.ranking,
     this.change,
     this.matchScore,
@@ -27,6 +29,7 @@ class RankingHistoryEntry {
       rankingHistoryId: map['ranking_history_id'] as String,
       playerId: map['player_id'] as String,
       matchId: map['match_id'] as String?,
+      tournamentId: map['tournament_id'] as String?,
       ranking: (map['ranking'] as num).toDouble(),
       change: (map['change'] as num?)?.toDouble(),
       matchScore: map['match_score'] as Map<String, dynamic>?,
@@ -42,6 +45,7 @@ class RankingHistoryEntry {
       'ranking_history_id': rankingHistoryId,
       'player_id': playerId,
       'match_id': matchId,
+      'tournament_id': tournamentId,
       'ranking': ranking,
       'change': change,
       'match_score': matchScore,

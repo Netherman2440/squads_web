@@ -48,7 +48,9 @@ class CreateTournamentMatchUseCase {
     }
 
     if (homeTeam.players.isEmpty || awayTeam.players.isEmpty) {
-      throw const ValidationFailure('Tournament teams must have players assigned.');
+      throw const ValidationFailure(
+        'Tournament teams must have players assigned.',
+      );
     }
 
     return _createMatchUseCase.execute(

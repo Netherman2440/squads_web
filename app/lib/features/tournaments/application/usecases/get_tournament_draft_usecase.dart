@@ -10,9 +10,7 @@ class GetTournamentDraftUseCase {
   const GetTournamentDraftUseCase(this._repository);
 
   Future<TournamentDraft?> execute({required String tournamentDraftId}) {
-    return _repository.getTournamentDraft(
-      tournamentDraftId: tournamentDraftId,
-    );
+    return _repository.getTournamentDraft(tournamentDraftId: tournamentDraftId);
   }
 
   Future<TournamentDraft?> executeLatest({required String tournamentId}) {
@@ -20,8 +18,8 @@ class GetTournamentDraftUseCase {
   }
 }
 
-final getTournamentDraftUseCaseProvider = Provider<GetTournamentDraftUseCase>(
-  (ref) {
-    return GetTournamentDraftUseCase(ref.read(tournamentDraftRepositoryProvider));
-  },
-);
+final getTournamentDraftUseCaseProvider = Provider<GetTournamentDraftUseCase>((
+  ref,
+) {
+  return GetTournamentDraftUseCase(ref.read(tournamentDraftRepositoryProvider));
+});

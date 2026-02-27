@@ -27,7 +27,9 @@ class UpdateTournamentTeamsUseCase {
     final flattenedPlayerIds = <String>[];
     for (final team in teams) {
       if (team.playerIds.isEmpty) {
-        throw const ValidationFailure('Each team must contain at least one player.');
+        throw const ValidationFailure(
+          'Each team must contain at least one player.',
+        );
       }
       flattenedPlayerIds.addAll(team.playerIds);
     }

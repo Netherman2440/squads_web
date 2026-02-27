@@ -8,10 +8,7 @@ abstract class TournamentRepository {
 
   Future<Tournament> getTournament({required String tournamentId});
 
-  Future<Tournament> createTournament({
-    required String squadId,
-    String? name,
-  });
+  Future<Tournament> createTournament({required String squadId, String? name});
 
   Future<Tournament> updateTournament({
     required String tournamentId,
@@ -20,7 +17,9 @@ abstract class TournamentRepository {
     String? acceptedTournamentDraftId,
   });
 
-  Future<List<TournamentTeam>> getTournamentTeams({required String tournamentId});
+  Future<List<TournamentTeam>> getTournamentTeams({
+    required String tournamentId,
+  });
 
   Future<List<String>> getTournamentPlayerIds({required String tournamentId});
 

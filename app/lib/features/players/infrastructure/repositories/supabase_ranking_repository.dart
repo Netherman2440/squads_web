@@ -75,6 +75,35 @@ class SupabaseRankingRepository implements RankingRepository {
   }
 
   @override
+  Future<List<RankingHistoryEntry>> getTournamentRankingHistory(
+    String tournamentId,
+  ) async {
+    try {
+      final response = await _supabase
+          .from('ranking_history')
+          .select()
+          .eq('tournament_id', tournamentId)
+          .order('created_at', ascending: false);
+
+      final data = response as List<dynamic>;
+      return data
+          .map(
+            (row) => RankingHistoryEntry.fromMap(
+              Map<String, dynamic>.from(row as Map),
+            ),
+          )
+          .toList(growable: false);
+    } catch (e, stack) {
+      _logger.severe(
+        'Failed to fetch ranking history for tournament $tournamentId',
+        e,
+        stack,
+      );
+      throw e.toFailure();
+    }
+  }
+
+  @override
   Future<RankingHistoryEntry?> getRankingHistoryEntryByMatch({
     required String matchId,
     required String playerId,
@@ -95,6 +124,34 @@ class SupabaseRankingRepository implements RankingRepository {
     } catch (e, stack) {
       _logger.severe(
         'Failed to fetch ranking history for match $matchId and player $playerId',
+        e,
+        stack,
+      );
+      throw e.toFailure();
+    }
+  }
+
+  @override
+  Future<RankingHistoryEntry?> getRankingHistoryEntryByTournament({
+    required String tournamentId,
+    required String playerId,
+  }) async {
+    try {
+      final response = await _supabase
+          .from('ranking_history')
+          .select()
+          .eq('tournament_id', tournamentId)
+          .eq('player_id', playerId)
+          .maybeSingle();
+
+      if (response == null) return null;
+
+      return RankingHistoryEntry.fromMap(
+        Map<String, dynamic>.from(response as Map),
+      );
+    } catch (e, stack) {
+      _logger.severe(
+        'Failed to fetch ranking history for tournament $tournamentId and player $playerId',
         e,
         stack,
       );
@@ -235,6 +292,44 @@ class SupabaseRankingRepository implements RankingRepository {
   }
 
   @override
+  Future<double> updateTournamentRankingChange({
+    required String playerId,
+    required String tournamentId,
+    required double newDelta,
+  }) async {
+    try {
+      final entry = await getRankingHistoryEntryByTournament(
+        tournamentId: tournamentId,
+        playerId: playerId,
+      );
+      if (entry == null) {
+        throw RankingHistoryNotFoundException('Entry not found');
+      }
+
+      final oldDelta = entry.change ?? 0.0;
+      final diff = newDelta - oldDelta;
+      if (diff == 0) return 0.0;
+
+      await _supabase
+          .from('ranking_history')
+          .update({
+            'change': newDelta,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('ranking_history_id', entry.rankingHistoryId);
+
+      return diff;
+    } catch (e, stack) {
+      _logger.severe(
+        'Failed to update tournament ranking change for player $playerId in tournament $tournamentId',
+        e,
+        stack,
+      );
+      throw e.toFailure();
+    }
+  }
+
+  @override
   Future<RankingHistoryEntry> createMatchRankingEntry({
     required String playerId,
     required String matchId,
@@ -258,6 +353,37 @@ class SupabaseRankingRepository implements RankingRepository {
     } catch (e, stack) {
       _logger.severe(
         'Failed to create match ranking entry for player $playerId',
+        e,
+        stack,
+      );
+      throw e.toFailure();
+    }
+  }
+
+  @override
+  Future<RankingHistoryEntry> createTournamentRankingEntry({
+    required String playerId,
+    required String tournamentId,
+    required double currentRanking,
+  }) async {
+    try {
+      final response = await _supabase
+          .from('ranking_history')
+          .insert({
+            'player_id': playerId,
+            'tournament_id': tournamentId,
+            'ranking': currentRanking,
+            'change': null,
+          })
+          .select()
+          .single();
+
+      return RankingHistoryEntry.fromMap(
+        Map<String, dynamic>.from(response as Map),
+      );
+    } catch (e, stack) {
+      _logger.severe(
+        'Failed to create tournament ranking entry for player $playerId in tournament $tournamentId',
         e,
         stack,
       );

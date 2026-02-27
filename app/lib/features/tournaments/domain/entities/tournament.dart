@@ -48,8 +48,7 @@ class Tournament {
       status: TournamentStatusParser.fromString(map['status'] as String?),
       createdAt: DateTime.parse(map['created_at'] as String),
       updatedAt: DateTime.parse(map['updated_at'] as String),
-      acceptedTournamentDraftId:
-          map['accepted_tournament_draft_id'] as String?,
+      acceptedTournamentDraftId: map['accepted_tournament_draft_id'] as String?,
     );
   }
 

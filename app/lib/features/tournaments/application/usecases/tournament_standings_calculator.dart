@@ -113,10 +113,10 @@ List<TournamentStandingRow> buildTournamentStandings({
   required List<TournamentTeam> teams,
   required List<Match> matches,
 }) {
-  final rows = computeTournamentTeamStats(teams: teams, matches: matches)
-      .values
-      .map((stats) => stats.toStandingRow())
-      .toList(growable: false);
+  final rows = computeTournamentTeamStats(
+    teams: teams,
+    matches: matches,
+  ).values.map((stats) => stats.toStandingRow()).toList(growable: false);
 
   rows.sort((left, right) {
     final byWins = right.wins.compareTo(left.wins);

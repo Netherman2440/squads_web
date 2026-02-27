@@ -25,6 +25,13 @@ import 'package:app/features/players/presentation/pages/players_page.dart';
 import 'package:app/features/squads/presentation/pages/squads_page.dart';
 import 'package:app/features/users/presentation/pages/user_page.dart';
 import 'package:app/features/squads/presentation/pages/squad_shell_page.dart';
+import 'package:app/features/tournaments/presentation/pages/create_tournament_page.dart';
+import 'package:app/features/tournaments/presentation/pages/squad_tournaments_page.dart';
+import 'package:app/features/tournaments/presentation/pages/tournament_against_relations_page.dart';
+import 'package:app/features/tournaments/presentation/pages/tournament_details_page.dart';
+import 'package:app/features/tournaments/presentation/pages/tournament_draft_page.dart';
+import 'package:app/features/tournaments/presentation/pages/tournament_relations_page.dart';
+import 'package:app/features/tournaments/presentation/pages/tournament_teams_page.dart';
 
 enum AppRoute {
   landing,
@@ -50,6 +57,14 @@ enum AppRoute {
   playerStats,
   matches,
   matchDetails,
+  tournaments,
+  tournamentCreate,
+  tournamentDraftRelations,
+  tournamentDraftAgainstRelations,
+  tournamentDraft,
+  tournamentDetails,
+  tournamentTeams,
+  tournamentDraftById,
   invite,
 }
 
@@ -349,6 +364,167 @@ final appRouter = () {
               final matchId = state.pathParameters['matchId'] ?? '';
               return NoTransitionPage(
                 child: MatchDetailsPage(squadId: squadId, matchId: matchId),
+              );
+            },
+          ),
+          GoRoute(
+            path: '/squads/:squadId/tournaments',
+            name: AppRoute.tournaments.name,
+            pageBuilder: (context, state) {
+              final squadId = state.pathParameters['squadId'] ?? '';
+              return NoTransitionPage(
+                child: SquadTournamentsPage(squadId: squadId),
+              );
+            },
+          ),
+          GoRoute(
+            path: '/squads/:squadId/tournaments/create',
+            name: AppRoute.tournamentCreate.name,
+            pageBuilder: (context, state) {
+              final squadId = state.pathParameters['squadId'] ?? '';
+              return NoTransitionPage(
+                child: CreateTournamentPage(squadId: squadId),
+              );
+            },
+          ),
+          GoRoute(
+            path: '/squads/:squadId/tournaments/:tournamentId/draft/relations',
+            name: AppRoute.tournamentDraftRelations.name,
+            pageBuilder: (context, state) {
+              final squadId = state.pathParameters['squadId'] ?? '';
+              final tournamentId = state.pathParameters['tournamentId'] ?? '';
+              final extra = state.extra;
+
+              List<String> selectedIds = const [];
+              var teamCount = 2;
+              List<DraftRule> draftRules = const [];
+
+              if (extra is Map<String, dynamic>) {
+                selectedIds =
+                    (extra['selectedIds'] as List<dynamic>?)?.cast<String>() ??
+                    [];
+                teamCount = (extra['teamCount'] as int?) ?? 2;
+                draftRules = _decodeDraftRules(extra['draftRules']);
+              }
+
+              return NoTransitionPage(
+                child: TournamentRelationsPage(
+                  squadId: squadId,
+                  tournamentId: tournamentId,
+                  selectedPlayerIds: selectedIds,
+                  teamCount: teamCount,
+                  initialDraftRules: draftRules,
+                ),
+              );
+            },
+          ),
+          GoRoute(
+            path:
+                '/squads/:squadId/tournaments/:tournamentId/draft/relations/against',
+            name: AppRoute.tournamentDraftAgainstRelations.name,
+            pageBuilder: (context, state) {
+              final squadId = state.pathParameters['squadId'] ?? '';
+              final tournamentId = state.pathParameters['tournamentId'] ?? '';
+              final extra = state.extra;
+
+              List<String> selectedIds = const [];
+              var teamCount = 2;
+              List<DraftRule> draftRules = const [];
+
+              if (extra is Map<String, dynamic>) {
+                selectedIds =
+                    (extra['selectedIds'] as List<dynamic>?)?.cast<String>() ??
+                    [];
+                teamCount = (extra['teamCount'] as int?) ?? 2;
+                draftRules = _decodeDraftRules(extra['draftRules']);
+              }
+
+              return NoTransitionPage(
+                child: TournamentAgainstRelationsPage(
+                  squadId: squadId,
+                  tournamentId: tournamentId,
+                  selectedPlayerIds: selectedIds,
+                  teamCount: teamCount,
+                  initialDraftRules: draftRules,
+                ),
+              );
+            },
+          ),
+          GoRoute(
+            path: '/squads/:squadId/tournaments/:tournamentId/draft',
+            name: AppRoute.tournamentDraft.name,
+            pageBuilder: (context, state) {
+              final squadId = state.pathParameters['squadId'] ?? '';
+              final tournamentId = state.pathParameters['tournamentId'] ?? '';
+              final extra = state.extra;
+
+              List<String> selectedIds = const [];
+              var teamCount = 2;
+              List<DraftRule> draftRules = const [];
+
+              if (extra is Map<String, dynamic>) {
+                selectedIds =
+                    (extra['selectedIds'] as List<dynamic>?)?.cast<String>() ??
+                    [];
+                teamCount = (extra['teamCount'] as int?) ?? 2;
+                draftRules = _decodeDraftRules(extra['draftRules']);
+              }
+
+              return NoTransitionPage(
+                child: TournamentDraftPage(
+                  squadId: squadId,
+                  tournamentId: tournamentId,
+                  selectedPlayerIds: selectedIds,
+                  teamCount: teamCount,
+                  draftRules: draftRules,
+                ),
+              );
+            },
+          ),
+          GoRoute(
+            path: '/squads/:squadId/tournaments/:tournamentId/teams',
+            name: AppRoute.tournamentTeams.name,
+            pageBuilder: (context, state) {
+              final squadId = state.pathParameters['squadId'] ?? '';
+              final tournamentId = state.pathParameters['tournamentId'] ?? '';
+              return NoTransitionPage(
+                child: TournamentTeamsPage(
+                  squadId: squadId,
+                  tournamentId: tournamentId,
+                ),
+              );
+            },
+          ),
+          GoRoute(
+            path:
+                '/squads/:squadId/tournaments/:tournamentId/drafts/:tournamentDraftId',
+            name: AppRoute.tournamentDraftById.name,
+            pageBuilder: (context, state) {
+              final squadId = state.pathParameters['squadId'] ?? '';
+              final tournamentId = state.pathParameters['tournamentId'] ?? '';
+              final tournamentDraftId =
+                  state.pathParameters['tournamentDraftId'] ?? '';
+
+              return NoTransitionPage(
+                child: TournamentDraftPage(
+                  squadId: squadId,
+                  tournamentId: tournamentId,
+                  tournamentDraftId: tournamentDraftId,
+                ),
+              );
+            },
+          ),
+          GoRoute(
+            path: '/squads/:squadId/tournaments/:tournamentId',
+            name: AppRoute.tournamentDetails.name,
+            pageBuilder: (context, state) {
+              final squadId = state.pathParameters['squadId'] ?? '';
+              final tournamentId = state.pathParameters['tournamentId'] ?? '';
+              return NoTransitionPage(
+                child: TournamentDetailsPage(
+                  squadId: squadId,
+                  tournamentId: tournamentId,
+                ),
               );
             },
           ),

@@ -10,6 +10,7 @@ import 'package:app/core/error/failure.dart';
 import 'package:app/core/utils/team_ranking.dart';
 import 'package:app/core/widgets/probability_slider.dart';
 import 'package:app/features/draft/domain/entities/draft_rule.dart';
+import 'package:app/features/draft/domain/services/draft_algorithm_policy.dart';
 import 'package:app/features/draft/application/get_match_draft_use_case.dart';
 import 'package:app/features/draft/application/save_match_draft_use_case.dart';
 import 'package:app/features/draft/presentation/controllers/draft_session_notifier.dart';
@@ -138,10 +139,13 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
 
   DraftAlgorithm get _preferredAlgorithm {
     final selectedCount = widget.selectedPlayerIds.toSet().length;
-    if (selectedCount >= AppConfig.greedyDraftThresholdPlayers) {
-      return DraftAlgorithm.greedy;
-    }
-    return DraftAlgorithm.combinatory;
+    return switch (DraftAlgorithmPolicy.resolve(
+      teamCount: 2,
+      playerCount: selectedCount,
+    )) {
+      DraftAlgorithmSelection.greedy => DraftAlgorithm.greedy,
+      DraftAlgorithmSelection.combinatory => DraftAlgorithm.combinatory,
+    };
   }
 
   Future<void> _hydrateLoadingPlayerCount() async {

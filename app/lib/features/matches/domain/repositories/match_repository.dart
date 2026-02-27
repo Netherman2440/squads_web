@@ -12,6 +12,7 @@ abstract class MatchRepository {
   Future<Match> createMatch({
     required String squadId,
     String? tournamentId,
+    Map<String, dynamic>? scoreMeta,
     required Team homeTeam,
     required Team awayTeam,
   });

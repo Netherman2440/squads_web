@@ -114,7 +114,10 @@ class SupabaseTournamentDraftRepository implements TournamentDraftRepository {
 
       final rows = response as List<dynamic>;
       return rows
-          .map((row) => _draftFromRows(draftRow: Map<String, dynamic>.from(row as Map)))
+          .map(
+            (row) =>
+                _draftFromRows(draftRow: Map<String, dynamic>.from(row as Map)),
+          )
           .toList(growable: false);
     } catch (e, stack) {
       _logger.severe(
@@ -227,7 +230,9 @@ TournamentDraft _draftFromRows({
     createdAt: DateTime.parse(draftRow['created_at'] as String),
     updatedAt: DateTime.parse(draftRow['updated_at'] as String),
     seed: parsedProposals.seed,
-    selectedPlayerIds: _parseSelectedPlayerIds(payloadRow?['selected_player_ids']),
+    selectedPlayerIds: _parseSelectedPlayerIds(
+      payloadRow?['selected_player_ids'],
+    ),
     draftRules: _parseRules(payloadRow?['rules']),
     proposals: parsedProposals.proposals,
     winRateMatrix: _parseWinRateMatrix(payloadRow?['win_rate_matrix']),
@@ -252,7 +257,9 @@ List<Map<String, dynamic>> _serializeProposals(
     proposals.map(
       (draft) => {
         'teams': draft.teams
-            .map((team) => team.players.map((player) => player.playerId).toList())
+            .map(
+              (team) => team.players.map((player) => player.playerId).toList(),
+            )
             .toList(),
       },
     ),
@@ -313,7 +320,9 @@ _ParsedStoredProposals _parseStoredProposals(dynamic raw) {
       if (teamRaw is! List) {
         continue;
       }
-      teams.add(teamRaw.whereType<String>().where((id) => id.isNotEmpty).toList());
+      teams.add(
+        teamRaw.whereType<String>().where((id) => id.isNotEmpty).toList(),
+      );
     }
 
     if (teams.isNotEmpty) {
@@ -332,7 +341,10 @@ List<String> _parseSelectedPlayerIds(dynamic raw) {
     return const [];
   }
 
-  return raw.whereType<String>().where((id) => id.isNotEmpty).toList(growable: false);
+  return raw
+      .whereType<String>()
+      .where((id) => id.isNotEmpty)
+      .toList(growable: false);
 }
 
 List<DraftRule> _parseRules(dynamic raw) {

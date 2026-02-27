@@ -34,7 +34,9 @@ List<DraftRule> decodeDraftRules(Object? rawRules) {
       continue;
     }
 
-    final ids = playerIdsRaw.whereType<String>().toSet().toList(growable: false);
+    final ids = playerIdsRaw.whereType<String>().toSet().toList(
+      growable: false,
+    );
     if (ids.length < 2) {
       continue;
     }

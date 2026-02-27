@@ -29,10 +29,14 @@ class AcceptTournamentDraftUseCase {
       throw const NotFoundFailure('Tournament draft not found.');
     }
     if (draft.tournamentId != tournamentId) {
-      throw const ValidationFailure('Draft does not belong to this tournament.');
+      throw const ValidationFailure(
+        'Draft does not belong to this tournament.',
+      );
     }
     if (draft.status == 'error') {
-      throw ValidationFailure(draft.errorMessage ?? 'Cannot accept failed draft.');
+      throw ValidationFailure(
+        draft.errorMessage ?? 'Cannot accept failed draft.',
+      );
     }
     if (proposalIndex < 0 || proposalIndex >= draft.proposals.length) {
       throw const ValidationFailure('Invalid proposal index.');
@@ -67,7 +71,9 @@ class AcceptTournamentDraftUseCase {
 
     final teamInputs = <TournamentTeamInput>[];
     for (var index = 0; index < proposal.teams.length; index++) {
-      final existing = index < existingTeams.length ? existingTeams[index] : null;
+      final existing = index < existingTeams.length
+          ? existingTeams[index]
+          : null;
       final playerIds = proposal.teams[index].toSet().toList(growable: false);
 
       teamInputs.add(

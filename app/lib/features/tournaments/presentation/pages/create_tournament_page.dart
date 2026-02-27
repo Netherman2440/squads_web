@@ -26,7 +26,7 @@ class _CreateTournamentPageState extends ConsumerState<CreateTournamentPage> {
   final _searchController = TextEditingController();
 
   List<Player> _players = const [];
-  Set<String> _selectedIds = <String>{};
+  final Set<String> _selectedIds = <String>{};
   int _teamCount = 2;
   bool _isLoading = true;
   bool _isSubmitting = false;
@@ -87,13 +87,15 @@ class _CreateTournamentPageState extends ConsumerState<CreateTournamentPage> {
     });
 
     try {
-      final tournament = await ref.read(createTournamentUseCaseProvider).execute(
-        squadId: widget.squadId,
-        playerIds: _selectedIds.toList(growable: false),
-        name: _nameController.text.trim().isEmpty
-            ? null
-            : _nameController.text.trim(),
-      );
+      final tournament = await ref
+          .read(createTournamentUseCaseProvider)
+          .execute(
+            squadId: widget.squadId,
+            playerIds: _selectedIds.toList(growable: false),
+            name: _nameController.text.trim().isEmpty
+                ? null
+                : _nameController.text.trim(),
+          );
 
       if (!mounted) {
         return;
@@ -137,9 +139,7 @@ class _CreateTournamentPageState extends ConsumerState<CreateTournamentPage> {
 
     final searchValue = _searchController.text.trim().toLowerCase();
     final visiblePlayers = _players
-        .where(
-          (player) => player.name.toLowerCase().contains(searchValue),
-        )
+        .where((player) => player.name.toLowerCase().contains(searchValue))
         .toList(growable: false);
 
     return Scaffold(
@@ -231,7 +231,9 @@ class _CreateTournamentPageState extends ConsumerState<CreateTournamentPage> {
                                           if (checked == true) {
                                             _selectedIds.add(player.playerId);
                                           } else {
-                                            _selectedIds.remove(player.playerId);
+                                            _selectedIds.remove(
+                                              player.playerId,
+                                            );
                                           }
                                         });
                                       },

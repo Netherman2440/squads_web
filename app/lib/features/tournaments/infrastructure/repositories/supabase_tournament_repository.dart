@@ -42,7 +42,9 @@ class SupabaseTournamentRepository implements TournamentRepository {
 
       final rows = response as List<dynamic>;
       return rows
-          .map((row) => Tournament.fromMap(Map<String, dynamic>.from(row as Map)))
+          .map(
+            (row) => Tournament.fromMap(Map<String, dynamic>.from(row as Map)),
+          )
           .toList(growable: false);
     } catch (e, stack) {
       _logger.severe('Failed to load tournaments for squad $squadId', e, stack);
@@ -147,9 +149,8 @@ class SupabaseTournamentRepository implements TournamentRepository {
       final teamsRows = teamsResponse as List<dynamic>;
       final teams = teamsRows
           .map(
-            (row) => TournamentTeam.fromMap(
-              Map<String, dynamic>.from(row as Map),
-            ),
+            (row) =>
+                TournamentTeam.fromMap(Map<String, dynamic>.from(row as Map)),
           )
           .toList(growable: false);
 
@@ -231,7 +232,9 @@ class SupabaseTournamentRepository implements TournamentRepository {
   }
 
   @override
-  Future<List<String>> getTournamentPlayerIds({required String tournamentId}) async {
+  Future<List<String>> getTournamentPlayerIds({
+    required String tournamentId,
+  }) async {
     try {
       final response = await _supabase
           .from('tournament_team_players')
@@ -276,10 +279,9 @@ class SupabaseTournamentRepository implements TournamentRepository {
       for (var index = 0; index < teams.length; index++) {
         final team = teams[index];
         final providedId = team.tournamentTeamId;
-        final teamId =
-            providedId != null && existingIds.contains(providedId)
-                ? providedId
-                : const Uuid().v4();
+        final teamId = providedId != null && existingIds.contains(providedId)
+            ? providedId
+            : const Uuid().v4();
 
         retainedIds.add(teamId);
         teamRows.add({
@@ -296,7 +298,9 @@ class SupabaseTournamentRepository implements TournamentRepository {
             .upsert(teamRows, onConflict: 'tournament_team_id');
       }
 
-      final idsToDelete = existingIds.difference(retainedIds).toList(growable: false);
+      final idsToDelete = existingIds
+          .difference(retainedIds)
+          .toList(growable: false);
       if (idsToDelete.isNotEmpty) {
         await _supabase
             .from('tournament_teams')
@@ -313,7 +317,9 @@ class SupabaseTournamentRepository implements TournamentRepository {
       final rosterRows = <Map<String, dynamic>>[];
       for (var index = 0; index < teams.length; index++) {
         final teamId = teamRows[index]['tournament_team_id'] as String;
-        final playerIds = teams[index].playerIds.toSet().toList(growable: false);
+        final playerIds = teams[index].playerIds.toSet().toList(
+          growable: false,
+        );
 
         for (final playerId in playerIds) {
           rosterRows.add({
@@ -338,7 +344,9 @@ class SupabaseTournamentRepository implements TournamentRepository {
   }
 
   @override
-  Future<List<Match>> getTournamentMatches({required String tournamentId}) async {
+  Future<List<Match>> getTournamentMatches({
+    required String tournamentId,
+  }) async {
     try {
       final response = await _supabase
           .from('matches')

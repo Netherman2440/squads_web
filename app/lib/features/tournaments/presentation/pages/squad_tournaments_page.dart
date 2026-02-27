@@ -92,19 +92,16 @@ class SquadTournamentsPage extends ConsumerWidget {
 }
 
 class _TournamentTile extends StatelessWidget {
-  const _TournamentTile({
-    required this.squadId,
-    required this.tournament,
-  });
+  const _TournamentTile({required this.squadId, required this.tournament});
 
   final String squadId;
   final Tournament tournament;
 
   @override
   Widget build(BuildContext context) {
-    final dateText = DateFormat('dd.MM.yyyy HH:mm').format(
-      tournament.createdAt.toLocal(),
-    );
+    final dateText = DateFormat(
+      'dd.MM.yyyy HH:mm',
+    ).format(tournament.createdAt.toLocal());
 
     return Card(
       child: ListTile(

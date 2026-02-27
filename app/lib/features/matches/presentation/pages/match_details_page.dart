@@ -549,6 +549,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
     final hasTeamAssignments =
         (match.homeTeam?.players.isNotEmpty ?? false) &&
         (match.awayTeam?.players.isNotEmpty ?? false);
+    final isTournamentMatch = match.tournamentId != null;
     final selectedIds = <String>{
       for (final player in match.homeTeam?.players ?? const []) player.playerId,
       for (final player in match.awayTeam?.players ?? const []) player.playerId,
@@ -564,7 +565,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
               child: Wrap(
                 spacing: 8,
                 children: [
-                  if (!hasScore && hasTeamAssignments)
+                  if (!isTournamentMatch && !hasScore && hasTeamAssignments)
                     TextButton(
                       onPressed: () => _onRedraft(match),
                       child: const Text('Wylosuj jeszcze raz'),
@@ -599,10 +600,11 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
                     onPressed: () => _enterScoreEditMode(match),
                     child: const Text('Wprowadź wynik'),
                   ),
-                  TextButton(
-                    onPressed: _onRematch,
-                    child: const Text('Rewanż'),
-                  ),
+                  if (!isTournamentMatch)
+                    TextButton(
+                      onPressed: _onRematch,
+                      child: const Text('Rewanż'),
+                    ),
                 ],
               ),
             ),

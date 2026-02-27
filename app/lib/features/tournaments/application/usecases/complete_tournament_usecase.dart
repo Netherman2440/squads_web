@@ -38,7 +38,10 @@ class CompleteTournamentUseCase {
     final matches = await _tournamentRepository.getTournamentMatches(
       tournamentId: tournamentId,
     );
-    final standings = computeTournamentTeamStats(teams: teams, matches: matches);
+    final standings = computeTournamentTeamStats(
+      teams: teams,
+      matches: matches,
+    );
 
     final rankingEntries = await _rankingRepository.getTournamentRankingHistory(
       tournamentId,
@@ -49,7 +52,8 @@ class CompleteTournamentUseCase {
     if (rankingEntries.isNotEmpty && squad.rankingUpdate) {
       final playerTeam = <String, String>{
         for (final team in teams)
-          for (final player in team.players) player.playerId: team.tournamentTeamId,
+          for (final player in team.players)
+            player.playerId: team.tournamentTeamId,
       };
 
       for (final entry in rankingEntries) {
@@ -87,7 +91,9 @@ class CompleteTournamentUseCase {
           continue;
         }
 
-        final player = await _playerRepository.getPlayer(playerId: entry.playerId);
+        final player = await _playerRepository.getPlayer(
+          playerId: entry.playerId,
+        );
         final desiredRanking = (player.ranking + expectedDiff)
             .clamp(0.0, 100.0)
             .toDouble();
@@ -129,13 +135,13 @@ double _computeTeamDelta({
   return (matchBalance + goalDiffFactor) * rankingMultiplier;
 }
 
-final completeTournamentUseCaseProvider = Provider<CompleteTournamentUseCase>(
-  (ref) {
-    return CompleteTournamentUseCase(
-      ref.read(tournamentRepositoryProvider),
-      ref.read(rankingRepositoryProvider),
-      ref.read(playerRepositoryProvider),
-      ref.read(getSquadUseCaseProvider),
-    );
-  },
-);
+final completeTournamentUseCaseProvider = Provider<CompleteTournamentUseCase>((
+  ref,
+) {
+  return CompleteTournamentUseCase(
+    ref.read(tournamentRepositoryProvider),
+    ref.read(rankingRepositoryProvider),
+    ref.read(playerRepositoryProvider),
+    ref.read(getSquadUseCaseProvider),
+  );
+});

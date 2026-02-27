@@ -5,11 +5,10 @@ import 'package:app/features/tournaments/application/usecases/get_tournament_use
 import 'package:app/features/tournaments/application/usecases/get_tournaments_usecase.dart';
 import 'package:app/features/tournaments/domain/entities/tournament.dart';
 
-final squadTournamentsProvider = FutureProvider.family<List<Tournament>, String>(
-  (ref, squadId) {
-    return ref.read(getTournamentsUseCaseProvider).execute(squadId: squadId);
-  },
-);
+final squadTournamentsProvider =
+    FutureProvider.family<List<Tournament>, String>((ref, squadId) {
+      return ref.read(getTournamentsUseCaseProvider).execute(squadId: squadId);
+    });
 
 final tournamentDetailsProvider =
     FutureProvider.family<TournamentDetailsDto, String>((ref, tournamentId) {

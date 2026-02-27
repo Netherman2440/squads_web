@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:app/core/app_router.dart';
+import 'package:app/features/draft/domain/entities/draft_rule.dart';
 import 'package:app/features/draft/presentation/widgets/draft_relation_widgets.dart';
 import 'package:app/features/players/application/usecases/get_squad_players_usecase.dart';
 import 'package:app/features/players/domain/entities/player.dart';
@@ -22,7 +23,7 @@ class TournamentAgainstRelationsPage extends ConsumerStatefulWidget {
   final String tournamentId;
   final List<String> selectedPlayerIds;
   final int teamCount;
-  final List<dynamic> initialDraftRules;
+  final List<DraftRule> initialDraftRules;
 
   @override
   ConsumerState<TournamentAgainstRelationsPage> createState() =>
@@ -41,9 +42,8 @@ class _TournamentAgainstRelationsPageState
   void initState() {
     super.initState();
 
-    final initialRules = decodeDraftRules(widget.initialDraftRules);
-    _togetherGroups = togetherGroupsFromRules(initialRules);
-    _againstGroups = againstGroupsFromRules(initialRules);
+    _togetherGroups = togetherGroupsFromRules(widget.initialDraftRules);
+    _againstGroups = againstGroupsFromRules(widget.initialDraftRules);
 
     Future.microtask(_loadPlayers);
   }

@@ -56,7 +56,9 @@ class CreateTournamentUseCase {
   }
 }
 
-final createTournamentUseCaseProvider = Provider<CreateTournamentUseCase>((ref) {
+final createTournamentUseCaseProvider = Provider<CreateTournamentUseCase>((
+  ref,
+) {
   return CreateTournamentUseCase(
     ref.read(tournamentRepositoryProvider),
     ref.read(rankingRepositoryProvider),

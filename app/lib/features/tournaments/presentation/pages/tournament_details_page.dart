@@ -13,6 +13,7 @@ import 'package:app/features/squads/presentation/state/squad_detail_notifier.dar
 import 'package:app/features/tournaments/application/dto/tournament_details_dto.dart';
 import 'package:app/features/tournaments/application/usecases/complete_tournament_usecase.dart';
 import 'package:app/features/tournaments/application/usecases/create_tournament_match_usecase.dart';
+import 'package:app/features/tournaments/application/usecases/tournament_standings_calculator.dart';
 import 'package:app/features/tournaments/domain/entities/tournament.dart';
 import 'package:app/features/tournaments/domain/entities/tournament_status.dart';
 import 'package:app/features/tournaments/domain/entities/tournament_team.dart';
@@ -50,9 +51,12 @@ class TournamentDetailsPage extends ConsumerWidget {
           squadId: squadId,
           details: details,
           canManage: canManage,
-          onInvalidate: () {
+          onRefreshCore: () {
             ref.invalidate(tournamentDetailsProvider(tournamentId));
             ref.invalidate(squadTournamentsProvider(squadId));
+          },
+          onRefreshMatches: () {
+            ref.invalidate(tournamentMatchesProvider(tournamentId));
           },
         ),
       ),
@@ -65,20 +69,30 @@ class _DetailsBody extends ConsumerWidget {
     required this.squadId,
     required this.details,
     required this.canManage,
-    required this.onInvalidate,
+    required this.onRefreshCore,
+    required this.onRefreshMatches,
   });
 
   final String squadId;
   final TournamentDetailsDto details;
   final bool canManage;
-  final VoidCallback onInvalidate;
+  final VoidCallback onRefreshCore;
+  final VoidCallback onRefreshMatches;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tournament = details.tournament;
+    final matchesAsync = ref.watch(
+      tournamentMatchesProvider(tournament.tournamentId),
+    );
+    final matches = matchesAsync.asData?.value ?? details.matches;
     final isWideLayout = MediaQuery.sizeOf(context).width >= 1100;
+    final standings = buildTournamentStandings(
+      teams: details.teams,
+      matches: matches,
+    );
     final pointsByTeamId = <String, int>{
-      for (final row in details.standings) row.tournamentTeamId: row.points,
+      for (final row in standings) row.tournamentTeamId: row.points,
     };
     Future<void> openTeamsEditor() async {
       await context.pushNamed(
@@ -90,7 +104,7 @@ class _DetailsBody extends ConsumerWidget {
       );
 
       if (context.mounted) {
-        onInvalidate();
+        onRefreshCore();
       }
     }
 
@@ -109,12 +123,20 @@ class _DetailsBody extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+              Wrap(
+                alignment: WrapAlignment.end,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                runSpacing: 8,
                 children: [
                   _StatusChip(status: tournament.status),
-                  if (canManage) ...[
-                    const SizedBox(height: 8),
+                  if (canManage)
+                    OutlinedButton.icon(
+                      onPressed: openTeamsEditor,
+                      icon: const Icon(Icons.groups),
+                      label: const Text('Edit teams'),
+                    ),
+                  if (canManage)
                     OutlinedButton.icon(
                       onPressed: tournament.status == TournamentStatus.active
                           ? () async {
@@ -149,13 +171,12 @@ class _DetailsBody extends ConsumerWidget {
                                   .execute(
                                     tournamentId: tournament.tournamentId,
                                   );
-                              onInvalidate();
+                              onRefreshCore();
                             }
                           : null,
                       icon: const Icon(Icons.flag),
                       label: const Text('Complete'),
                     ),
-                  ],
                 ],
               ),
             ],
@@ -164,24 +185,11 @@ class _DetailsBody extends ConsumerWidget {
           if (isWideLayout)
             _WideTeamsAndStandings(
               teams: details.teams,
-              standings: details.standings,
+              standings: standings,
               pointsByTeamId: pointsByTeamId,
-              canManage: canManage,
-              onEditTeams: openTeamsEditor,
             )
           else ...[
-            Row(
-              children: [
-                Text('Teams', style: Theme.of(context).textTheme.titleMedium),
-                const Spacer(),
-                if (canManage)
-                  OutlinedButton.icon(
-                    onPressed: openTeamsEditor,
-                    icon: const Icon(Icons.groups),
-                    label: const Text('Edit teams'),
-                  ),
-              ],
-            ),
+            Text('Teams', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             _TeamsStrip(
               teams: details.teams,
@@ -189,14 +197,14 @@ class _DetailsBody extends ConsumerWidget {
               pointsByTeamId: pointsByTeamId,
             ),
             const SizedBox(height: 20),
-            _StandingsSection(rows: details.standings),
+            _StandingsSection(rows: standings),
           ],
           const SizedBox(height: 20),
           _MatchesSection(
             squadId: squadId,
-            matches: details.matches,
+            matches: matches,
             canManage: canManage,
-            onReturnFromMatch: onInvalidate,
+            onReturnFromMatch: onRefreshMatches,
             onSaveScore: (matchId, homeScore, awayScore) async {
               await ref
                   .read(updateMatchScoreUseCaseProvider)
@@ -206,7 +214,7 @@ class _DetailsBody extends ConsumerWidget {
                     homeScore: homeScore,
                     awayScore: awayScore,
                   );
-              onInvalidate();
+              onRefreshMatches();
             },
             onAddMatch: details.teams.length >= 2
                 ? () async {
@@ -218,17 +226,7 @@ class _DetailsBody extends ConsumerWidget {
                     );
 
                     if (created != null && context.mounted) {
-                      onInvalidate();
-                      await context.pushNamed(
-                        AppRoute.matchDetails.name,
-                        pathParameters: {
-                          'squadId': squadId,
-                          'matchId': created.matchId,
-                        },
-                      );
-                      if (context.mounted) {
-                        onInvalidate();
-                      }
+                      onRefreshMatches();
                     }
                   }
                 : null,
@@ -393,15 +391,11 @@ class _WideTeamsAndStandings extends StatelessWidget {
     required this.teams,
     required this.standings,
     required this.pointsByTeamId,
-    required this.canManage,
-    required this.onEditTeams,
   });
 
   final List<TournamentTeam> teams;
   final List<TournamentStandingRow> standings;
   final Map<String, int> pointsByTeamId;
-  final bool canManage;
-  final Future<void> Function() onEditTeams;
 
   @override
   Widget build(BuildContext context) {
@@ -413,18 +407,7 @@ class _WideTeamsAndStandings extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Text('Teams', style: Theme.of(context).textTheme.titleMedium),
-                  const Spacer(),
-                  if (canManage)
-                    OutlinedButton.icon(
-                      onPressed: onEditTeams,
-                      icon: const Icon(Icons.groups),
-                      label: const Text('Edit teams'),
-                    ),
-                ],
-              ),
+              Text('Teams', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
               if (teams.isEmpty)
                 const Text('No teams available yet.')

@@ -4,10 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:app/core/global_dependencies.dart';
+import 'package:app/features/matches/domain/entities/match.dart';
 import 'package:app/features/tournaments/application/dto/tournament_details_dto.dart';
 import 'package:app/features/tournaments/application/usecases/get_tournament_usecase.dart';
 import 'package:app/features/tournaments/application/usecases/get_tournaments_usecase.dart';
 import 'package:app/features/tournaments/domain/entities/tournament.dart';
+import 'package:app/features/tournaments/tournaments_providers.dart';
 
 final squadTournamentsProvider =
     FutureProvider.family<List<Tournament>, String>((ref, squadId) {
@@ -21,6 +23,16 @@ final tournamentDetailsProvider =
           .read(getTournamentUseCaseProvider)
           .execute(tournamentId: tournamentId);
     });
+
+final tournamentMatchesProvider = FutureProvider.family<List<Match>, String>((
+  ref,
+  tournamentId,
+) {
+  ref.watch(tournamentMatchesRealtimeTickProvider(tournamentId));
+  return ref
+      .read(tournamentRepositoryProvider)
+      .getTournamentMatches(tournamentId: tournamentId);
+});
 
 final tournamentRealtimeTickProvider = StreamProvider.family<int, String>((
   ref,
@@ -52,13 +64,6 @@ final tournamentRealtimeTickProvider = StreamProvider.family<int, String>((
       .onPostgresChanges(
         event: PostgresChangeEvent.all,
         schema: 'public',
-        table: 'matches',
-        filter: filter,
-        callback: (_) => emitTick(),
-      )
-      .onPostgresChanges(
-        event: PostgresChangeEvent.all,
-        schema: 'public',
         table: 'tournament_teams',
         filter: filter,
         callback: (_) => emitTick(),
@@ -67,6 +72,52 @@ final tournamentRealtimeTickProvider = StreamProvider.family<int, String>((
         event: PostgresChangeEvent.all,
         schema: 'public',
         table: 'tournament_team_players',
+        filter: filter,
+        callback: (_) => emitTick(),
+      )
+      .subscribe();
+
+  controller.add(tick);
+
+  ref.onDispose(() {
+    controller.close();
+    supabase.removeChannel(channel);
+  });
+
+  return controller.stream;
+});
+
+final tournamentMatchesRealtimeTickProvider = StreamProvider.family<int, String>((
+  ref,
+  tournamentId,
+) {
+  final supabase = ref.read(supabaseProvider);
+  final controller = StreamController<int>();
+  var tick = 0;
+
+  void emitTick() {
+    if (controller.isClosed) {
+      return;
+    }
+    tick += 1;
+    controller.add(tick);
+  }
+
+  final filter = PostgresChangeFilter(
+    type: PostgresChangeFilterType.eq,
+    column: 'tournament_id',
+    value: tournamentId,
+  );
+
+  final channel = supabase.channel(
+    'tournament-matches-updates-$tournamentId-${DateTime.now().microsecondsSinceEpoch}',
+  );
+
+  channel
+      .onPostgresChanges(
+        event: PostgresChangeEvent.all,
+        schema: 'public',
+        table: 'matches',
         filter: filter,
         callback: (_) => emitTick(),
       )

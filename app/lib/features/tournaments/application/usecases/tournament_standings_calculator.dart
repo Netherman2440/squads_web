@@ -7,6 +7,7 @@ class TournamentTeamStats {
   final String teamName;
   final String? teamColor;
   final int wins;
+  final int draws;
   final int losses;
   final int goalsFor;
   final int goalsAgainst;
@@ -16,6 +17,7 @@ class TournamentTeamStats {
     required this.teamName,
     required this.teamColor,
     required this.wins,
+    required this.draws,
     required this.losses,
     required this.goalsFor,
     required this.goalsAgainst,
@@ -23,6 +25,7 @@ class TournamentTeamStats {
 
   TournamentTeamStats copyWith({
     int? wins,
+    int? draws,
     int? losses,
     int? goalsFor,
     int? goalsAgainst,
@@ -32,6 +35,7 @@ class TournamentTeamStats {
       teamName: teamName,
       teamColor: teamColor,
       wins: wins ?? this.wins,
+      draws: draws ?? this.draws,
       losses: losses ?? this.losses,
       goalsFor: goalsFor ?? this.goalsFor,
       goalsAgainst: goalsAgainst ?? this.goalsAgainst,
@@ -39,7 +43,7 @@ class TournamentTeamStats {
   }
 
   int get goalDifference => goalsFor - goalsAgainst;
-  int get played => wins + losses;
+  int get played => wins + draws + losses;
 
   TournamentStandingRow toStandingRow() {
     return TournamentStandingRow(
@@ -47,6 +51,7 @@ class TournamentTeamStats {
       teamName: teamName,
       teamColor: teamColor,
       wins: wins,
+      draws: draws,
       losses: losses,
       goalsFor: goalsFor,
       goalsAgainst: goalsAgainst,
@@ -65,6 +70,7 @@ Map<String, TournamentTeamStats> computeTournamentTeamStats({
         teamName: _teamName(team),
         teamColor: team.color,
         wins: 0,
+        draws: 0,
         losses: 0,
         goalsFor: 0,
         goalsAgainst: 0,
@@ -95,6 +101,7 @@ Map<String, TournamentTeamStats> computeTournamentTeamStats({
       goalsFor: homeStats.goalsFor + homeScore,
       goalsAgainst: homeStats.goalsAgainst + awayScore,
       wins: homeStats.wins + (homeScore > awayScore ? 1 : 0),
+      draws: homeStats.draws + (homeScore == awayScore ? 1 : 0),
       losses: homeStats.losses + (homeScore < awayScore ? 1 : 0),
     );
 
@@ -102,6 +109,7 @@ Map<String, TournamentTeamStats> computeTournamentTeamStats({
       goalsFor: awayStats.goalsFor + awayScore,
       goalsAgainst: awayStats.goalsAgainst + homeScore,
       wins: awayStats.wins + (awayScore > homeScore ? 1 : 0),
+      draws: awayStats.draws + (awayScore == homeScore ? 1 : 0),
       losses: awayStats.losses + (awayScore < homeScore ? 1 : 0),
     );
   }
@@ -119,9 +127,9 @@ List<TournamentStandingRow> buildTournamentStandings({
   ).values.map((stats) => stats.toStandingRow()).toList(growable: false);
 
   rows.sort((left, right) {
-    final byWins = right.wins.compareTo(left.wins);
-    if (byWins != 0) {
-      return byWins;
+    final byPoints = right.points.compareTo(left.points);
+    if (byPoints != 0) {
+      return byPoints;
     }
 
     final byGoalDiff = right.goalDifference.compareTo(left.goalDifference);
@@ -129,9 +137,14 @@ List<TournamentStandingRow> buildTournamentStandings({
       return byGoalDiff;
     }
 
-    final byLosses = left.losses.compareTo(right.losses);
-    if (byLosses != 0) {
-      return byLosses;
+    final byGoalsFor = right.goalsFor.compareTo(left.goalsFor);
+    if (byGoalsFor != 0) {
+      return byGoalsFor;
+    }
+
+    final byWins = right.wins.compareTo(left.wins);
+    if (byWins != 0) {
+      return byWins;
     }
 
     return left.teamName.toLowerCase().compareTo(right.teamName.toLowerCase());

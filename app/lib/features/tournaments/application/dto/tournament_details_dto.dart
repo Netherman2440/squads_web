@@ -8,6 +8,7 @@ class TournamentStandingRow {
   final String teamName;
   final String? teamColor;
   final int wins;
+  final int draws;
   final int losses;
   final int goalsFor;
   final int goalsAgainst;
@@ -17,13 +18,15 @@ class TournamentStandingRow {
     required this.teamName,
     this.teamColor,
     required this.wins,
+    required this.draws,
     required this.losses,
     required this.goalsFor,
     required this.goalsAgainst,
   });
 
   int get goalDifference => goalsFor - goalsAgainst;
-  int get played => wins + losses;
+  int get played => wins + draws + losses;
+  int get points => (wins * 3) + draws;
 }
 
 class TournamentDetailsDto {

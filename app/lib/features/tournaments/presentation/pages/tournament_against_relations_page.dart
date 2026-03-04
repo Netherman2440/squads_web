@@ -144,7 +144,7 @@ class _TournamentAgainstRelationsPageState
                           player.playerId: player,
                       },
                       borderColor: Colors.red,
-                      onAdd: _selectedPlayers.length < widget.teamCount
+                      onAdd: _selectedPlayers.length < 2
                           ? null
                           : () async {
                               final result = await showDraftRuleEditorDialog(
@@ -152,8 +152,8 @@ class _TournamentAgainstRelationsPageState
                                 title: 'Add against rule',
                                 players: _selectedPlayers,
                                 blockedPlayerIds: const <String>{},
-                                minSelection: widget.teamCount,
-                                exactSelection: widget.teamCount,
+                                minSelection: 2,
+                                maxSelection: widget.teamCount,
                                 blockTogetherConflicts: true,
                                 togetherGroupByPlayer: togetherGroupByPlayer,
                               );
@@ -172,8 +172,8 @@ class _TournamentAgainstRelationsPageState
                           title: 'Edit against rule',
                           players: _selectedPlayers,
                           blockedPlayerIds: const <String>{},
-                          minSelection: widget.teamCount,
-                          exactSelection: widget.teamCount,
+                          minSelection: 2,
+                          maxSelection: widget.teamCount,
                           initialSelection: _againstGroups[index],
                           blockTogetherConflicts: true,
                           togetherGroupByPlayer: togetherGroupByPlayer,

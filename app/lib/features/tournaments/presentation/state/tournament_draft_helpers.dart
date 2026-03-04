@@ -105,8 +105,11 @@ String? validateDraftGroups({
     if (group.toSet().length != group.length) {
       return 'Against group cannot contain duplicates.';
     }
-    if (group.length != teamCount) {
-      return 'Against group must contain exactly $teamCount players.';
+    if (group.length < 2) {
+      return 'Against group must contain at least 2 players.';
+    }
+    if (group.length > teamCount) {
+      return 'Against group can contain up to $teamCount players.';
     }
 
     final togetherGroupsInAgainst = <int>{};

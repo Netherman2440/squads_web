@@ -38,7 +38,6 @@ class TournamentDetailsPage extends ConsumerWidget {
         squadAsync.asData?.value.role == SquadRole.admin;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Tournament')),
       body: detailsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(
@@ -91,8 +90,12 @@ class _DetailsBody extends ConsumerWidget {
       teams: details.teams,
       matches: matches,
     );
-    final pointsByTeamId = <String, int>{
-      for (final row in standings) row.tournamentTeamId: row.points,
+    final rankingSumByTeamId = <String, double>{
+      for (final team in details.teams)
+        team.tournamentTeamId: team.players.fold<double>(
+          0,
+          (sum, player) => sum + player.ranking,
+        ),
     };
     Future<void> openTeamsEditor() async {
       await context.pushNamed(
@@ -186,7 +189,7 @@ class _DetailsBody extends ConsumerWidget {
             _WideTeamsAndStandings(
               teams: details.teams,
               standings: standings,
-              pointsByTeamId: pointsByTeamId,
+              rankingSumByTeamId: rankingSumByTeamId,
             )
           else ...[
             Text('Teams', style: Theme.of(context).textTheme.titleMedium),
@@ -194,7 +197,7 @@ class _DetailsBody extends ConsumerWidget {
             _TeamsStrip(
               teams: details.teams,
               isWideLayout: false,
-              pointsByTeamId: pointsByTeamId,
+              rankingSumByTeamId: rankingSumByTeamId,
             ),
             const SizedBox(height: 20),
             _StandingsSection(rows: standings),
@@ -345,12 +348,12 @@ class _TeamsStrip extends StatelessWidget {
   const _TeamsStrip({
     required this.teams,
     required this.isWideLayout,
-    required this.pointsByTeamId,
+    required this.rankingSumByTeamId,
   });
 
   final List<TournamentTeam> teams;
   final bool isWideLayout;
-  final Map<String, int> pointsByTeamId;
+  final Map<String, double> rankingSumByTeamId;
 
   @override
   Widget build(BuildContext context) {
@@ -374,7 +377,8 @@ class _TeamsStrip extends StatelessWidget {
                 child: _TeamSummaryTile(
                   team: team,
                   compact: false,
-                  teamPoints: pointsByTeamId[team.tournamentTeamId] ?? 0,
+                  teamRankingSum:
+                      rankingSumByTeamId[team.tournamentTeamId] ?? 0,
                 ),
               );
             })
@@ -390,12 +394,12 @@ class _WideTeamsAndStandings extends StatelessWidget {
   const _WideTeamsAndStandings({
     required this.teams,
     required this.standings,
-    required this.pointsByTeamId,
+    required this.rankingSumByTeamId,
   });
 
   final List<TournamentTeam> teams;
   final List<TournamentStandingRow> standings;
-  final Map<String, int> pointsByTeamId;
+  final Map<String, double> rankingSumByTeamId;
 
   @override
   Widget build(BuildContext context) {
@@ -430,8 +434,9 @@ class _WideTeamsAndStandings extends StatelessWidget {
                               child: _TeamSummaryTile(
                                 team: team,
                                 compact: true,
-                                teamPoints:
-                                    pointsByTeamId[team.tournamentTeamId] ?? 0,
+                                teamRankingSum:
+                                    rankingSumByTeamId[team.tournamentTeamId] ??
+                                    0,
                               ),
                             ),
                           )
@@ -585,12 +590,12 @@ class _TeamSummaryTile extends StatelessWidget {
   const _TeamSummaryTile({
     required this.team,
     required this.compact,
-    required this.teamPoints,
+    required this.teamRankingSum,
   });
 
   final TournamentTeam team;
   final bool compact;
-  final int teamPoints;
+  final double teamRankingSum;
 
   @override
   Widget build(BuildContext context) {
@@ -619,7 +624,7 @@ class _TeamSummaryTile extends StatelessWidget {
                     ),
                   ),
                 ),
-                _TeamPointsBadge(points: teamPoints),
+                _TeamRankingBadge(rankingSum: teamRankingSum),
               ],
             ),
             const SizedBox(height: 8),
@@ -641,10 +646,10 @@ class _TeamSummaryTile extends StatelessWidget {
   }
 }
 
-class _TeamPointsBadge extends StatelessWidget {
-  const _TeamPointsBadge({required this.points});
+class _TeamRankingBadge extends StatelessWidget {
+  const _TeamRankingBadge({required this.rankingSum});
 
-  final int points;
+  final double rankingSum;
 
   @override
   Widget build(BuildContext context) {
@@ -657,7 +662,7 @@ class _TeamPointsBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
-        '$points pts',
+        'R ${rankingSum.toStringAsFixed(1)}',
         style: Theme.of(
           context,
         ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),

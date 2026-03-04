@@ -24,22 +24,7 @@ class SquadTournamentsPage extends ConsumerWidget {
         squadAsync.asData?.value.role == SquadRole.admin;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Tournaments'),
-        actions: [
-          if (canManage)
-            IconButton(
-              tooltip: 'Create tournament',
-              onPressed: () {
-                context.pushNamed(
-                  AppRoute.tournamentCreate.name,
-                  pathParameters: {'squadId': squadId},
-                );
-              },
-              icon: const Icon(Icons.add),
-            ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Tournaments')),
       body: tournamentsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(

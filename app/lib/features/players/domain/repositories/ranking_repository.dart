@@ -72,4 +72,10 @@ abstract class RankingRepository {
     required String playerId,
     required String matchId,
   });
+
+  /// Delete ranking history entry for a tournament and revert ranking change
+  Future<void> deleteTournamentRankingEntry({
+    required String playerId,
+    required String tournamentId,
+  });
 }

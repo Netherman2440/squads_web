@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:app/features/players/presentation/pages/player_details_page.dart';
 import 'package:app/features/players/presentation/pages/player_matches_page.dart';
 import 'package:app/features/players/presentation/pages/player_stats_page.dart';
+import 'package:app/features/players/presentation/pages/player_tournaments_page.dart';
 import 'package:app/core/root_shell.dart';
 import 'package:app/features/auth/presentation/pages/auth_page.dart';
 import 'package:app/features/auth/presentation/pages/auth_confirm_page.dart';
@@ -54,6 +55,7 @@ enum AppRoute {
   matchDraft,
   playerDetails,
   playerMatches,
+  playerTournaments,
   playerStats,
   matches,
   matchDetails,
@@ -166,6 +168,20 @@ final appRouter = () {
               final playerId = state.pathParameters['playerId'] ?? '';
               return NoTransitionPage(
                 child: PlayerMatchesPage(squadId: squadId, playerId: playerId),
+              );
+            },
+          ),
+          GoRoute(
+            path: '/squads/:squadId/players/:playerId/tournaments',
+            name: AppRoute.playerTournaments.name,
+            pageBuilder: (context, state) {
+              final squadId = state.pathParameters['squadId'] ?? '';
+              final playerId = state.pathParameters['playerId'] ?? '';
+              return NoTransitionPage(
+                child: PlayerTournamentsPage(
+                  squadId: squadId,
+                  playerId: playerId,
+                ),
               );
             },
           ),

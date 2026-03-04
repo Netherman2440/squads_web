@@ -17,6 +17,8 @@ abstract class TournamentRepository {
     String? acceptedTournamentDraftId,
   });
 
+  Future<void> deleteTournament({required String tournamentId});
+
   Future<List<TournamentTeam>> getTournamentTeams({
     required String tournamentId,
   });

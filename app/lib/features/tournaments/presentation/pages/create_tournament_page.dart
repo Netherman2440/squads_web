@@ -31,7 +31,7 @@ class _CreateTournamentPageState extends ConsumerState<CreateTournamentPage> {
 
   List<Player> _players = const [];
   final Set<String> _selectedIds = <String>{};
-  int _teamCount = 2;
+  int _teamCount = 3;
   bool _isLoading = true;
   bool _isSubmitting = false;
   String? _error;
@@ -189,6 +189,13 @@ class _CreateTournamentPageState extends ConsumerState<CreateTournamentPage> {
       query: _searchController.text,
     );
 
+    final teamCountBorderColor = _teamCount == 3
+        ? Colors.green.shade600
+        : Theme.of(context).colorScheme.outlineVariant;
+    final teamCountBackgroundColor = _teamCount == 3
+        ? Colors.green.withValues(alpha: 0.08)
+        : Colors.transparent;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Create Tournament'),
@@ -228,9 +235,11 @@ class _CreateTournamentPageState extends ConsumerState<CreateTournamentPage> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10),
                   decoration: BoxDecoration(
+                    color: teamCountBackgroundColor,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: Theme.of(context).colorScheme.outlineVariant,
+                      color: teamCountBorderColor,
+                      width: _teamCount == 3 ? 2 : 1,
                     ),
                   ),
                   child: DropdownButtonHideUnderline(

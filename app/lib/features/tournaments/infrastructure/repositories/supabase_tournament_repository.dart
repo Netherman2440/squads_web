@@ -136,6 +136,19 @@ class SupabaseTournamentRepository implements TournamentRepository {
   }
 
   @override
+  Future<void> deleteTournament({required String tournamentId}) async {
+    try {
+      await _supabase
+          .from('tournaments')
+          .delete()
+          .eq('tournament_id', tournamentId);
+    } catch (e, stack) {
+      _logger.severe('Failed to delete tournament $tournamentId', e, stack);
+      throw e.toFailure();
+    }
+  }
+
+  @override
   Future<List<TournamentTeam>> getTournamentTeams({
     required String tournamentId,
   }) async {

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import 'package:app/core/app_router.dart';
+import 'package:app/core/error/failure.dart';
 import 'package:app/features/matches/domain/entities/match.dart';
 import 'package:app/features/matches/application/usecases/update_match_score_usecase.dart';
 import 'package:app/features/players/domain/entities/player.dart';
@@ -13,6 +14,7 @@ import 'package:app/features/squads/presentation/state/squad_detail_notifier.dar
 import 'package:app/features/tournaments/application/dto/tournament_details_dto.dart';
 import 'package:app/features/tournaments/application/usecases/complete_tournament_usecase.dart';
 import 'package:app/features/tournaments/application/usecases/create_tournament_match_usecase.dart';
+import 'package:app/features/tournaments/application/usecases/delete_tournament_usecase.dart';
 import 'package:app/features/tournaments/application/usecases/tournament_standings_calculator.dart';
 import 'package:app/features/tournaments/domain/entities/tournament.dart';
 import 'package:app/features/tournaments/domain/entities/tournament_status.dart';
@@ -38,6 +40,21 @@ class TournamentDetailsPage extends ConsumerWidget {
         squadAsync.asData?.value.role == SquadRole.admin;
 
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Tournament details'),
+        leading: BackButton(
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+              return;
+            }
+            context.goNamed(
+              AppRoute.tournaments.name,
+              pathParameters: {'squadId': squadId},
+            );
+          },
+        ),
+      ),
       body: detailsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(
@@ -81,6 +98,7 @@ class _DetailsBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tournament = details.tournament;
+    final previewDraftId = _resolvePreviewDraftId(details);
     final matchesAsync = ref.watch(
       tournamentMatchesProvider(tournament.tournamentId),
     );
@@ -133,6 +151,21 @@ class _DetailsBody extends ConsumerWidget {
                 runSpacing: 8,
                 children: [
                   _StatusChip(status: tournament.status),
+                  if (previewDraftId != null)
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        context.pushNamed(
+                          AppRoute.tournamentDraftById.name,
+                          pathParameters: {
+                            'squadId': squadId,
+                            'tournamentId': tournament.tournamentId,
+                            'tournamentDraftId': previewDraftId,
+                          },
+                        );
+                      },
+                      icon: const Icon(Icons.visibility),
+                      label: const Text('Podgląd propozycji'),
+                    ),
                   if (canManage)
                     OutlinedButton.icon(
                       onPressed: openTeamsEditor,
@@ -180,6 +213,77 @@ class _DetailsBody extends ConsumerWidget {
                       icon: const Icon(Icons.flag),
                       label: const Text('Complete'),
                     ),
+                  if (canManage)
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Delete tournament?'),
+                            content: const Text(
+                              'This will remove tournament teams, drafts and matches. Ranking adjustments from this tournament will be reverted.',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () =>
+                                    Navigator.of(context).pop(false),
+                                child: const Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () =>
+                                    Navigator.of(context).pop(true),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.red,
+                                ),
+                                child: const Text('Delete'),
+                              ),
+                            ],
+                          ),
+                        );
+
+                        if (confirm != true) {
+                          return;
+                        }
+
+                        try {
+                          await ref
+                              .read(deleteTournamentUseCaseProvider)
+                              .execute(tournamentId: tournament.tournamentId);
+                        } catch (error) {
+                          if (!context.mounted) {
+                            return;
+                          }
+
+                          final message = error is Failure
+                              ? error.message
+                              : error.toString();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Failed to delete tournament: $message',
+                              ),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                          return;
+                        }
+
+                        if (!context.mounted) {
+                          return;
+                        }
+
+                        onRefreshCore();
+                        context.goNamed(
+                          AppRoute.tournaments.name,
+                          pathParameters: {'squadId': squadId},
+                        );
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                      ),
+                      icon: const Icon(Icons.delete_outline),
+                      label: const Text('Delete'),
+                    ),
                 ],
               ),
             ],
@@ -219,7 +323,9 @@ class _DetailsBody extends ConsumerWidget {
                   );
               onRefreshMatches();
             },
-            onAddMatch: details.teams.length >= 2
+            onAddMatch:
+                tournament.status == TournamentStatus.active &&
+                    details.teams.length >= 2
                 ? () async {
                     final created = await _showCreateMatchDialog(
                       context,
@@ -499,7 +605,7 @@ class _MatchesSection extends StatelessWidget {
           children: [
             Text('Matches', style: Theme.of(context).textTheme.titleMedium),
             const Spacer(),
-            if (canManage)
+            if (canManage && onAddMatch != null)
               OutlinedButton.icon(
                 onPressed: onAddMatch,
                 icon: const Icon(Icons.sports_soccer),
@@ -1077,6 +1183,21 @@ class _StatusChip extends StatelessWidget {
       child: Text(label),
     );
   }
+}
+
+String? _resolvePreviewDraftId(TournamentDetailsDto details) {
+  final acceptedId = details.tournament.acceptedTournamentDraftId;
+  if (acceptedId != null && acceptedId.isNotEmpty) {
+    return acceptedId;
+  }
+
+  for (final draft in details.drafts) {
+    if (draft.status == 'completed' && draft.proposalsCount > 0) {
+      return draft.tournamentDraftId;
+    }
+  }
+
+  return null;
 }
 
 String _displayTournamentName(Tournament tournament) {

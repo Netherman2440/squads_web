@@ -434,6 +434,47 @@ class SupabaseRankingRepository implements RankingRepository {
       throw e.toFailure();
     }
   }
+
+  @override
+  Future<void> deleteTournamentRankingEntry({
+    required String playerId,
+    required String tournamentId,
+  }) async {
+    try {
+      final entry = await getRankingHistoryEntryByTournament(
+        tournamentId: tournamentId,
+        playerId: playerId,
+      );
+      if (entry == null) return;
+
+      final oldDelta = entry.change;
+      if (oldDelta != null && oldDelta != 0) {
+        final playerRes = await _supabase
+            .from('players')
+            .select('score')
+            .eq('player_id', playerId)
+            .single();
+        final currentScore = (playerRes['score'] as num).toDouble();
+        final newScore = currentScore - oldDelta;
+        await _supabase
+            .from('players')
+            .update({'score': newScore})
+            .eq('player_id', playerId);
+      }
+
+      await _supabase
+          .from('ranking_history')
+          .delete()
+          .eq('ranking_history_id', entry.rankingHistoryId);
+    } catch (e, stack) {
+      _logger.severe(
+        'Failed to delete tournament ranking entry for player $playerId in tournament $tournamentId',
+        e,
+        stack,
+      );
+      throw e.toFailure();
+    }
+  }
 }
 
 final rankingRepositoryProvider = Provider<RankingRepository>((ref) {

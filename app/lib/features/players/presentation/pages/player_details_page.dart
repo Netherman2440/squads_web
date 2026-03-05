@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:app/core/app_config.dart';
 import 'package:app/core/error/failure.dart';
 import 'package:app/core/app_router.dart';
 import 'package:app/features/players/application/usecases/delete_player_usecase.dart';
@@ -77,6 +78,19 @@ class PlayerDetailsPage extends ConsumerWidget {
           final isPositive = difference >= 0;
           final positionLabel =
               playerPositionPolishLabel(player.position) ?? 'Brak pozycji';
+          final isNarrowScreen =
+              MediaQuery.sizeOf(context).width < AppConfig.mobileWidth;
+          final baseNameStyle =
+              Theme.of(context).textTheme.headlineMedium ??
+              const TextStyle(fontSize: 28);
+          final nameStyle = isNarrowScreen
+              ? baseNameStyle.copyWith(
+                  fontSize: ((baseNameStyle.fontSize ?? 28) * 0.8)
+                      .clamp(18.0, 24.0)
+                      .toDouble(),
+                  height: 1.1,
+                )
+              : baseNameStyle;
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
@@ -100,17 +114,26 @@ class PlayerDetailsPage extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                player.name,
-                                style: Theme.of(
-                                  context,
-                                ).textTheme.headlineMedium,
+                              Expanded(
+                                child: Text(
+                                  player.name,
+                                  style: nameStyle,
+                                  softWrap: true,
+                                  maxLines: isNarrowScreen ? 3 : 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
-
                               if (canEdit)
                                 IconButton(
                                   tooltip: 'Edit name',
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(
+                                    minWidth: 40,
+                                    minHeight: 40,
+                                  ),
+                                  visualDensity: VisualDensity.compact,
                                   onPressed: () async {
                                     final result = await showDialog<bool>(
                                       context: context,

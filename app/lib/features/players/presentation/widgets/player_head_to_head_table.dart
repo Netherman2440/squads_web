@@ -10,12 +10,16 @@ enum HeadToHeadColumn {
   togetherWins,
   togetherDraws,
   togetherLosses,
+  togetherWinRate,
+  togetherLossRate,
   togetherGoalsFor,
   togetherGoalsAgainst,
   vsMatches,
   vsWins,
   vsDraws,
   vsLosses,
+  vsWinRate,
+  vsLossRate,
   vsGoalsFor,
   vsGoalsAgainst,
 }
@@ -293,12 +297,16 @@ class _PlayerHeadToHeadTableState extends State<PlayerHeadToHeadTable> {
       HeadToHeadColumn.togetherWins,
       HeadToHeadColumn.togetherDraws,
       HeadToHeadColumn.togetherLosses,
+      HeadToHeadColumn.togetherWinRate,
+      HeadToHeadColumn.togetherLossRate,
       HeadToHeadColumn.togetherGoalsFor,
       HeadToHeadColumn.togetherGoalsAgainst,
       HeadToHeadColumn.vsMatches,
       HeadToHeadColumn.vsWins,
       HeadToHeadColumn.vsDraws,
       HeadToHeadColumn.vsLosses,
+      HeadToHeadColumn.vsWinRate,
+      HeadToHeadColumn.vsLossRate,
       HeadToHeadColumn.vsGoalsFor,
       HeadToHeadColumn.vsGoalsAgainst,
     ];
@@ -316,6 +324,10 @@ class _PlayerHeadToHeadTableState extends State<PlayerHeadToHeadTable> {
         return 'Razem remisy';
       case HeadToHeadColumn.togetherLosses:
         return 'Razem porażki';
+      case HeadToHeadColumn.togetherWinRate:
+        return 'Razem % zwycięstw';
+      case HeadToHeadColumn.togetherLossRate:
+        return 'Razem % porażek';
       case HeadToHeadColumn.togetherGoalsFor:
         return 'Razem gole strzelone';
       case HeadToHeadColumn.togetherGoalsAgainst:
@@ -328,6 +340,10 @@ class _PlayerHeadToHeadTableState extends State<PlayerHeadToHeadTable> {
         return 'Przeciwko remisy';
       case HeadToHeadColumn.vsLosses:
         return 'Przeciwko porażki';
+      case HeadToHeadColumn.vsWinRate:
+        return 'Przeciwko % zwycięstw';
+      case HeadToHeadColumn.vsLossRate:
+        return 'Przeciwko % porażek';
       case HeadToHeadColumn.vsGoalsFor:
         return 'Przeciwko gole strzelone';
       case HeadToHeadColumn.vsGoalsAgainst:
@@ -345,6 +361,14 @@ class _PlayerHeadToHeadTableState extends State<PlayerHeadToHeadTable> {
         return stat.togetherDraws.toString();
       case HeadToHeadColumn.togetherLosses:
         return stat.togetherLosses.toString();
+      case HeadToHeadColumn.togetherWinRate:
+        return _formatPercent(
+          _rate(value: stat.togetherWins, total: stat.togetherMatches),
+        );
+      case HeadToHeadColumn.togetherLossRate:
+        return _formatPercent(
+          _rate(value: stat.togetherLosses, total: stat.togetherMatches),
+        );
       case HeadToHeadColumn.togetherGoalsFor:
         return stat.togetherGoalsFor.toString();
       case HeadToHeadColumn.togetherGoalsAgainst:
@@ -357,6 +381,12 @@ class _PlayerHeadToHeadTableState extends State<PlayerHeadToHeadTable> {
         return stat.vsDraws.toString();
       case HeadToHeadColumn.vsLosses:
         return stat.vsLosses.toString();
+      case HeadToHeadColumn.vsWinRate:
+        return _formatPercent(_rate(value: stat.vsWins, total: stat.vsMatches));
+      case HeadToHeadColumn.vsLossRate:
+        return _formatPercent(
+          _rate(value: stat.vsLosses, total: stat.vsMatches),
+        );
       case HeadToHeadColumn.vsGoalsFor:
         return stat.vsGoalsFor.toString();
       case HeadToHeadColumn.vsGoalsAgainst:
@@ -397,6 +427,18 @@ class _PlayerHeadToHeadTableState extends State<PlayerHeadToHeadTable> {
       case HeadToHeadColumn.togetherLosses:
         result = compareNum(a.togetherLosses, b.togetherLosses);
         break;
+      case HeadToHeadColumn.togetherWinRate:
+        result = compareNum(
+          _rate(value: a.togetherWins, total: a.togetherMatches),
+          _rate(value: b.togetherWins, total: b.togetherMatches),
+        );
+        break;
+      case HeadToHeadColumn.togetherLossRate:
+        result = compareNum(
+          _rate(value: a.togetherLosses, total: a.togetherMatches),
+          _rate(value: b.togetherLosses, total: b.togetherMatches),
+        );
+        break;
       case HeadToHeadColumn.togetherGoalsFor:
         result = compareNum(a.togetherGoalsFor, b.togetherGoalsFor);
         break;
@@ -414,6 +456,18 @@ class _PlayerHeadToHeadTableState extends State<PlayerHeadToHeadTable> {
         break;
       case HeadToHeadColumn.vsLosses:
         result = compareNum(a.vsLosses, b.vsLosses);
+        break;
+      case HeadToHeadColumn.vsWinRate:
+        result = compareNum(
+          _rate(value: a.vsWins, total: a.vsMatches),
+          _rate(value: b.vsWins, total: b.vsMatches),
+        );
+        break;
+      case HeadToHeadColumn.vsLossRate:
+        result = compareNum(
+          _rate(value: a.vsLosses, total: a.vsMatches),
+          _rate(value: b.vsLosses, total: b.vsMatches),
+        );
         break;
       case HeadToHeadColumn.vsGoalsFor:
         result = compareNum(a.vsGoalsFor, b.vsGoalsFor);
@@ -446,6 +500,8 @@ class _PlayerHeadToHeadTableState extends State<PlayerHeadToHeadTable> {
         column == HeadToHeadColumn.togetherWins ||
         column == HeadToHeadColumn.togetherDraws ||
         column == HeadToHeadColumn.togetherLosses ||
+        column == HeadToHeadColumn.togetherWinRate ||
+        column == HeadToHeadColumn.togetherLossRate ||
         column == HeadToHeadColumn.togetherGoalsFor ||
         column == HeadToHeadColumn.togetherGoalsAgainst;
   }
@@ -455,8 +511,21 @@ class _PlayerHeadToHeadTableState extends State<PlayerHeadToHeadTable> {
         column == HeadToHeadColumn.vsWins ||
         column == HeadToHeadColumn.vsDraws ||
         column == HeadToHeadColumn.vsLosses ||
+        column == HeadToHeadColumn.vsWinRate ||
+        column == HeadToHeadColumn.vsLossRate ||
         column == HeadToHeadColumn.vsGoalsFor ||
         column == HeadToHeadColumn.vsGoalsAgainst;
+  }
+
+  double _rate({required int value, required int total}) {
+    if (total == 0) {
+      return 0;
+    }
+    return value / total;
+  }
+
+  String _formatPercent(double value) {
+    return '${(value * 100).toStringAsFixed(1)}%';
   }
 }
 

@@ -448,7 +448,7 @@ class _LandingPageState extends State<LandingPage> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Silnik draftu przeszukuje masę kombinacji i oddaje tylko te '
+              'Silnik propozycji przeszukuje masę kombinacji i oddaje tylko te '
               'najbardziej równe.',
               style: body.copyWith(fontSize: 18, color: _muted),
             ),
@@ -563,7 +563,7 @@ class _LandingPageState extends State<LandingPage> {
                   children: [
                     _FeatureCard(
                       width: cardWidth,
-                      title: 'Draft wielu zestawów meczy',
+                      title: 'Propozycje wielu zestawów meczów',
                       description: 'Top 20 propozycji gotowych do wybrania.',
                       icon: Icons.auto_fix_high_outlined,
                     ),
@@ -716,7 +716,7 @@ class _LandingPageState extends State<LandingPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Gotowy na spokojny, uczciwy draft?',
+                    'Gotowy na spokojną, uczciwą propozycję?',
                     style: display.copyWith(
                       fontSize: 32,
                       fontWeight: FontWeight.w700,
@@ -1815,7 +1815,7 @@ class _HeroPreview extends StatelessWidget {
             children: const [
               Expanded(
                 child: _TeamColumn(
-                  title: 'Home',
+                  title: 'Gospodarze',
                   totalRanking: 301.0,
                   players: homePlayers,
                   accent: Color(0xFF81B64C),
@@ -1824,7 +1824,7 @@ class _HeroPreview extends StatelessWidget {
               SizedBox(width: 12),
               Expanded(
                 child: _TeamColumn(
-                  title: 'Away',
+                  title: 'Goście',
                   totalRanking: 300.9,
                   players: awayPlayers,
                   accent: Color(0xFF6FB0D6),

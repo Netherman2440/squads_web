@@ -16,7 +16,7 @@ class SquadStatsPage extends ConsumerWidget {
     final statsState = ref.watch(squadStatsProvider(squadId));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Stats')),
+      appBar: AppBar(title: const Text('Statystyki')),
       body: statsState.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => _StatsErrorView(
@@ -41,18 +41,21 @@ class SquadStatsPage extends ConsumerWidget {
         '${stats.avgAwayGoals.toStringAsFixed(2)}';
 
     return [
-      StatTile(label: 'Top player', value: stats.topPlayer),
-      StatTile(label: 'Rising star', value: stats.topRisingStar),
+      StatTile(label: 'Najlepszy gracz', value: stats.topPlayer),
+      StatTile(label: 'Wschodząca gwiazda', value: stats.topRisingStar),
       const Divider(),
-      StatTile(label: 'Matches', value: stats.matchesCount),
-      StatTile(label: 'Total goals', value: stats.totalGoals),
-      StatTile(label: 'Home goals', value: stats.totalHomeGoals),
-      StatTile(label: 'Away goals', value: stats.totalAwayGoals),
-      StatTile(label: 'Avg goals per match', value: stats.avgGoalsPerMatch),
-      StatTile(label: 'Avg score (home : away)', value: avgScoreText),
+      StatTile(label: 'Mecze', value: stats.matchesCount),
+      StatTile(label: 'Wszystkie gole', value: stats.totalGoals),
+      StatTile(label: 'Gole gospodarzy', value: stats.totalHomeGoals),
+      StatTile(label: 'Gole gości', value: stats.totalAwayGoals),
+      StatTile(label: 'Średnia goli na mecz', value: stats.avgGoalsPerMatch),
+      StatTile(
+        label: 'Średni wynik (gospodarze : goście)',
+        value: avgScoreText,
+      ),
       const Divider(),
-      StatTile(label: 'Players', value: stats.playersCount),
-      StatTile(label: 'Avg player score', value: stats.avgPlayerScore),
+      StatTile(label: 'Gracze', value: stats.playersCount),
+      StatTile(label: 'Średni ranking gracza', value: stats.avgPlayerScore),
     ];
   }
 
@@ -60,7 +63,7 @@ class SquadStatsPage extends ConsumerWidget {
     if (error is Failure) {
       return error.message;
     }
-    return 'Failed to load squad stats.';
+    return 'Nie udało się wczytać statystyk składu.';
   }
 }
 
@@ -80,7 +83,7 @@ class _StatsErrorView extends StatelessWidget {
           children: [
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 16),
-            FilledButton(onPressed: onRetry, child: const Text('Retry')),
+            FilledButton(onPressed: onRetry, child: const Text('Ponów')),
           ],
         ),
       ),

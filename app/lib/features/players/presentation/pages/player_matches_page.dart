@@ -35,7 +35,7 @@ class PlayerMatchesPage extends ConsumerWidget {
                 physics: const AlwaysScrollableScrollPhysics(),
                 children: const [
                   SizedBox(height: 120),
-                  Center(child: Text('No matches found.')),
+                  Center(child: Text('Nie znaleziono meczów.')),
                 ],
               );
             }
@@ -53,7 +53,7 @@ class PlayerMatchesPage extends ConsumerWidget {
           error: (error, stack) => Center(
             child: SelectableText.rich(
               TextSpan(
-                text: 'Error: $error',
+                text: 'Błąd: $error',
                 style: const TextStyle(color: Colors.red),
               ),
             ),

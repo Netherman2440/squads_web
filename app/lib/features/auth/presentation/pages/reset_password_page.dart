@@ -51,7 +51,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
       }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Password updated. Please log in.'),
+          content: Text('Hasło zostało zaktualizowane. Zaloguj się.'),
           backgroundColor: Colors.green,
         ),
       );
@@ -60,7 +60,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
       if (!mounted) {
         return;
       }
-      var message = 'Failed to reset password.';
+      var message = 'Nie udało się zresetować hasła.';
       if (error is Failure) {
         message = error.message;
       }
@@ -82,7 +82,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Reset password'),
+        title: const Text('Resetowanie hasła'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
       body: Center(
@@ -96,7 +96,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                 const Icon(Icons.lock_reset, size: 80),
                 const SizedBox(height: 16),
                 Text(
-                  'Set a new password',
+                  'Ustaw nowe hasło',
                   style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -105,7 +105,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                 TextFormField(
                   controller: _passwordController,
                   decoration: const InputDecoration(
-                    labelText: 'New password',
+                    labelText: 'Nowe hasło',
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.lock_outline),
                   ),
@@ -114,10 +114,10 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                   validator: (value) {
                     final text = value ?? '';
                     if (text.isEmpty) {
-                      return 'Please enter a password';
+                      return 'Podaj hasło';
                     }
                     if (text.length < 8) {
-                      return 'Password must be at least 8 characters';
+                      return 'Hasło musi mieć co najmniej 8 znaków';
                     }
                     return null;
                   },
@@ -126,7 +126,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                 TextFormField(
                   controller: _confirmController,
                   decoration: const InputDecoration(
-                    labelText: 'Confirm password',
+                    labelText: 'Potwierdź hasło',
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.lock_outline),
                   ),
@@ -134,7 +134,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                   textInputAction: TextInputAction.done,
                   validator: (value) {
                     if (value != _passwordController.text) {
-                      return 'Passwords do not match';
+                      return 'Hasła nie są zgodne';
                     }
                     return null;
                   },
@@ -155,13 +155,13 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                               color: Colors.white,
                             ),
                           )
-                        : const Text('Update password'),
+                        : const Text('Zaktualizuj hasło'),
                   ),
                 ),
                 const SizedBox(height: 16),
                 TextButton(
                   onPressed: _isLoading ? null : () => context.go('/auth'),
-                  child: const Text('Back to login'),
+                  child: const Text('Wróć do logowania'),
                 ),
               ],
             ),

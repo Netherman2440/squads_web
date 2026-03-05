@@ -22,7 +22,7 @@ class SquadMatchesPage extends ConsumerWidget {
         squadAsync.asData?.value.role == SquadRole.admin;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Matches')),
+      appBar: AppBar(title: const Text('Mecze')),
       floatingActionButton: canManage
           ? FloatingActionButton(
               onPressed: () {
@@ -41,7 +41,7 @@ class SquadMatchesPage extends ConsumerWidget {
         child: matchesAsync.when(
           data: (matches) {
             if (matches.isEmpty) {
-              return const Center(child: Text('No matches found.'));
+              return const Center(child: Text('Nie znaleziono meczów.'));
             }
             return ListView.builder(
               padding: const EdgeInsets.all(8),
@@ -56,7 +56,7 @@ class SquadMatchesPage extends ConsumerWidget {
           error: (error, stack) => Center(
             child: SelectableText.rich(
               TextSpan(
-                text: 'Error: $error',
+                text: 'Błąd: $error',
                 style: const TextStyle(color: Colors.red),
               ),
             ),

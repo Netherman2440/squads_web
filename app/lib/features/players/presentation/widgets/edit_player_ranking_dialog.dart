@@ -54,7 +54,7 @@ class _EditPlayerRankingDialogState
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return AlertDialog(
-      title: const Text('Edit Ranking'),
+      title: const Text('Edytuj ranking'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -90,7 +90,7 @@ class _EditPlayerRankingDialogState
       actions: [
         TextButton(
           onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: const Text('Anuluj'),
         ),
         FilledButton(
           onPressed: _isLoading ? null : _submit,
@@ -100,7 +100,7 @@ class _EditPlayerRankingDialogState
                   width: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Save'),
+              : const Text('Zapisz'),
         ),
       ],
     );

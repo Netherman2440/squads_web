@@ -98,13 +98,13 @@ class MemberTile extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.check),
             color: Colors.green,
-            tooltip: 'Accept',
+            tooltip: 'Akceptuj',
             onPressed: onAccept,
           ),
           IconButton(
             icon: const Icon(Icons.close),
             color: Theme.of(context).colorScheme.error,
-            tooltip: 'Decline',
+            tooltip: 'Odrzuć',
             onPressed: onDecline,
           ),
         ],
@@ -139,12 +139,12 @@ class MemberTile extends StatelessWidget {
             currentUserRole == SquadRole.owner)
           const PopupMenuItem(
             value: 'promote',
-            child: Text('Promote to Admin'),
+            child: Text('Awansuj na administratora'),
           ),
         if (member.role == SquadRole.admin &&
             currentUserRole == SquadRole.owner)
-          const PopupMenuItem(value: 'demote', child: Text('Demote to Member')),
-        const PopupMenuItem(value: 'remove', child: Text('Remove from Squad')),
+          const PopupMenuItem(value: 'demote', child: Text('Zmień na członka')),
+        const PopupMenuItem(value: 'remove', child: Text('Usuń ze składu')),
       ],
     );
   }

@@ -252,7 +252,7 @@ class DraftSelectionController
         return 'Relacja "Przeciwko sobie" nie może mieć więcej graczy niż liczba drużyn (${value.teamCount}).';
       }
       if (group.length < value.teamCount) {
-        return 'Relacja "Przeciwko sobie" musi mieć dokładnie ${value.teamCount} graczy dla tego typu draftu.';
+        return 'Relacja "Przeciwko sobie" musi mieć dokładnie ${value.teamCount} graczy dla tego typu propozycji.';
       }
       final togetherGroupsInAgainst = <int>{};
       for (final playerId in group) {

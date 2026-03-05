@@ -50,7 +50,7 @@ class _PlayerStatsPageState extends ConsumerState<PlayerStatsPage> {
               ..._buildStatTiles(state.stats),
               const SizedBox(height: 24),
               Text(
-                'Head to head',
+                'Bezpośrednie pojedynki',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 12),
@@ -117,7 +117,7 @@ class _PlayerStatsPageState extends ConsumerState<PlayerStatsPage> {
     if (error is Failure) {
       return error.message;
     }
-    return 'Failed to load player stats.';
+    return 'Nie udało się wczytać statystyk gracza.';
   }
 }
 

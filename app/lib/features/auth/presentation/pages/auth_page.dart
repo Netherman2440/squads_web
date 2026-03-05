@@ -80,7 +80,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
       if (!mounted) {
         return null;
       }
-      var message = 'Invite code is invalid or expired.';
+      var message = 'Kod zaproszenia jest nieprawidłowy lub wygasł.';
       if (error is Failure && error.message.isNotEmpty) {
         message = error.message;
       }
@@ -130,14 +130,14 @@ class _AuthPageState extends ConsumerState<AuthPage> {
       return;
     }
 
-    String message = 'Login failed. Please try again.';
+    String message = 'Logowanie nie powiodło się. Spróbuj ponownie.';
 
     if (error is InvalidCredentialsFailure) {
-      message = 'Invalid email or password.';
+      message = 'Nieprawidłowy e-mail lub hasło.';
     } else if (error is UserNotConfirmedFailure) {
-      message = 'Email not confirmed. Please check your inbox.';
+      message = 'E-mail nie został potwierdzony. Sprawdź skrzynkę odbiorczą.';
     } else if (error is NetworkFailure) {
-      message = 'Failed to connect to the server. Please try again later.';
+      message = 'Nie udało się połączyć z serwerem. Spróbuj ponownie później.';
     } else if (error is Failure) {
       message = error.message;
     }
@@ -202,13 +202,13 @@ class _AuthPageState extends ConsumerState<AuthPage> {
       final result = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Reset password'),
+          title: const Text('Resetowanie hasła'),
           content: Form(
             key: formKey,
             child: TextFormField(
               controller: controller,
               decoration: const InputDecoration(
-                labelText: 'Email',
+                labelText: 'E-mail',
                 border: OutlineInputBorder(),
               ),
               textCapitalization: TextCapitalization.none,
@@ -216,11 +216,11 @@ class _AuthPageState extends ConsumerState<AuthPage> {
               validator: (value) {
                 final text = value?.trim() ?? '';
                 if (text.isEmpty) {
-                  return 'Please enter email';
+                  return 'Podaj e-mail';
                 }
                 final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
                 if (!emailRegex.hasMatch(text)) {
-                  return 'Please enter valid email';
+                  return 'Podaj poprawny e-mail';
                 }
                 return null;
               },
@@ -229,7 +229,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
+              child: const Text('Anuluj'),
             ),
             FilledButton(
               onPressed: () {
@@ -260,7 +260,9 @@ class _AuthPageState extends ConsumerState<AuthPage> {
         }
         messenger.showSnackBar(
           const SnackBar(
-            content: Text('Password reset link sent. Check your email.'),
+            content: Text(
+              'Link do resetu hasła został wysłany. Sprawdź e-mail.',
+            ),
             backgroundColor: Colors.green,
           ),
         );
@@ -268,7 +270,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
         if (!mounted) {
           return;
         }
-        var message = 'Failed to send reset link.';
+        var message = 'Nie udało się wysłać linku resetującego.';
         if (error is Failure) {
           message = error.message;
         }
@@ -320,7 +322,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                               TextFormField(
                                 controller: emailController,
                                 decoration: const InputDecoration(
-                                  labelText: 'Email',
+                                  labelText: 'E-mail',
                                   border: OutlineInputBorder(),
                                   prefixIcon: Icon(Icons.email_outlined),
                                 ),
@@ -330,13 +332,13 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                                 validator: (value) {
                                   final text = value?.trim() ?? '';
                                   if (text.isEmpty) {
-                                    return 'Please enter email';
+                                    return 'Podaj e-mail';
                                   }
                                   final emailRegex = RegExp(
                                     r'^[^@]+@[^@]+\.[^@]+$',
                                   );
                                   if (!emailRegex.hasMatch(text)) {
-                                    return 'Please enter valid email';
+                                    return 'Podaj poprawny e-mail';
                                   }
                                   return null;
                                 },
@@ -345,7 +347,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                               TextFormField(
                                 controller: passwordController,
                                 decoration: InputDecoration(
-                                  labelText: 'Password',
+                                  labelText: 'Hasło',
                                   border: const OutlineInputBorder(),
                                   prefixIcon: const Icon(Icons.lock_outline),
                                   suffixIcon: IconButton(
@@ -367,7 +369,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                                 validator: (value) {
                                   final text = value ?? '';
                                   if (text.isEmpty) {
-                                    return 'Please enter password';
+                                    return 'Podaj hasło';
                                   }
                                   return null;
                                 },
@@ -379,7 +381,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                                   onPressed: isLoading
                                       ? null
                                       : handlePasswordReset,
-                                  child: const Text('Forgot password?'),
+                                  child: const Text('Nie pamiętasz hasła?'),
                                 ),
                               ),
                               const SizedBox(height: 16),
@@ -396,7 +398,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                                             color: Colors.white,
                                           ),
                                         )
-                                      : const Text('Login'),
+                                      : const Text('Zaloguj się'),
                                 ),
                               ),
                               const SizedBox(height: 20),
@@ -408,7 +410,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                                       horizontal: 12,
                                     ),
                                     child: Text(
-                                      'or',
+                                      'lub',
                                       style: theme.textTheme.bodySmall
                                           ?.copyWith(
                                             color: theme.colorScheme.onSurface
@@ -427,7 +429,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                                       ? null
                                       : handleGoogleSignIn,
                                   icon: const Icon(Icons.g_mobiledata),
-                                  label: const Text('Continue with Google'),
+                                  label: const Text('Kontynuuj z Google'),
                                 ),
                               ),
                               const SizedBox(height: 20),
@@ -449,7 +451,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                                               }
                                               context.go('/auth/register');
                                             },
-                                      child: const Text('Create account'),
+                                      child: const Text('Utwórz konto'),
                                     ),
                                   ),
                                   SizedBox(
@@ -458,7 +460,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                                     child: TextButton(
                                       style: actionButtonStyle,
                                       onPressed: isLoading ? null : handleGuest,
-                                      child: const Text('Continue as guest'),
+                                      child: const Text('Kontynuuj jako gość'),
                                     ),
                                   ),
                                 ],

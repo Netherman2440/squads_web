@@ -6,7 +6,7 @@ class ProbabilitySlider extends StatelessWidget {
     required this.homeColor,
     required this.awayColor,
     required this.homeProbability,
-    this.title = 'Win probability',
+    this.title = 'Szansa na wygraną',
     this.infoText,
     this.animationDuration = const Duration(milliseconds: 350),
   });
@@ -40,7 +40,7 @@ class ProbabilitySlider extends StatelessWidget {
                 if (infoText != null)
                   IconButton(
                     icon: const Icon(Icons.info_outline),
-                    tooltip: 'How is this calculated?',
+                    tooltip: 'Jak to obliczamy?',
                     onPressed: () => _showInfo(context, infoText!),
                   ),
               ],
@@ -66,12 +66,12 @@ class ProbabilitySlider extends StatelessWidget {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Win probability'),
+        title: const Text('Szansa na wygraną'),
         content: Text(message),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
+            child: const Text('Zamknij'),
           ),
         ],
       ),

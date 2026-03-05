@@ -21,7 +21,7 @@ class RankingHistoryGraphWidget extends StatelessWidget {
     if (historyWithChange.isEmpty) {
       return const SizedBox(
         height: 200,
-        child: Center(child: Text('No ranking changes')),
+        child: Center(child: Text('Brak zmian rankingu')),
       );
     }
 

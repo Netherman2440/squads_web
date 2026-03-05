@@ -37,23 +37,23 @@ extension SquadRoleParser on SquadRole {
   String get label {
     switch (this) {
       case SquadRole.owner:
-        return 'Owner';
+        return 'Właściciel';
       case SquadRole.admin:
-        return 'Admin';
+        return 'Administrator';
       case SquadRole.member:
-        return 'Member';
+        return 'Członek';
       case SquadRole.pending:
-        return 'Pending';
+        return 'Oczekuje';
       case SquadRole.invited:
-        return 'Invited';
+        return 'Zaproszony';
       case SquadRole.declined:
-        return 'Declined';
+        return 'Odrzucony';
       case SquadRole.removed:
-        return 'Removed';
+        return 'Usunięty';
       case SquadRole.none:
-        return 'None';
+        return 'Brak';
       case SquadRole.guest:
-        return 'Guest';
+        return 'Gość';
     }
   }
 }

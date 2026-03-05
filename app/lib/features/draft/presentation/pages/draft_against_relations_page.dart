@@ -118,7 +118,7 @@ class _DraftAgainstRelationsPageState
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Text(
-                      'Uwaga: przy większej liczbie graczy wynik draftu może być mniej dokładny.',
+                      'Uwaga: przy większej liczbie graczy wynik propozycji może być mniej dokładny.',
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.error,
                       ),

@@ -22,13 +22,13 @@ class EmptyPlayersState extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                'No players yet',
+                'Brak graczy',
                 style: theme.textTheme.titleMedium,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
               Text(
-                'Add your first player to start tracking your squad.',
+                'Dodaj pierwszego gracza, aby zacząć śledzić swój skład.',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.outline,
                 ),

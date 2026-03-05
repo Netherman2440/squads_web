@@ -216,7 +216,7 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
                 },
                 icon: const Icon(Icons.arrow_back),
               ),
-        title: const Text('Draft'),
+        title: const Text('Propozycja'),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8),
@@ -245,7 +245,7 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
           if (data.proposals.isEmpty) {
             return const Padding(
               padding: EdgeInsets.all(16),
-              child: Text('No draft proposals. Go back and select players.'),
+              child: Text('Brak propozycji. Wróć i wybierz graczy.'),
             );
           }
 
@@ -289,7 +289,7 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
                           ? SizedBox(
                               width: panelWidth,
                               child: _RosterPanel(
-                                title: 'Home',
+                                title: 'Gospodarze',
                                 players: data.home,
                                 compact: isCompact,
                                 onAcceptPlayerId: (playerId) => ref
@@ -302,7 +302,7 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
                             )
                           : Expanded(
                               child: _RosterPanel(
-                                title: 'Home',
+                                title: 'Gospodarze',
                                 players: data.home,
                                 compact: isCompact,
                                 onAcceptPlayerId: (playerId) => ref
@@ -318,7 +318,7 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
                           ? SizedBox(
                               width: panelWidth,
                               child: _RosterPanel(
-                                title: 'Away',
+                                title: 'Goście',
                                 players: data.away,
                                 compact: isCompact,
                                 onAcceptPlayerId: (playerId) => ref
@@ -331,7 +331,7 @@ class _DraftResultsPageState extends ConsumerState<DraftResultsPage> {
                             )
                           : Expanded(
                               child: _RosterPanel(
-                                title: 'Away',
+                                title: 'Goście',
                                 players: data.away,
                                 compact: isCompact,
                                 onAcceptPlayerId: (playerId) => ref
@@ -401,14 +401,14 @@ class _DraftLoadingBody extends StatelessWidget {
         children: [
           const CircularProgressIndicator(),
           const SizedBox(height: 12),
-          const Text('Trwa generowanie draftu. To może chwilę potrwać.'),
+          const Text('Trwa generowanie propozycji. To może chwilę potrwać.'),
           const SizedBox(height: 8),
           Text(
             showCombinationCount
                 ? (count == null
                       ? 'Sprawdzane warianty: wyliczanie...'
                       : 'Sprawdzane warianty: ${_formatBigInt(count)}')
-                : 'Sprawdzam zapisany draft...',
+                : 'Sprawdzam zapisaną propozycję...',
           ),
           if (showCombinationCount) ...[
             const SizedBox(height: 6),
@@ -418,7 +418,7 @@ class _DraftLoadingBody extends StatelessWidget {
             if (usesGreedyHeuristic) ...[
               const SizedBox(height: 6),
               const Text(
-                'Uwaga: przy większej liczbie graczy wynik draftu '
+                'Uwaga: przy większej liczbie graczy wynik propozycji '
                 'może być mniej dokładny.',
                 textAlign: TextAlign.center,
               ),
@@ -450,7 +450,7 @@ class _CreateMatchButton extends ConsumerWidget {
     final isLoading = createMatchState.isLoading;
 
     return IconButton(
-      tooltip: isExistingMatch ? 'Update Match' : 'Create Match',
+      tooltip: isExistingMatch ? 'Zaktualizuj mecz' : 'Utwórz mecz',
       onPressed: isLoading || !hasProposals
           ? null
           : () async {
@@ -494,7 +494,7 @@ class _CreateMatchButton extends ConsumerWidget {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
-                          'Match saved, but draft payload failed to save: $error',
+                          'Mecz zapisany, ale nie udało się zapisać danych propozycji: $error',
                         ),
                         backgroundColor: Colors.orange,
                       ),
@@ -519,7 +519,7 @@ class _CreateMatchButton extends ConsumerWidget {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
-                      'Failed to ${isExistingMatch ? 'update' : 'create'} match: ${createMatchState.error}',
+                      'Nie udało się ${isExistingMatch ? 'zaktualizować' : 'utworzyć'} meczu: ${createMatchState.error}',
                     ),
                     backgroundColor: Colors.red,
                   ),
@@ -556,7 +556,7 @@ class _ProposalNavigator extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         IconButton(onPressed: onPrev, icon: const Icon(Icons.chevron_left)),
-        Text('Draft ${index + 1} of $total'),
+        Text('Propozycja ${index + 1} z $total'),
         IconButton(onPressed: onNext, icon: const Icon(Icons.chevron_right)),
       ],
     );
@@ -595,13 +595,13 @@ class _TotalsRow extends StatelessWidget {
         final isCompact = constraints.maxWidth < 700;
         final theme = Theme.of(context);
         final slider = ProbabilitySlider(
-          title: 'Draft win probability',
+          title: 'Szansa wygranej propozycji',
           homeColor: theme.colorScheme.primary,
           awayColor: theme.colorScheme.secondary,
           homeProbability: homeWinProbability,
           infoText:
-              'Calculated from head-to-head win rates between the '
-              'selected players.',
+              'Obliczono na podstawie współczynników wygranych bezpośrednich '
+              'pojedynków między wybranymi graczami.',
         );
 
         if (isCompact) {
@@ -610,8 +610,8 @@ class _TotalsRow extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _TotalChip(label: 'Home ranking', value: effectiveHome),
-                  _TotalChip(label: 'Away ranking', value: effectiveAway),
+                  _TotalChip(label: 'Ranking gospodarzy', value: effectiveHome),
+                  _TotalChip(label: 'Ranking gości', value: effectiveAway),
                 ],
               ),
               const SizedBox(height: 12),
@@ -626,7 +626,10 @@ class _TotalsRow extends StatelessWidget {
             Expanded(
               child: Align(
                 alignment: Alignment.center,
-                child: _TotalChip(label: 'Home ranking', value: effectiveHome),
+                child: _TotalChip(
+                  label: 'Ranking gospodarzy',
+                  value: effectiveHome,
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -635,7 +638,7 @@ class _TotalsRow extends StatelessWidget {
             Expanded(
               child: Align(
                 alignment: Alignment.center,
-                child: _TotalChip(label: 'Away ranking', value: effectiveAway),
+                child: _TotalChip(label: 'Ranking gości', value: effectiveAway),
               ),
             ),
           ],
@@ -734,7 +737,7 @@ class _RosterPanel extends StatelessWidget {
                 SizedBox(height: compact ? 6 : 8),
                 Expanded(
                   child: players.isEmpty
-                      ? const Center(child: Text('No players.'))
+                      ? const Center(child: Text('Brak graczy.'))
                       : Builder(
                           builder: (context) {
                             final sortedPlayers = [...players]

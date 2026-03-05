@@ -16,11 +16,11 @@ class MatchTile extends StatelessWidget {
     final dateFormat = DateFormat('dd.MM.yyyy HH:mm');
     final homeTeamName = _displayTeamName(
       match.homeTeam?.name,
-      'home',
+      'gospodarze',
     ).toUpperCase();
     final awayTeamName = _displayTeamName(
       match.awayTeam?.name,
-      'away',
+      'goście',
     ).toUpperCase();
     final homeTeamColor = _parseColor(match.homeTeam?.color);
     final awayTeamColor = _parseColor(match.awayTeam?.color);

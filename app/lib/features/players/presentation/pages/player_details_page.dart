@@ -49,7 +49,7 @@ class PlayerDetailsPage extends ConsumerWidget {
         actions: [
           if (canEdit && playerName != null)
             IconButton(
-              tooltip: 'Delete player',
+              tooltip: 'Usuń gracza',
               icon: const Icon(Icons.delete),
               color: Colors.red,
               onPressed: () => _confirmDeletePlayer(
@@ -67,7 +67,7 @@ class PlayerDetailsPage extends ConsumerWidget {
         error: (err, stack) => Center(
           child: SelectableText.rich(
             TextSpan(
-              text: 'Error: ${err.toString()}',
+              text: 'Błąd: ${err.toString()}',
               style: const TextStyle(color: Colors.red),
             ),
           ),
@@ -228,9 +228,43 @@ class PlayerDetailsPage extends ConsumerWidget {
                 ),
                 const SizedBox(height: 24),
                 const SizedBox(height: 8),
-                Text(
-                  'Ranking History',
-                  style: Theme.of(context).textTheme.titleMedium,
+                Row(
+                  children: [
+                    Text(
+                      'Historia rankingu',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(width: 8),
+                    InkWell(
+                      onTap: () => showDialog<void>(
+                        context: context,
+                        builder: (dialogContext) => AlertDialog(
+                          title: const Text('Historia rankingu'),
+                          content: const Text(
+                            'Po każdym meczu ranking gracza jest aktualizowany automatycznie. '
+                            'Im większa różnica bramek, tym większa zmiana rankingu '
+                            '(w górę lub w dół).',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () =>
+                                  Navigator.of(dialogContext).pop(),
+                              child: const Text('OK'),
+                            ),
+                          ],
+                        ),
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.all(2),
+                        child: Icon(
+                          Icons.info_outline,
+                          size: 18,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
                 Card(
@@ -262,21 +296,21 @@ class PlayerDetailsPage extends ConsumerWidget {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete player?'),
+        title: const Text('Usunąć gracza?'),
         content: Text(
-          'This will permanently remove '
-          '${playerName.isNotEmpty ? playerName : 'this player'} '
-          'from the squad. This action cannot be undone.',
+          'To trwale usunie '
+          '${playerName.isNotEmpty ? playerName : 'tego gracza'} '
+          'ze składu. Tej operacji nie można cofnąć.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: const Text('Anuluj'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
+            child: const Text('Usuń'),
           ),
         ],
       ),
@@ -353,7 +387,7 @@ class _PlayerTabs extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             _TabButton(
-              label: 'Matches',
+              label: 'Mecze',
               icon: Icons.sports_soccer,
               onPressed: () => context.pushNamed(
                 AppRoute.playerMatches.name,
@@ -361,12 +395,12 @@ class _PlayerTabs extends StatelessWidget {
               ),
             ),
             _TabButton(
-              label: 'Tournaments',
+              label: 'Turnieje',
               icon: Icons.emoji_events,
               onPressed: () => _showTodo(context),
             ),
             _TabButton(
-              label: 'Stats',
+              label: 'Statystyki',
               icon: Icons.analytics,
               onPressed: () => context.pushNamed(
                 AppRoute.playerStats.name,
@@ -382,7 +416,7 @@ class _PlayerTabs extends StatelessWidget {
   void _showTodo(BuildContext context) {
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('Coming soon!')));
+    ).showSnackBar(const SnackBar(content: Text('Wkrótce dostępne!')));
   }
 }
 

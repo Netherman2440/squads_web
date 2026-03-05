@@ -58,7 +58,7 @@ class _SquadsPageState extends ConsumerState<SquadsPage> {
         return;
       case SquadRole.pending:
         messenger.showSnackBar(
-          const SnackBar(content: Text('Request already sent')),
+          const SnackBar(content: Text('Prośba została już wysłana')),
         );
         return;
       case SquadRole.none:
@@ -76,7 +76,7 @@ class _SquadsPageState extends ConsumerState<SquadsPage> {
       case SquadRole.declined:
       case SquadRole.removed:
         messenger.showSnackBar(
-          const SnackBar(content: Text('You cannot access this squad')),
+          const SnackBar(content: Text('Nie masz dostępu do tego składu')),
         );
         return;
       default:
@@ -88,19 +88,19 @@ class _SquadsPageState extends ConsumerState<SquadsPage> {
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Apply to Squad'),
-        content: Text('Apply to join ${squad.name}'),
+        title: const Text('Dołącz do składu'),
+        content: Text('Wyślij prośbę o dołączenie do ${squad.name}'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: const Text('Anuluj'),
           ),
           FilledButton(
             onPressed: () async {
               Navigator.of(context).pop();
               await notifier.applyToSquad(squad.squadId);
             },
-            child: const Text('Apply'),
+            child: const Text('Dołącz'),
           ),
         ],
       ),
@@ -115,14 +115,14 @@ class _SquadsPageState extends ConsumerState<SquadsPage> {
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Create squad'),
+        title: const Text('Utwórz skład'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: nameController,
               decoration: const InputDecoration(
-                labelText: 'Squad name',
+                labelText: 'Nazwa składu',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -131,13 +131,13 @@ class _SquadsPageState extends ConsumerState<SquadsPage> {
               initialValue: visibility,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
-                labelText: 'Visibility',
+                labelText: 'Widoczność',
               ),
               items: SquadVisibility.values
                   .map(
                     (option) => DropdownMenuItem(
                       value: option,
-                      child: Text(option.name),
+                      child: Text(option.label),
                     ),
                   )
                   .toList(),
@@ -150,14 +150,14 @@ class _SquadsPageState extends ConsumerState<SquadsPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: const Text('Anuluj'),
           ),
           FilledButton(
             onPressed: () async {
               Navigator.of(context).pop();
               await notifier.createSquad(nameController.text, visibility);
             },
-            child: const Text('Create'),
+            child: const Text('Utwórz'),
           ),
         ],
       ),
@@ -170,7 +170,7 @@ class _SquadsPageState extends ConsumerState<SquadsPage> {
       data: (squads) {
         if (squads.isEmpty) {
           return const Center(
-            child: Text('No squads found. Create one to get started!'),
+            child: Text('Nie znaleziono składów. Utwórz pierwszy, aby zacząć!'),
           );
         }
 
@@ -200,7 +200,7 @@ class _SquadsPageState extends ConsumerState<SquadsPage> {
             const SizedBox(height: 16),
             SelectableText.rich(
               TextSpan(
-                text: 'Error: $error',
+                text: 'Błąd: $error',
                 style: const TextStyle(color: Colors.red),
               ),
               textAlign: TextAlign.center,
@@ -210,7 +210,7 @@ class _SquadsPageState extends ConsumerState<SquadsPage> {
               onPressed: () => ref
                   .read(squadsNotifierProvider.notifier)
                   .loadSquads(searchQuery: _searchController.text),
-              child: const Text('Retry'),
+              child: const Text('Ponów'),
             ),
           ],
         ),
@@ -246,7 +246,7 @@ class _SquadsPageState extends ConsumerState<SquadsPage> {
                     controller: _searchController,
                     decoration: const InputDecoration(
                       prefixIcon: Icon(Icons.search),
-                      hintText: 'Search squads',
+                      hintText: 'Szukaj składów',
                       border: OutlineInputBorder(),
                     ),
                     onSubmitted: (value) => ref
@@ -260,7 +260,7 @@ class _SquadsPageState extends ConsumerState<SquadsPage> {
                       .read(squadsNotifierProvider.notifier)
                       .loadSquads(searchQuery: _searchController.text),
                   icon: const Icon(Icons.search),
-                  label: const Text('Find'),
+                  label: const Text('Znajdź'),
                 ),
               ],
             ),
@@ -273,7 +273,7 @@ class _SquadsPageState extends ConsumerState<SquadsPage> {
           : FloatingActionButton.extended(
               onPressed: _showCreateDialog,
               icon: const Icon(Icons.add),
-              label: const Text('Create Squad'),
+              label: const Text('Utwórz skład'),
             ),
     );
   }

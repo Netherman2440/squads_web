@@ -37,7 +37,7 @@ class _EditPlayerNameDialogState extends ConsumerState<EditPlayerNameDialog> {
   Future<void> _submit() async {
     final name = _controller.text.trim();
     if (name.isEmpty) {
-      setState(() => _error = 'Name cannot be empty');
+      setState(() => _error = 'Nazwa nie może być pusta');
       return;
     }
 
@@ -64,13 +64,13 @@ class _EditPlayerNameDialogState extends ConsumerState<EditPlayerNameDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Edit Name'),
+      title: const Text('Edytuj nazwę'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           TextField(
             controller: _controller,
-            decoration: InputDecoration(labelText: 'Name', errorText: _error),
+            decoration: InputDecoration(labelText: 'Nazwa', errorText: _error),
             autofocus: true,
             onSubmitted: (_) => _submit(),
           ),
@@ -79,7 +79,7 @@ class _EditPlayerNameDialogState extends ConsumerState<EditPlayerNameDialog> {
       actions: [
         TextButton(
           onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: const Text('Anuluj'),
         ),
         FilledButton(
           onPressed: _isLoading ? null : _submit,
@@ -89,7 +89,7 @@ class _EditPlayerNameDialogState extends ConsumerState<EditPlayerNameDialog> {
                   width: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Save'),
+              : const Text('Zapisz'),
         ),
       ],
     );

@@ -114,7 +114,7 @@ class _PlayerHeadToHeadTableState extends State<PlayerHeadToHeadTable> {
   @override
   Widget build(BuildContext context) {
     if (widget.stats.isEmpty) {
-      return const Text('No head-to-head stats yet.');
+      return const Text('Brak statystyk bezpośrednich pojedynków.');
     }
 
     return LayoutBuilder(

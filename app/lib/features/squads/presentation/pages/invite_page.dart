@@ -36,7 +36,7 @@ class _InvitePageState extends ConsumerState<InvitePage> {
     if (code == null || code.isEmpty) {
       if (mounted) {
         setState(() {
-          _error = 'Invite code missing.';
+          _error = 'Brak kodu zaproszenia.';
         });
       }
       return;
@@ -83,7 +83,7 @@ class _InvitePageState extends ConsumerState<InvitePage> {
       }
       if (mounted) {
         setState(() {
-          _error = 'Invite code is no longer available.';
+          _error = 'Kod zaproszenia nie jest już dostępny.';
         });
       }
     } catch (error) {
@@ -91,7 +91,7 @@ class _InvitePageState extends ConsumerState<InvitePage> {
       if (!mounted) {
         return;
       }
-      var message = 'Invite code is invalid or expired.';
+      var message = 'Kod zaproszenia jest nieprawidłowy lub wygasł.';
       if (error is Failure && error.message.isNotEmpty) {
         message = error.message;
       }
@@ -130,7 +130,10 @@ class _InvitePageState extends ConsumerState<InvitePage> {
             children: [
               const Icon(Icons.link, size: 64),
               const SizedBox(height: 16),
-              Text('Joining squad...', style: theme.textTheme.titleMedium),
+              Text(
+                'Dołączanie do składu...',
+                style: theme.textTheme.titleMedium,
+              ),
               const SizedBox(height: 12),
               if (_error != null) ...[
                 Text(
@@ -143,12 +146,12 @@ class _InvitePageState extends ConsumerState<InvitePage> {
                 const SizedBox(height: 12),
                 FilledButton(
                   onPressed: _attemptJoin,
-                  child: const Text('Try again'),
+                  child: const Text('Spróbuj ponownie'),
                 ),
               ] else if (_joining)
                 const CircularProgressIndicator()
               else
-                const Text('Redirecting you to the squad'),
+                const Text('Przekierowuję do składu'),
             ],
           ),
         ),

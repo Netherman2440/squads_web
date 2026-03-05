@@ -54,7 +54,7 @@ class _CreatePlayerDialogState extends ConsumerState<CreatePlayerDialog> {
 
     if (baseRanking < 1 || baseRanking > 100) {
       setState(() {
-        _errorText = 'Base ranking must be between 1 and 100.';
+        _errorText = 'Ranking bazowy musi mieścić się w zakresie 1-100.';
       });
       return;
     }
@@ -71,7 +71,7 @@ class _CreatePlayerDialogState extends ConsumerState<CreatePlayerDialog> {
       );
       if (nameExists) {
         setState(() {
-          _errorText = 'Player with this name already exists.';
+          _errorText = 'Gracz o tej nazwie już istnieje.';
           _isSubmitting = false;
         });
         return;
@@ -161,7 +161,7 @@ class _CreatePlayerDialogState extends ConsumerState<CreatePlayerDialog> {
     final contentWidth = (screenWidth - 48).clamp(0.0, 420.0);
 
     return AlertDialog(
-      title: const Text('Add player'),
+      title: const Text('Dodaj gracza'),
       content: SingleChildScrollView(
         child: SizedBox(
           width: contentWidth,
@@ -171,7 +171,7 @@ class _CreatePlayerDialogState extends ConsumerState<CreatePlayerDialog> {
               TextField(
                 controller: _nameController,
                 decoration: const InputDecoration(
-                  labelText: 'Name',
+                  labelText: 'Nazwa',
                   border: OutlineInputBorder(),
                 ),
                 textInputAction: TextInputAction.next,
@@ -208,7 +208,7 @@ class _CreatePlayerDialogState extends ConsumerState<CreatePlayerDialog> {
               TextField(
                 controller: _baseRankingController,
                 decoration: const InputDecoration(
-                  labelText: 'Base ranking',
+                  labelText: 'Ranking bazowy',
                   border: OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.number,
@@ -218,7 +218,7 @@ class _CreatePlayerDialogState extends ConsumerState<CreatePlayerDialog> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Selected ranking: $_sliderValue',
+                'Wybrany ranking: $_sliderValue',
                 style: theme.textTheme.bodyMedium,
               ),
               Slider(
@@ -247,9 +247,9 @@ class _CreatePlayerDialogState extends ConsumerState<CreatePlayerDialog> {
                           FadeTransition(opacity: animation, child: child),
                       child: _NearestPlayerProfile(
                         key: ValueKey(lowerPlayer?.playerId ?? 'lower-null'),
-                        label: 'Weaker player',
+                        label: 'Słabszy gracz',
                         player: lowerPlayer,
-                        placeholderText: 'No weaker player',
+                        placeholderText: 'Brak słabszego gracza',
                       ),
                     ),
                   ),
@@ -261,9 +261,9 @@ class _CreatePlayerDialogState extends ConsumerState<CreatePlayerDialog> {
                           FadeTransition(opacity: animation, child: child),
                       child: _NearestPlayerProfile(
                         key: ValueKey(higherPlayer?.playerId ?? 'higher-null'),
-                        label: 'Stronger player',
+                        label: 'Silniejszy gracz',
                         player: higherPlayer,
-                        placeholderText: 'No stronger player',
+                        placeholderText: 'Brak silniejszego gracza',
                       ),
                     ),
                   ),
@@ -287,7 +287,7 @@ class _CreatePlayerDialogState extends ConsumerState<CreatePlayerDialog> {
       actions: [
         TextButton(
           onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: const Text('Anuluj'),
         ),
         FilledButton(
           onPressed: _isSubmitting ? null : _handleSubmit,
@@ -302,7 +302,7 @@ class _CreatePlayerDialogState extends ConsumerState<CreatePlayerDialog> {
                     ),
                   ),
                 )
-              : const Text('Add'),
+              : const Text('Dodaj'),
         ),
       ],
     );

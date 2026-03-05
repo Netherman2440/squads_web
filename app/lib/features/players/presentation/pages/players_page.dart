@@ -98,10 +98,10 @@ class _PlayersPageState extends ConsumerState<PlayersPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Players'),
+        title: const Text('Gracze'),
         actions: [
           PopupMenuButton<_PlayerSortOption>(
-            tooltip: 'Sort',
+            tooltip: 'Sortuj',
             icon: const Icon(Icons.filter_alt),
             initialValue: _sortOption,
             onSelected: (value) {
@@ -125,7 +125,7 @@ class _PlayersPageState extends ConsumerState<PlayersPage> {
           ? FloatingActionButton.extended(
               onPressed: _showCreatePlayerDialog,
               icon: const Icon(Icons.person_add),
-              label: const Text('Add Player'),
+              label: const Text('Dodaj gracza'),
             )
           : null,
     );
@@ -215,13 +215,13 @@ class _PlayersPageState extends ConsumerState<PlayersPage> {
   String _sortLabel(_PlayerSortOption option) {
     switch (option) {
       case _PlayerSortOption.scoreDesc:
-        return 'Score: High to low';
+        return 'Ranking: malejąco';
       case _PlayerSortOption.scoreAsc:
-        return 'Score: Low to high';
+        return 'Ranking: rosnąco';
       case _PlayerSortOption.nameAsc:
-        return 'Name: A to Z';
+        return 'Nazwa: A-Z';
       case _PlayerSortOption.nameDesc:
-        return 'Name: Z to A';
+        return 'Nazwa: Z-A';
     }
   }
 }
@@ -246,7 +246,7 @@ class _SearchControls extends StatelessWidget {
       child: TextField(
         controller: controller,
         decoration: InputDecoration(
-          labelText: 'Search',
+          labelText: 'Szukaj',
           prefixIcon: const Icon(Icons.search),
           suffixIcon: controller.text.isEmpty
               ? null

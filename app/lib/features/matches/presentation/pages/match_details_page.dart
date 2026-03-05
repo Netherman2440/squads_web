@@ -218,9 +218,9 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
 
     if (homeScoreText.isEmpty || awayScoreText.isEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please enter both scores')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Podaj oba wyniki')));
       }
       return;
     }
@@ -230,9 +230,9 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
 
     if (home == null || away == null) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please enter valid scores')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Podaj poprawne wyniki')));
       }
       return;
     }
@@ -254,19 +254,19 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Match?'),
+        title: const Text('Usunąć mecz?'),
         content: const Text(
-          'This will revert all ranking changes associated with this match. This action cannot be undone.',
+          'To cofnie wszystkie zmiany rankingu powiązane z tym meczem. Tej operacji nie można cofnąć.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: const Text('Anuluj'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
+            child: const Text('Usuń'),
           ),
         ],
       ),
@@ -411,7 +411,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
     final selected = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Select team color'),
+        title: const Text('Wybierz kolor drużyny'),
         content: Wrap(
           spacing: 12,
           runSpacing: 12,
@@ -440,7 +440,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: const Text('Anuluj'),
           ),
         ],
       ),
@@ -479,25 +479,25 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
                 },
                 icon: const Icon(Icons.arrow_back),
               ),
-        title: const Text('Match Details'),
+        title: const Text('Szczegóły meczu'),
         actions: [
           if (canManage && matchAsync.hasValue) ...[
             if (_isEditing) ...[
               IconButton(
                 icon: const Icon(Icons.save),
                 onPressed: () => _saveChanges(matchAsync.value!),
-                tooltip: 'Save',
+                tooltip: 'Zapisz',
               ),
               IconButton(
                 icon: const Icon(Icons.close),
                 onPressed: _cancelEdit,
-                tooltip: 'Cancel',
+                tooltip: 'Anuluj',
               ),
             ] else ...[
               IconButton(
                 icon: const Icon(Icons.delete),
                 onPressed: _deleteMatch,
-                tooltip: 'Delete Match',
+                tooltip: 'Usuń mecz',
                 color: Colors.red,
               ),
               IconButton(
@@ -529,7 +529,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
         error: (error, stack) => Center(
           child: SelectableText.rich(
             TextSpan(
-              text: 'Error: $error',
+              text: 'Błąd: $error',
               style: const TextStyle(color: Colors.red),
             ),
           ),
@@ -624,7 +624,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
                     ? _homePlayers
                     : (match.homeTeam?.players ?? const <PlayerDto>[]),
                 match.homeTeam?.name,
-                'Home',
+                'Gospodarze',
                 'home',
                 _isTeamEditing ? _homeTeamColorHex : match.homeTeam?.color,
                 opponentCount: _isTeamEditing
@@ -639,7 +639,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
                     ? _awayPlayers
                     : (match.awayTeam?.players ?? const <PlayerDto>[]),
                 match.awayTeam?.name,
-                'Away',
+                'Goście',
                 'away',
                 _isTeamEditing ? _awayTeamColorHex : match.awayTeam?.color,
                 opponentCount: _isTeamEditing
@@ -682,7 +682,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
                         Expanded(
                           child: _buildCompactTeamHeader(
                             teamName: match.homeTeam?.name,
-                            fallbackLabel: 'Home',
+                            fallbackLabel: 'Gospodarze',
                             colorHex: _isTeamEditing
                                 ? _homeTeamColorHex
                                 : match.homeTeam?.color,
@@ -706,7 +706,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
                         Expanded(
                           child: _buildCompactTeamHeader(
                             teamName: match.awayTeam?.name,
-                            fallbackLabel: 'Away',
+                            fallbackLabel: 'Goście',
                             colorHex: _isTeamEditing
                                 ? _awayTeamColorHex
                                 : match.awayTeam?.color,
@@ -731,7 +731,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
                             context,
                             homePlayers,
                             match.homeTeam?.name,
-                            'Home',
+                            'Gospodarze',
                             'home',
                             _isTeamEditing
                                 ? _homeTeamColorHex
@@ -750,7 +750,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
                             context,
                             awayPlayers,
                             match.awayTeam?.name,
-                            'Away',
+                            'Goście',
                             'away',
                             _isTeamEditing
                                 ? _awayTeamColorHex
@@ -800,13 +800,13 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
           if (!_isEditing && match.homeWinProbability != null) ...[
             const SizedBox(height: 24),
             ProbabilitySlider(
-              title: 'Win probability',
+              title: 'Szansa na wygraną',
               homeColor: _parseColor(match.homeTeam?.color),
               awayColor: _parseColor(match.awayTeam?.color),
               homeProbability: match.homeWinProbability!,
               infoText:
-                  'Estimated from historical head-to-head results between '
-                  'players in this squad.',
+                  'Szacowane na podstawie historycznych wyników bezpośrednich pojedynków między '
+                  'graczami w tym składzie.',
             ),
           ],
         ],
@@ -859,7 +859,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
             style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.bold),
             decoration: const InputDecoration(
               border: OutlineInputBorder(),
-              labelText: 'Home',
+              labelText: 'Gospodarze',
             ),
           ),
         ),
@@ -877,7 +877,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
             style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.bold),
             decoration: const InputDecoration(
               border: OutlineInputBorder(),
-              labelText: 'Away',
+              labelText: 'Goście',
             ),
           ),
         ),
@@ -1063,7 +1063,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
           ),
           SizedBox(height: compact ? 4 : 6),
           Text(
-            'Rating: ${effective.toStringAsFixed(1)}',
+            'Ranking: ${effective.toStringAsFixed(1)}',
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
               fontSize: compact ? 11 : null,
@@ -1104,7 +1104,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
               border: Border.all(color: Colors.grey.withValues(alpha: 0.5)),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Text('Drag players here'),
+            child: const Text('Przeciągnij graczy tutaj'),
           ),
       ],
     );
@@ -1201,7 +1201,7 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
         ),
         const SizedBox(height: 4),
         Text(
-          'Rating: ${rating.toStringAsFixed(1)}',
+          'Ranking: ${rating.toStringAsFixed(1)}',
           style: theme.textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),
@@ -1236,7 +1236,7 @@ class _RemoveDropZone extends StatelessWidget {
               Icon(Icons.close, color: theme.colorScheme.error, size: 28),
               const SizedBox(width: 8),
               Text(
-                'Drag here to remove',
+                'Przeciągnij tutaj, aby usunąć',
                 style: theme.textTheme.titleMedium?.copyWith(
                   color: theme.colorScheme.error,
                 ),

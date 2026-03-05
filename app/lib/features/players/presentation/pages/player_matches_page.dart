@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:app/features/matches/presentation/widgets/match_tile.dart';
 import 'package:app/features/players/presentation/state/player_matches_provider.dart';
+import 'package:app/features/players/presentation/state/player_name_provider.dart';
 
 class PlayerMatchesPage extends ConsumerWidget {
   const PlayerMatchesPage({
@@ -17,9 +18,14 @@ class PlayerMatchesPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final matchesAsync = ref.watch(playerMatchesProvider(playerId));
+    final playerNameAsync = ref.watch(playerNameProvider(playerId));
+    final title = playerNameAsync.maybeWhen(
+      data: (name) => '$name > Mecze',
+      orElse: () => 'Mecze',
+    );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Matches')),
+      appBar: AppBar(title: Text(title)),
       body: RefreshIndicator(
         onRefresh: () => ref.refresh(playerMatchesProvider(playerId).future),
         child: matchesAsync.when(

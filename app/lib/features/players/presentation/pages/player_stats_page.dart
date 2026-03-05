@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:app/core/error/failure.dart';
 import 'package:app/features/players/domain/entities/player_stats.dart';
+import 'package:app/features/players/presentation/state/player_name_provider.dart';
 import 'package:app/features/players/presentation/state/player_stats_provider.dart';
 import 'package:app/features/players/presentation/widgets/player_head_to_head_table.dart';
 import 'package:app/features/squads/presentation/widgets/stat_tile.dart';
@@ -28,9 +29,14 @@ class _PlayerStatsPageState extends ConsumerState<PlayerStatsPage> {
   @override
   Widget build(BuildContext context) {
     final statsAsync = ref.watch(playerStatsProvider(widget.playerId));
+    final playerNameAsync = ref.watch(playerNameProvider(widget.playerId));
+    final title = playerNameAsync.maybeWhen(
+      data: (name) => '$name > Statystyki',
+      orElse: () => 'Statystyki',
+    );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Stats')),
+      appBar: AppBar(title: Text(title)),
       body: statsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => _StatsErrorView(message: _errorMessage(error)),

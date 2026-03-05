@@ -40,10 +40,11 @@ class PlayerDetailsPage extends ConsumerWidget {
       data: (state) => state.player.name,
       orElse: () => null,
     );
+    final title = 'Szczegóły gracza';
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Player Details'),
+        title: Text(title),
         leading: BackButton(onPressed: () => context.pop()),
         actions: [
           if (canEdit && playerName != null)

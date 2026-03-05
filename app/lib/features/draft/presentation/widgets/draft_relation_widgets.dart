@@ -253,6 +253,7 @@ Future<List<String>?> showDraftRuleEditorDialog({
   required int minSelection,
   Map<String, int> togetherGroupByPlayer = const {},
   bool blockTogetherConflicts = false,
+  int? maxSelection,
   int? exactSelection,
   List<String> initialSelection = const [],
 }) async {
@@ -266,9 +267,13 @@ Future<List<String>?> showDraftRuleEditorDialog({
 
       return StatefulBuilder(
         builder: (context, setState) {
+          final effectiveMaxSelection = exactSelection ?? maxSelection;
           final isValidSelection =
               selectedIds.length >= minSelection &&
-              (exactSelection == null || selectedIds.length == exactSelection);
+              (exactSelection == null ||
+                  selectedIds.length == exactSelection) &&
+              (effectiveMaxSelection == null ||
+                  selectedIds.length <= effectiveMaxSelection);
 
           return AlertDialog(
             title: Text(title),
@@ -279,9 +284,11 @@ Future<List<String>?> showDraftRuleEditorDialog({
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    exactSelection == null
-                        ? 'Wybierz minimum $minSelection graczy.'
-                        : 'Wybierz dokładnie $exactSelection graczy.',
+                    _buildSelectionHintText(
+                      minSelection: minSelection,
+                      maxSelection: effectiveMaxSelection,
+                      exactSelection: exactSelection,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   SizedBox(
@@ -303,8 +310,8 @@ Future<List<String>?> showDraftRuleEditorDialog({
                               togetherGroupByPlayer: togetherGroupByPlayer,
                             );
                         final reachesLimit =
-                            exactSelection != null &&
-                            selectedIds.length >= exactSelection;
+                            effectiveMaxSelection != null &&
+                            selectedIds.length >= effectiveMaxSelection;
                         final canSelect =
                             !isBlocked &&
                             !hasTogetherConflict &&
@@ -359,6 +366,20 @@ Future<List<String>?> showDraftRuleEditorDialog({
       );
     },
   );
+}
+
+String _buildSelectionHintText({
+  required int minSelection,
+  required int? maxSelection,
+  required int? exactSelection,
+}) {
+  if (exactSelection != null) {
+    return 'Wybierz dokładnie $exactSelection graczy.';
+  }
+  if (maxSelection != null) {
+    return 'Wybierz minimum $minSelection i maksymalnie $maxSelection graczy.';
+  }
+  return 'Wybierz minimum $minSelection graczy.';
 }
 
 Map<String, int> buildTogetherGroupByPlayer(List<List<String>> togetherGroups) {

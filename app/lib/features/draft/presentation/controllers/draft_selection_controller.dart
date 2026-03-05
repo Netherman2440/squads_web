@@ -84,8 +84,8 @@ class DraftSelectionController
       final against = _pruneGroupsForSelection(
         groups: current.againstGroups,
         selectedPlayerIds: selected,
-        minSize: current.teamCount,
-        exactSize: current.teamCount,
+        minSize: 2,
+        maxSize: current.teamCount,
       );
       _setData(
         current.copyWith(
@@ -251,8 +251,8 @@ class DraftSelectionController
       if (group.length > value.teamCount) {
         return 'Relacja "Przeciwko sobie" nie może mieć więcej graczy niż liczba drużyn (${value.teamCount}).';
       }
-      if (group.length < value.teamCount) {
-        return 'Relacja "Przeciwko sobie" musi mieć dokładnie ${value.teamCount} graczy dla tego typu draftu.';
+      if (group.length < 2) {
+        return 'Relacja "Przeciwko sobie" musi mieć co najmniej 2 graczy.';
       }
       final togetherGroupsInAgainst = <int>{};
       for (final playerId in group) {
@@ -300,7 +300,7 @@ List<List<String>> _pruneGroupsForSelection({
   required List<List<String>> groups,
   required Set<String> selectedPlayerIds,
   required int minSize,
-  int? exactSize,
+  int? maxSize,
 }) {
   final next = <List<String>>[];
   for (final group in groups) {
@@ -311,7 +311,7 @@ List<List<String>> _pruneGroupsForSelection({
     if (filtered.length < minSize) {
       continue;
     }
-    if (exactSize != null && filtered.length != exactSize) {
+    if (maxSize != null && filtered.length > maxSize) {
       continue;
     }
     next.add(filtered);

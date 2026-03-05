@@ -28,11 +28,13 @@ class CreateMatchUseCase {
     required List<String> homePlayerIds,
     required List<String> awayPlayerIds,
     List<String> rankingHistoryPlayerIds = const [],
+    bool createRankingEntries = true,
     String? homeTeamName,
     String? awayTeamName,
     String? homeTeamColor,
     String? awayTeamColor,
     String? tournamentId,
+    Map<String, dynamic>? scoreMeta,
   }) async {
     // 1. Fetch all players to have current state (especially ranking/score)
     // We can optimize this by fetching by IDs if repository supports it,
@@ -83,6 +85,7 @@ class CreateMatchUseCase {
     final match = await _matchRepository.createMatch(
       squadId: squadId,
       tournamentId: tournamentId,
+      scoreMeta: scoreMeta,
       homeTeam: homeTeam,
       awayTeam: awayTeam,
     );
@@ -100,11 +103,13 @@ class CreateMatchUseCase {
       await _matchRepository.refreshMatchWinProbability(matchId: match.matchId);
     }
 
-    final rankingEntryPlayerIds = <String>{
-      ...rankingHistoryPlayerIds,
-      if (rankingHistoryPlayerIds.isEmpty) ...homePlayerIds,
-      if (rankingHistoryPlayerIds.isEmpty) ...awayPlayerIds,
-    }.toList(growable: false);
+    final rankingEntryPlayerIds = createRankingEntries
+        ? <String>{
+            ...rankingHistoryPlayerIds,
+            if (rankingHistoryPlayerIds.isEmpty) ...homePlayerIds,
+            if (rankingHistoryPlayerIds.isEmpty) ...awayPlayerIds,
+          }.toList(growable: false)
+        : const <String>[];
 
     if (rankingEntryPlayerIds.isNotEmpty) {
       final playersById = <String, Player>{

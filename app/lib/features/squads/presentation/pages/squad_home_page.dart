@@ -204,6 +204,14 @@ class _SquadHomeGrid extends StatelessWidget {
                   return;
                 }
 
+                if (tile.title == 'Tournaments') {
+                  context.pushNamed(
+                    AppRoute.tournaments.name,
+                    pathParameters: {'squadId': squad.squadId},
+                  );
+                  return;
+                }
+
                 showDialog<void>(
                   context: context,
                   builder: (context) => AlertDialog(

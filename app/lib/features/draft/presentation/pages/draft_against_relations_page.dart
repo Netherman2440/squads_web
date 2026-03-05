@@ -113,6 +113,11 @@ class _DraftAgainstRelationsPageState
                   'Wybierz graczy, którzy mają być przeciwko w drużynie.',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
+                const SizedBox(height: 6),
+                Text(
+                  'W jednej relacji wybierz do ${data.teamCount} graczy.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
                 const SizedBox(height: 10),
                 if (selected.length >= AppConfig.greedyDraftThresholdPlayers)
                   Padding(
@@ -137,7 +142,7 @@ class _DraftAgainstRelationsPageState
                     groups: data.againstGroups,
                     playersById: playersById,
                     borderColor: Colors.red,
-                    onAdd: selected.length < data.teamCount
+                    onAdd: selected.length < 2
                         ? null
                         : () async {
                             final result = await showDraftRuleEditorDialog(
@@ -145,8 +150,8 @@ class _DraftAgainstRelationsPageState
                               title: 'Dodaj relację „Przeciwko sobie”',
                               players: selected,
                               blockedPlayerIds: const <String>{},
-                              minSelection: data.teamCount,
-                              exactSelection: data.teamCount,
+                              minSelection: 2,
+                              maxSelection: data.teamCount,
                               blockTogetherConflicts: true,
                               togetherGroupByPlayer: togetherGroupByPlayer,
                             );
@@ -166,8 +171,8 @@ class _DraftAgainstRelationsPageState
                         title: 'Edytuj relację „Przeciwko sobie”',
                         players: selected,
                         blockedPlayerIds: const <String>{},
-                        minSelection: data.teamCount,
-                        exactSelection: data.teamCount,
+                        minSelection: 2,
+                        maxSelection: data.teamCount,
                         initialSelection: initialSelection,
                         blockTogetherConflicts: true,
                         togetherGroupByPlayer: togetherGroupByPlayer,

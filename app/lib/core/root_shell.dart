@@ -490,6 +490,19 @@ class _SidebarNavigation extends StatelessWidget {
                 ),
                 _SidebarNavItem(
                   item: _NavItem(
+                    icon: Icons.emoji_events,
+                    label: 'Tournaments',
+                    path: '/squads/$squadId/tournaments',
+                  ),
+                  isExpanded: isExpanded,
+                  isSelected: _isLocationSelected(
+                    location,
+                    '/squads/$squadId/tournaments',
+                  ),
+                  onNavigate: onNavigate,
+                ),
+                _SidebarNavItem(
+                  item: _NavItem(
                     icon: Icons.bar_chart,
                     label: 'Statystyki',
                     path: '/squads/$squadId/stats',

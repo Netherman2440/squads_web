@@ -42,6 +42,8 @@ class UpdateMatchScoreUseCase {
       throw const UnauthorizedFailure('Not authenticated.');
     }
 
+    final currentMatch = await _getMatchUseCase.execute(matchId: matchId);
+
     // 1. Get Squad Settings
     final squad = await _getSquadUseCase.execute(squadId: squadId);
 
@@ -53,7 +55,7 @@ class UpdateMatchScoreUseCase {
     );
 
     // 3. Update Rankings if enabled
-    if (squad.rankingUpdate) {
+    if (squad.rankingUpdate && currentMatch.tournamentId == null) {
       final delta = (homeScore - awayScore) * squad.rankingMultiplier;
 
       final teams = await _teamRepository.getMatchTeams(matchId);

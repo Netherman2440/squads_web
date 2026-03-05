@@ -397,7 +397,10 @@ class _PlayerTabs extends StatelessWidget {
             _TabButton(
               label: 'Turnieje',
               icon: Icons.emoji_events,
-              onPressed: () => _showTodo(context),
+              onPressed: () => context.pushNamed(
+                AppRoute.playerTournaments.name,
+                pathParameters: {'squadId': squadId, 'playerId': playerId},
+              ),
             ),
             _TabButton(
               label: 'Statystyki',
@@ -411,12 +414,6 @@ class _PlayerTabs extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  void _showTodo(BuildContext context) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Wkrótce dostępne!')));
   }
 }
 

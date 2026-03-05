@@ -7,9 +7,20 @@ abstract class RankingRepository {
   /// Get all ranking history entries for a specific match.
   Future<List<RankingHistoryEntry>> getMatchRankingHistory(String matchId);
 
+  /// Get all ranking history entries for a specific tournament.
+  Future<List<RankingHistoryEntry>> getTournamentRankingHistory(
+    String tournamentId,
+  );
+
   /// Get a specific ranking history entry by match_id
   Future<RankingHistoryEntry?> getRankingHistoryEntryByMatch({
     required String matchId,
+    required String playerId,
+  });
+
+  /// Get a specific ranking history entry by tournament_id.
+  Future<RankingHistoryEntry?> getRankingHistoryEntryByTournament({
+    required String tournamentId,
     required String playerId,
   });
 
@@ -35,6 +46,13 @@ abstract class RankingRepository {
     required double newDelta,
   });
 
+  /// Updates the ranking change for a specific tournament entry.
+  Future<double> updateTournamentRankingChange({
+    required String playerId,
+    required String tournamentId,
+    required double newDelta,
+  });
+
   /// Create initial ranking history entry when match is created (change = null)
   Future<RankingHistoryEntry> createMatchRankingEntry({
     required String playerId,
@@ -42,9 +60,22 @@ abstract class RankingRepository {
     required double currentRanking,
   });
 
+  /// Create initial ranking history entry when tournament is created.
+  Future<RankingHistoryEntry> createTournamentRankingEntry({
+    required String playerId,
+    required String tournamentId,
+    required double currentRanking,
+  });
+
   /// Delete ranking history entry for a match and revert the ranking change
   Future<void> deleteMatchRankingEntry({
     required String playerId,
     required String matchId,
+  });
+
+  /// Delete ranking history entry for a tournament and revert ranking change
+  Future<void> deleteTournamentRankingEntry({
+    required String playerId,
+    required String tournamentId,
   });
 }

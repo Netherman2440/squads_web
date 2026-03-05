@@ -13,6 +13,7 @@ import 'package:app/features/draft/domain/entities/draft.dart';
 import 'package:app/features/draft/domain/entities/draft_rule.dart';
 import 'package:app/features/draft/domain/entities/head_to_head_win_rate.dart';
 import 'package:app/features/draft/domain/entities/stored_draft_payload.dart';
+import 'package:app/features/draft/domain/services/draft_algorithm_policy.dart';
 import 'package:app/features/draft/presentation/state/draft_session_state.dart';
 import 'package:app/features/matches/application/usecases/get_match_usecase.dart';
 import 'package:app/features/players/application/usecases/get_squad_players_usecase.dart';
@@ -531,7 +532,11 @@ DraftAlgorithm _resolveAlgorithmForPlayerCount({
   required DraftAlgorithm preferred,
   required int playerCount,
 }) {
-  if (playerCount >= AppConfig.greedyDraftThresholdPlayers) {
+  final policySelection = DraftAlgorithmPolicy.resolve(
+    teamCount: 2,
+    playerCount: playerCount,
+  );
+  if (policySelection == DraftAlgorithmSelection.greedy) {
     return DraftAlgorithm.greedy;
   }
   if (playerCount > AppConfig.maxPlayersPerMatch) {

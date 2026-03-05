@@ -198,29 +198,14 @@ class _QuickActionsSheet extends StatelessWidget {
               subtitle: const Text('Utwórz nowy turniej dla tego składu.'),
               onTap: () {
                 Navigator.of(context).pop();
-                _showPlaceholderDialog(context, title: 'Dodaj turniej');
+                context.pushNamed(
+                  AppRoute.tournamentCreate.name,
+                  pathParameters: {'squadId': squad.squadId},
+                );
               },
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  void _showPlaceholderDialog(BuildContext context, {required String title}) {
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: const SelectableText(
-          'Ta akcja będzie dostępna w kolejnej wersji aplikacji.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Zamknij'),
-          ),
-        ],
       ),
     );
   }

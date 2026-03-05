@@ -95,6 +95,7 @@ class SupabaseMatchRepository implements MatchRepository {
   Future<Match> createMatch({
     required String squadId,
     String? tournamentId,
+    Map<String, dynamic>? scoreMeta,
     required Team homeTeam,
     required Team awayTeam,
   }) async {
@@ -115,7 +116,7 @@ class SupabaseMatchRepository implements MatchRepository {
         'squad_id': squadId,
         'tournament_id': tournamentId,
         'created_at': now.toIso8601String(),
-        'score_meta': {},
+        'score_meta': scoreMeta ?? <String, dynamic>{},
       };
 
       await _supabase.from('matches').insert(matchData);

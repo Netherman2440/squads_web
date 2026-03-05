@@ -135,7 +135,7 @@ class _TournamentTeamsPageState extends ConsumerState<TournamentTeamsPage> {
     final selected = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Select team color'),
+        title: const Text('Wybierz kolor drużyny'),
         content: Wrap(
           spacing: 12,
           runSpacing: 12,
@@ -166,7 +166,7 @@ class _TournamentTeamsPageState extends ConsumerState<TournamentTeamsPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: const Text('Anuluj'),
           ),
         ],
       ),
@@ -188,7 +188,9 @@ class _TournamentTeamsPageState extends ConsumerState<TournamentTeamsPage> {
     if (teamCount < 2 || selectedIds.length < teamCount) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Not enough assigned players to redraft teams.'),
+          content: Text(
+            'Za mało przypisanych graczy, aby ponownie wygenerować drużyny.',
+          ),
         ),
       );
       return;
@@ -197,16 +199,18 @@ class _TournamentTeamsPageState extends ConsumerState<TournamentTeamsPage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Redraft teams?'),
-        content: const Text('Generate new team proposals for this tournament?'),
+        title: const Text('Wygenerować drużyny ponownie?'),
+        content: const Text(
+          'Wygenerować nowe propozycje drużyn dla tego turnieju?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: const Text('Anuluj'),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Redraft'),
+            child: const Text('Generuj'),
           ),
         ],
       ),
@@ -246,7 +250,7 @@ class _TournamentTeamsPageState extends ConsumerState<TournamentTeamsPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tournament Teams'),
+        title: const Text('Drużyny turniejowe'),
         actions: [
           if (canEditTeams)
             Padding(
@@ -254,12 +258,12 @@ class _TournamentTeamsPageState extends ConsumerState<TournamentTeamsPage> {
               child: TextButton.icon(
                 onPressed: _saving || !_initialized ? null : _onRedraft,
                 icon: const Icon(Icons.refresh),
-                label: const Text('Redraft'),
+                label: const Text('Generuj ponownie'),
               ),
             ),
           if (canEditTeams)
             IconButton(
-              tooltip: 'Save teams',
+              tooltip: 'Zapisz drużyny',
               onPressed: _saving || !_initialized ? null : _save,
               icon: _saving
                   ? const SizedBox(
@@ -275,7 +279,7 @@ class _TournamentTeamsPageState extends ConsumerState<TournamentTeamsPage> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(
           child: SelectableText(
-            'Failed to load teams: $error',
+            'Nie udało się wczytać drużyn: $error',
             style: TextStyle(color: Theme.of(context).colorScheme.error),
           ),
         ),
@@ -289,7 +293,7 @@ class _TournamentTeamsPageState extends ConsumerState<TournamentTeamsPage> {
           }
 
           if (_teams.isEmpty) {
-            return const Center(child: Text('No teams to edit yet.'));
+            return const Center(child: Text('Brak drużyn do edycji.'));
           }
 
           return Padding(
@@ -300,7 +304,7 @@ class _TournamentTeamsPageState extends ConsumerState<TournamentTeamsPage> {
                 Row(
                   children: [
                     Text(
-                      'Teams',
+                      'Drużyny',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                   ],
@@ -308,10 +312,10 @@ class _TournamentTeamsPageState extends ConsumerState<TournamentTeamsPage> {
                 const SizedBox(height: 8),
                 Text(
                   canEditTeams
-                      ? 'Drag players between teams to edit assignments.'
+                      ? 'Przeciągaj graczy między drużynami, aby zmienić składy.'
                       : details.tournament.status == TournamentStatus.completed
-                      ? 'Tournament completed. Team assignments are read-only.'
-                      : 'Team assignments are read-only.',
+                      ? 'Turniej zakończony. Składy drużyn są tylko do odczytu.'
+                      : 'Składy drużyn są tylko do odczytu.',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
                 const SizedBox(height: 8),
@@ -458,7 +462,7 @@ class _TournamentTeamsPageState extends ConsumerState<TournamentTeamsPage> {
       ref.invalidate(squadTournamentsProvider(widget.squadId));
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tournament teams updated.')),
+        const SnackBar(content: Text('Drużyny turnieju zostały zapisane.')),
       );
     } catch (error) {
       if (!mounted) {
@@ -549,7 +553,7 @@ class _TeamEditorCard extends StatelessWidget {
                           ? TextField(
                               controller: nameController,
                               decoration: InputDecoration(
-                                hintText: 'Team ${teamIndex + 1}',
+                                hintText: 'Drużyna ${teamIndex + 1}',
                                 isDense: true,
                                 contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 8,
@@ -560,7 +564,7 @@ class _TeamEditorCard extends StatelessWidget {
                           : Text(
                               _displayTeamName(
                                 nameController.text,
-                                'Team ${teamIndex + 1}',
+                                'Drużyna ${teamIndex + 1}',
                               ),
                               style: theme.textTheme.titleMedium,
                             ),
@@ -569,7 +573,7 @@ class _TeamEditorCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Players: ${players.length} | Ranking: ${rankingTotal.toStringAsFixed(1)}',
+                  'Gracze: ${players.length} | Ranking: ${rankingTotal.toStringAsFixed(1)}',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -583,7 +587,7 @@ class _TeamEditorCard extends StatelessWidget {
                       border: Border.all(color: theme.colorScheme.outline),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Text('Drag players here'),
+                    child: const Text('Przeciągnij tu graczy'),
                   )
                 else
                   ...players.map(

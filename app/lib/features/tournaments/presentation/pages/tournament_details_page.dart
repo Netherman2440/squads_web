@@ -41,7 +41,7 @@ class TournamentDetailsPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tournament details'),
+        title: const Text('Szczegóły turnieju'),
         leading: BackButton(
           onPressed: () {
             if (context.canPop()) {
@@ -59,7 +59,7 @@ class TournamentDetailsPage extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(
           child: SelectableText(
-            'Failed to load tournament: $error',
+            'Nie udało się wczytać turnieju: $error',
             style: TextStyle(color: Theme.of(context).colorScheme.error),
           ),
         ),
@@ -99,6 +99,10 @@ class _DetailsBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final tournament = details.tournament;
     final previewDraftId = _resolvePreviewDraftId(details);
+    final teamsNotSelected =
+        details.teams.isEmpty ||
+        details.teams.every((team) => team.players.isEmpty);
+    final limitedActions = teamsNotSelected;
     final matchesAsync = ref.watch(
       tournamentMatchesProvider(tournament.tournamentId),
     );
@@ -152,47 +156,40 @@ class _DetailsBody extends ConsumerWidget {
                 children: [
                   _StatusChip(status: tournament.status),
                   if (previewDraftId != null)
-                    OutlinedButton.icon(
-                      onPressed: () {
-                        context.pushNamed(
-                          AppRoute.tournamentDraftById.name,
-                          pathParameters: {
-                            'squadId': squadId,
-                            'tournamentId': tournament.tournamentId,
-                            'tournamentDraftId': previewDraftId,
-                          },
-                        );
-                      },
-                      icon: const Icon(Icons.visibility),
-                      label: const Text('Podgląd propozycji'),
+                    _buildPreviewDraftButton(
+                      context,
+                      squadId: squadId,
+                      tournamentId: tournament.tournamentId,
+                      previewDraftId: previewDraftId,
+                      showAttention: teamsNotSelected,
                     ),
-                  if (canManage)
+                  if (canManage && !limitedActions)
                     OutlinedButton.icon(
                       onPressed: openTeamsEditor,
                       icon: const Icon(Icons.groups),
-                      label: const Text('Edit teams'),
+                      label: const Text('Edytuj drużyny'),
                     ),
-                  if (canManage)
+                  if (canManage && !limitedActions)
                     OutlinedButton.icon(
                       onPressed: tournament.status == TournamentStatus.active
                           ? () async {
                               final confirm = await showDialog<bool>(
                                 context: context,
                                 builder: (context) => AlertDialog(
-                                  title: const Text('Complete tournament?'),
+                                  title: const Text('Zakończyć turniej?'),
                                   content: const Text(
-                                    'This will finalize tournament ranking changes.',
+                                    'To zatwierdzi zmiany rankingowe turnieju.',
                                   ),
                                   actions: [
                                     TextButton(
                                       onPressed: () =>
                                           Navigator.pop(context, false),
-                                      child: const Text('Cancel'),
+                                      child: const Text('Anuluj'),
                                     ),
                                     FilledButton(
                                       onPressed: () =>
                                           Navigator.pop(context, true),
-                                      child: const Text('Complete'),
+                                      child: const Text('Zakończ'),
                                     ),
                                   ],
                                 ),
@@ -211,7 +208,7 @@ class _DetailsBody extends ConsumerWidget {
                             }
                           : null,
                       icon: const Icon(Icons.flag),
-                      label: const Text('Complete'),
+                      label: const Text('Zakończ'),
                     ),
                   if (canManage)
                     OutlinedButton.icon(
@@ -219,15 +216,15 @@ class _DetailsBody extends ConsumerWidget {
                         final confirm = await showDialog<bool>(
                           context: context,
                           builder: (context) => AlertDialog(
-                            title: const Text('Delete tournament?'),
+                            title: const Text('Usunąć turniej?'),
                             content: const Text(
-                              'This will remove tournament teams, drafts and matches. Ranking adjustments from this tournament will be reverted.',
+                              'To usunie drużyny, drafty i mecze turnieju. Zmiany rankingowe z tego turnieju zostaną cofnięte.',
                             ),
                             actions: [
                               TextButton(
                                 onPressed: () =>
                                     Navigator.of(context).pop(false),
-                                child: const Text('Cancel'),
+                                child: const Text('Anuluj'),
                               ),
                               TextButton(
                                 onPressed: () =>
@@ -235,7 +232,7 @@ class _DetailsBody extends ConsumerWidget {
                                 style: TextButton.styleFrom(
                                   foregroundColor: Colors.red,
                                 ),
-                                child: const Text('Delete'),
+                                child: const Text('Usuń'),
                               ),
                             ],
                           ),
@@ -260,7 +257,7 @@ class _DetailsBody extends ConsumerWidget {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
-                                'Failed to delete tournament: $message',
+                                'Nie udało się usunąć turnieju: $message',
                               ),
                               backgroundColor: Colors.red,
                             ),
@@ -282,7 +279,7 @@ class _DetailsBody extends ConsumerWidget {
                         foregroundColor: Colors.red,
                       ),
                       icon: const Icon(Icons.delete_outline),
-                      label: const Text('Delete'),
+                      label: const Text('Usuń'),
                     ),
                 ],
               ),
@@ -296,7 +293,7 @@ class _DetailsBody extends ConsumerWidget {
               rankingSumByTeamId: rankingSumByTeamId,
             )
           else ...[
-            Text('Teams', style: Theme.of(context).textTheme.titleMedium),
+            Text('Drużyny', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             _TeamsStrip(
               teams: details.teams,
@@ -345,6 +342,62 @@ class _DetailsBody extends ConsumerWidget {
     );
   }
 
+  Widget _buildPreviewDraftButton(
+    BuildContext context, {
+    required String squadId,
+    required String tournamentId,
+    required String previewDraftId,
+    required bool showAttention,
+  }) {
+    final theme = Theme.of(context);
+    final button = OutlinedButton.icon(
+      onPressed: () {
+        context.pushNamed(
+          AppRoute.tournamentDraftById.name,
+          pathParameters: {
+            'squadId': squadId,
+            'tournamentId': tournamentId,
+            'tournamentDraftId': previewDraftId,
+          },
+        );
+      },
+      icon: const Icon(Icons.visibility),
+      label: const Text('Podgląd propozycji'),
+    );
+
+    if (!showAttention) {
+      return button;
+    }
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        button,
+        Positioned(
+          right: 6,
+          top: 2,
+          child: Container(
+            width: 14,
+            height: 14,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.error,
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              '!',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onError,
+                fontWeight: FontWeight.w700,
+                height: 1,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Future<Match?> _showCreateMatchDialog(
     BuildContext context,
     WidgetRef ref,
@@ -364,13 +417,15 @@ class _DetailsBody extends ConsumerWidget {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: const Text('Add tournament match'),
+              title: const Text('Dodaj mecz turniejowy'),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   DropdownButtonFormField<String>(
                     initialValue: homeId,
-                    decoration: const InputDecoration(labelText: 'Home team'),
+                    decoration: const InputDecoration(
+                      labelText: 'Drużyna gospodarzy',
+                    ),
                     items: teams
                         .map(
                           (team) => DropdownMenuItem<String>(
@@ -398,7 +453,9 @@ class _DetailsBody extends ConsumerWidget {
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
                     initialValue: awayId,
-                    decoration: const InputDecoration(labelText: 'Away team'),
+                    decoration: const InputDecoration(
+                      labelText: 'Drużyna gości',
+                    ),
                     items: teams
                         .map(
                           (team) => DropdownMenuItem<String>(
@@ -421,7 +478,7 @@ class _DetailsBody extends ConsumerWidget {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
+                  child: const Text('Anuluj'),
                 ),
                 FilledButton(
                   onPressed: homeId == awayId
@@ -439,7 +496,7 @@ class _DetailsBody extends ConsumerWidget {
                             Navigator.pop(context, created);
                           }
                         },
-                  child: const Text('Create'),
+                  child: const Text('Utwórz'),
                 ),
               ],
             );
@@ -464,7 +521,7 @@ class _TeamsStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (teams.isEmpty) {
-      return const Text('No teams available yet.');
+      return const Text('Brak drużyn.');
     }
 
     if (!isWideLayout) {
@@ -517,10 +574,10 @@ class _WideTeamsAndStandings extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Teams', style: Theme.of(context).textTheme.titleMedium),
+              Text('Drużyny', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
               if (teams.isEmpty)
-                const Text('No teams available yet.')
+                const Text('Brak drużyn.')
               else
                 LayoutBuilder(
                   builder: (context, constraints) {
@@ -570,7 +627,7 @@ class _StandingsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Standings', style: Theme.of(context).textTheme.titleMedium),
+        Text('Tabela', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         _StandingsTable(rows: rows),
       ],
@@ -603,19 +660,19 @@ class _MatchesSection extends StatelessWidget {
       children: [
         Row(
           children: [
-            Text('Matches', style: Theme.of(context).textTheme.titleMedium),
+            Text('Mecze', style: Theme.of(context).textTheme.titleMedium),
             const Spacer(),
             if (canManage && onAddMatch != null)
               OutlinedButton.icon(
                 onPressed: onAddMatch,
                 icon: const Icon(Icons.sports_soccer),
-                label: const Text('Add match'),
+                label: const Text('Dodaj mecz'),
               ),
           ],
         ),
         const SizedBox(height: 8),
         if (matches.isEmpty)
-          const Text('No tournament matches yet.')
+          const Text('Brak meczów turniejowych.')
         else
           ...matches.map(
             (match) => Padding(
@@ -642,7 +699,7 @@ class _StandingsTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (rows.isEmpty) {
-      return const Text('No standings yet.');
+      return const Text('Brak tabeli.');
     }
 
     return LayoutBuilder(
@@ -660,13 +717,13 @@ class _StandingsTable extends StatelessWidget {
                 dataRowMinHeight: 42,
                 dataRowMaxHeight: 48,
                 columns: const [
-                  DataColumn(label: Text('Team')),
-                  DataColumn(label: Text('Pts'), numeric: true),
+                  DataColumn(label: Text('Drużyna')),
+                  DataColumn(label: Text('Pkt'), numeric: true),
+                  DataColumn(label: Text('M'), numeric: true),
+                  DataColumn(label: Text('Z'), numeric: true),
+                  DataColumn(label: Text('R'), numeric: true),
                   DataColumn(label: Text('P'), numeric: true),
-                  DataColumn(label: Text('W'), numeric: true),
-                  DataColumn(label: Text('D'), numeric: true),
-                  DataColumn(label: Text('L'), numeric: true),
-                  DataColumn(label: Text('GD'), numeric: true),
+                  DataColumn(label: Text('RB'), numeric: true),
                 ],
                 rows: rows
                     .map(
@@ -735,7 +792,7 @@ class _TeamSummaryTile extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             if (players.isEmpty)
-              Text('No players assigned.', style: textTheme.bodyMedium)
+              Text('Brak przypisanych graczy.', style: textTheme.bodyMedium)
             else
               ...players.asMap().entries.map(
                 (entry) => Padding(
@@ -912,10 +969,10 @@ class _MatchTileState extends State<_MatchTile> {
   Widget build(BuildContext context) {
     final home = widget.match.homeTeam?.name?.trim().isNotEmpty == true
         ? widget.match.homeTeam!.name!
-        : 'Home';
+        : 'Gospodarze';
     final away = widget.match.awayTeam?.name?.trim().isNotEmpty == true
         ? widget.match.awayTeam!.name!
-        : 'Away';
+        : 'Goście';
 
     return Card(
       child: InkWell(
@@ -985,7 +1042,7 @@ class _MatchTileState extends State<_MatchTile> {
                           height: 16,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Save'),
+                      : const Text('Zapisz'),
                 ),
               ],
               const SizedBox(width: 4),
@@ -1076,7 +1133,7 @@ class _MatchTileState extends State<_MatchTile> {
       });
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Match score updated.')));
+      ).showSnackBar(const SnackBar(content: Text('Wynik meczu zapisany.')));
     } catch (error) {
       if (!mounted) {
         return;
@@ -1084,9 +1141,9 @@ class _MatchTileState extends State<_MatchTile> {
       setState(() {
         _isSaving = false;
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to update score: $error')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Nie udało się zapisać wyniku: $error')),
+      );
     }
   }
 }
@@ -1169,9 +1226,12 @@ class _StatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final (label, color) = switch (status) {
-      TournamentStatus.drafting => ('Drafting', scheme.secondaryContainer),
-      TournamentStatus.active => ('Active', scheme.primaryContainer),
-      TournamentStatus.completed => ('Completed', scheme.tertiaryContainer),
+      TournamentStatus.drafting => (
+        'Nie wybrano drużyn',
+        scheme.secondaryContainer,
+      ),
+      TournamentStatus.active => ('Aktywny', scheme.primaryContainer),
+      TournamentStatus.completed => ('Zakończony', scheme.surfaceContainerHigh),
     };
 
     return Container(
@@ -1203,7 +1263,7 @@ String? _resolvePreviewDraftId(TournamentDetailsDto details) {
 String _displayTournamentName(Tournament tournament) {
   final value = tournament.name?.trim();
   if (value == null || value.isEmpty) {
-    return 'Tournament';
+    return 'Turniej';
   }
   return value;
 }
@@ -1211,7 +1271,7 @@ String _displayTournamentName(Tournament tournament) {
 String _teamName(TournamentTeam team) {
   final value = team.name?.trim();
   if (value == null || value.isEmpty) {
-    return 'Team';
+    return 'Drużyna';
   }
   return value;
 }
@@ -1219,7 +1279,7 @@ String _teamName(TournamentTeam team) {
 String _playerName(Player player) {
   final value = player.name.trim();
   if (value.isEmpty) {
-    return 'Player';
+    return 'Gracz';
   }
   return value;
 }

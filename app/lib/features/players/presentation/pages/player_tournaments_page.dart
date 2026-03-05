@@ -24,7 +24,7 @@ class PlayerTournamentsPage extends ConsumerWidget {
     final tournamentsAsync = ref.watch(playerTournamentsProvider(params));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Tournaments')),
+      appBar: AppBar(title: const Text('Turnieje')),
       body: RefreshIndicator(
         onRefresh: () => ref.refresh(playerTournamentsProvider(params).future),
         child: tournamentsAsync.when(
@@ -32,7 +32,7 @@ class PlayerTournamentsPage extends ConsumerWidget {
           error: (error, _) => Center(
             child: SelectableText.rich(
               TextSpan(
-                text: 'Error: $error',
+                text: 'Błąd: $error',
                 style: const TextStyle(color: Colors.red),
               ),
             ),
@@ -43,7 +43,7 @@ class PlayerTournamentsPage extends ConsumerWidget {
                 physics: const AlwaysScrollableScrollPhysics(),
                 children: const [
                   SizedBox(height: 120),
-                  Center(child: Text('No tournaments found.')),
+                  Center(child: Text('Nie znaleziono turniejów.')),
                 ],
               );
             }
@@ -93,15 +93,15 @@ class _TournamentTile extends StatelessWidget {
         },
         leading: const Icon(Icons.emoji_events_outlined),
         title: Text(_displayTournamentName(tournament)),
-        subtitle: Text('Created: $dateText'),
-        trailing: _StatusChip(status: tournament.status),
+        subtitle: Text('Utworzono: $dateText'),
+        trailing: _StatusLabel(status: tournament.status),
       ),
     );
   }
 }
 
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.status});
+class _StatusLabel extends StatelessWidget {
+  const _StatusLabel({required this.status});
 
   final TournamentStatus status;
 
@@ -109,18 +109,21 @@ class _StatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final (label, color) = switch (status) {
-      TournamentStatus.drafting => ('Drafting', scheme.secondaryContainer),
-      TournamentStatus.active => ('Active', scheme.primaryContainer),
-      TournamentStatus.completed => ('Completed', scheme.tertiaryContainer),
+      TournamentStatus.drafting => (
+        'Nie wybrano drużyn',
+        scheme.onSurfaceVariant,
+      ),
+      TournamentStatus.active => ('Aktywny', scheme.primary),
+      TournamentStatus.completed => ('Zakończony', Colors.grey),
     };
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
+    return Text(
+      label,
+      textAlign: TextAlign.end,
+      style: Theme.of(context).textTheme.bodySmall?.copyWith(
         color: color,
-        borderRadius: BorderRadius.circular(999),
+        fontWeight: FontWeight.w600,
       ),
-      child: Text(label),
     );
   }
 }
@@ -128,7 +131,7 @@ class _StatusChip extends StatelessWidget {
 String _displayTournamentName(Tournament tournament) {
   final value = tournament.name?.trim();
   if (value == null || value.isEmpty) {
-    return 'Tournament ${tournament.createdAt.day}.${tournament.createdAt.month}';
+    return 'Turniej ${tournament.createdAt.day}.${tournament.createdAt.month}';
   }
   return value;
 }

@@ -95,11 +95,11 @@ class _TournamentRelationsPageState
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Relations: Together'),
+        title: const Text('Relacje: Razem'),
         actions: [
           TextButton(
             onPressed: validationMessage == null ? _goNext : null,
-            child: const Text('Next'),
+            child: const Text('Dalej'),
           ),
         ],
       ),
@@ -118,7 +118,7 @@ class _TournamentRelationsPageState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Pick players that should stay together in one team.',
+                    'Wybierz graczy, którzy powinni grać razem w jednej drużynie.',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 12),
@@ -134,8 +134,8 @@ class _TournamentRelationsPageState
                     ),
                   Expanded(
                     child: DraftRelationGroupsList(
-                      title: 'Together rules',
-                      emptyText: 'No together rules yet.',
+                      title: 'Zasady razem',
+                      emptyText: 'Brak zasad razem.',
                       groups: _togetherGroups,
                       playersById: {
                         for (final player in _selectedPlayers)
@@ -150,7 +150,7 @@ class _TournamentRelationsPageState
                               };
                               final result = await showDraftRuleEditorDialog(
                                 context: context,
-                                title: 'Add together rule',
+                                title: 'Dodaj zasadę razem',
                                 players: _selectedPlayers,
                                 blockedPlayerIds: blockedIds,
                                 minSelection: 2,
@@ -172,7 +172,7 @@ class _TournamentRelationsPageState
 
                         final result = await showDraftRuleEditorDialog(
                           context: context,
-                          title: 'Edit together rule',
+                          title: 'Edytuj zasadę razem',
                           players: _selectedPlayers,
                           blockedPlayerIds: blockedIds,
                           minSelection: 2,

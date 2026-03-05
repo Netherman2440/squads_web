@@ -356,8 +356,7 @@ class _RootShellState extends ConsumerState<RootShell> {
                 value: _ProfileMenuAction.profile,
                 child: ListTile(
                   leading: const Icon(Icons.person),
-                  title: const Text('Profil'),
-                  subtitle: Text(
+                  title: Text(
                     email,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,

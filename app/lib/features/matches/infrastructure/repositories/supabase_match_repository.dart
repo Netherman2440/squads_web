@@ -20,7 +20,8 @@ class SupabaseMatchRepository implements MatchRepository {
       match_id,
       side,
       name,
-      color
+      color,
+      team_players!team_players_team_fk(count)
     )
   ''';
 
@@ -315,7 +316,9 @@ class SupabaseMatchRepository implements MatchRepository {
     Team? homeTeam;
     Team? awayTeam;
     for (final teamRow in teamsData) {
-      final team = Team.fromJson(Map<String, dynamic>.from(teamRow as Map));
+      final teamMap = Map<String, dynamic>.from(teamRow as Map);
+      final playerCount = _extractTeamPlayerCount(teamMap);
+      final team = Team.fromJson(teamMap).copyWith(playerCount: playerCount);
       if (team.side == Side.home) {
         homeTeam = team;
       } else {
@@ -324,6 +327,24 @@ class SupabaseMatchRepository implements MatchRepository {
     }
 
     return match.copyWith(homeTeam: homeTeam, awayTeam: awayTeam);
+  }
+
+  int _extractTeamPlayerCount(Map<String, dynamic> teamMap) {
+    final teamPlayers = teamMap['team_players'];
+
+    if (teamPlayers is List && teamPlayers.isNotEmpty) {
+      final first = teamPlayers.first;
+      if (first is Map && first['count'] is num) {
+        return (first['count'] as num).toInt();
+      }
+      return teamPlayers.length;
+    }
+
+    if (teamPlayers is Map && teamPlayers['count'] is num) {
+      return (teamPlayers['count'] as num).toInt();
+    }
+
+    return 0;
   }
 
   @override

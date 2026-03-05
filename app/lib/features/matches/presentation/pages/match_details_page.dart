@@ -549,6 +549,9 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
     final hasTeamAssignments =
         (match.homeTeam?.players.isNotEmpty ?? false) &&
         (match.awayTeam?.players.isNotEmpty ?? false);
+    final teamsNotSelected =
+        (match.homeTeam?.players.length ?? 0) == 0 &&
+        (match.awayTeam?.players.length ?? 0) == 0;
     final selectedIds = <String>{
       for (final player in match.homeTeam?.players ?? const []) player.playerId,
       for (final player in match.awayTeam?.players ?? const []) player.playerId,
@@ -583,17 +586,9 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
                       },
                       child: const Text('Zmień drużyny'),
                     ),
-                  TextButton(
-                    onPressed: () {
-                      context.pushNamed(
-                        AppRoute.matchDraft.name,
-                        pathParameters: {
-                          'squadId': widget.squadId,
-                          'matchId': widget.matchId,
-                        },
-                      );
-                    },
-                    child: const Text('Podgląd propozycji'),
+                  _buildDraftPreviewButton(
+                    context,
+                    showAttention: teamsNotSelected,
                   ),
                   TextButton(
                     onPressed: () => _enterScoreEditMode(match),
@@ -811,6 +806,57 @@ class _MatchDetailsPageState extends ConsumerState<MatchDetailsPage> {
           ],
         ],
       ),
+    );
+  }
+
+  Widget _buildDraftPreviewButton(
+    BuildContext context, {
+    required bool showAttention,
+  }) {
+    final theme = Theme.of(context);
+    final button = TextButton(
+      onPressed: () {
+        context.pushNamed(
+          AppRoute.matchDraft.name,
+          pathParameters: {
+            'squadId': widget.squadId,
+            'matchId': widget.matchId,
+          },
+        );
+      },
+      child: const Text('Podgląd propozycji'),
+    );
+
+    if (!showAttention) {
+      return button;
+    }
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        button,
+        Positioned(
+          right: 6,
+          top: 2,
+          child: Container(
+            width: 14,
+            height: 14,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.error,
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              '!',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onError,
+                fontWeight: FontWeight.w700,
+                height: 1,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

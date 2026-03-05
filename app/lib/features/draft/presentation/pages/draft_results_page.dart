@@ -449,8 +449,12 @@ class _CreateMatchButton extends ConsumerWidget {
 
     final isLoading = createMatchState.isLoading;
 
-    return IconButton(
-      tooltip: isExistingMatch ? 'Zaktualizuj mecz' : 'Utwórz mecz',
+    return OutlinedButton(
+      style: OutlinedButton.styleFrom(
+        side: const BorderSide(color: Colors.green),
+        foregroundColor: Colors.green,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      ),
       onPressed: isLoading || !hasProposals
           ? null
           : () async {
@@ -526,13 +530,13 @@ class _CreateMatchButton extends ConsumerWidget {
                 );
               }
             },
-      icon: isLoading
+      child: isLoading
           ? const SizedBox(
-              width: 24,
-              height: 24,
+              width: 18,
+              height: 18,
               child: CircularProgressIndicator(strokeWidth: 2),
             )
-          : const Icon(Icons.check_circle_outline),
+          : const Text('Zakceptuj propozycję'),
     );
   }
 }

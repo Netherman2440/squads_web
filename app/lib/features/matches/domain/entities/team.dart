@@ -11,6 +11,8 @@ class Team {
   final Side side;
   final String? name;
   final String? color;
+  // Populated in list queries (without loading players) to detect empty teams.
+  final int playerCount;
   @JsonKey(fromJson: _playersFromJson, toJson: _playersToJson)
   final List<Player> players;
 
@@ -20,6 +22,7 @@ class Team {
     required this.side,
     this.name,
     this.color,
+    this.playerCount = 0,
     this.players = const [],
   });
 
@@ -32,6 +35,7 @@ class Team {
     Side? side,
     String? name,
     String? color,
+    int? playerCount,
     List<Player>? players,
   }) {
     return Team(
@@ -40,6 +44,7 @@ class Team {
       side: side ?? this.side,
       name: name ?? this.name,
       color: color ?? this.color,
+      playerCount: playerCount ?? this.playerCount,
       players: players ?? this.players,
     );
   }

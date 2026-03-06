@@ -44,7 +44,7 @@ class _SquadRankingSettingsPageState
     final squadState = ref.watch(squadDetailProvider(widget.squadId));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Ranking settings')),
+      appBar: AppBar(title: const Text('Ustawienia rankingu')),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -68,22 +68,22 @@ class _SquadRankingSettingsPageState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Manage ranking updates',
+                        'Zarządzaj aktualizacją rankingu',
                         style: theme.textTheme.titleLarge,
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Control how match results change player rankings.',
+                        'Kontroluj, jak wyniki meczów zmieniają rankingi graczy.',
                         style: theme.textTheme.bodySmall,
                       ),
                       const SizedBox(height: 16),
 
                       _ActionDropdownRow(
-                        title: 'Ranking updates',
+                        title: 'Aktualizacja rankingu',
                         subtitle: rankingUpdateDraft
-                            ? 'Enabled. Match results update player rankings.'
-                            : 'Disabled. Match results do not affect rankings.',
-                        dropdownLabel: 'Change',
+                            ? 'Włączona. Wyniki meczów aktualizują rankingi graczy.'
+                            : 'Wyłączona. Wyniki meczów nie wpływają na ranking.',
+                        dropdownLabel: 'Zmień',
                         isExpanded: _isRankingUpdatesExpanded,
                         onToggleExpanded: () {
                           setState(() {
@@ -92,8 +92,8 @@ class _SquadRankingSettingsPageState
                           });
                         },
                         optionLabel: rankingUpdateDraft
-                            ? 'Disable updates'
-                            : 'Enable updates',
+                            ? 'Wyłącz aktualizacje'
+                            : 'Włącz aktualizacje',
                         onOptionPressed: () async {
                           setState(() {
                             _rankingUpdateDraft = !rankingUpdateDraft;
@@ -112,11 +112,11 @@ class _SquadRankingSettingsPageState
                       const SizedBox(height: 12),
                       if (rankingUpdateDraft) ...[
                         _ActionDropdownRow(
-                          title: 'Experience factor',
+                          title: 'Współczynnik doświadczenia',
                           subtitle: useExperienceFactorDraft
-                              ? 'Enabled. New players gain/lose more.'
-                              : 'Disabled. Everyone gets the same change.',
-                          dropdownLabel: 'Change',
+                              ? 'Włączony. Nowi gracze zyskują/tracą więcej.'
+                              : 'Wyłączony. Każdy otrzymuje tę samą zmianę.',
+                          dropdownLabel: 'Zmień',
                           isExpanded: _isExperienceFactorExpanded,
                           onToggleExpanded: () {
                             setState(() {
@@ -125,8 +125,8 @@ class _SquadRankingSettingsPageState
                             });
                           },
                           optionLabel: useExperienceFactorDraft
-                              ? 'Disable experience factor'
-                              : 'Enable experience factor',
+                              ? 'Wyłącz współczynnik doświadczenia'
+                              : 'Włącz współczynnik doświadczenia',
                           onOptionPressed: () async {
                             setState(() {
                               _useExperienceFactorDraft =
@@ -154,7 +154,7 @@ class _SquadRankingSettingsPageState
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Factor value',
+                                    'Wartość współczynnika',
                                     style: theme.textTheme.bodySmall,
                                   ),
                                   const SizedBox(height: 6),
@@ -210,7 +210,7 @@ class _SquadRankingSettingsPageState
                                         const SizedBox(width: 12),
                                         FilledButton(
                                           onPressed: _onSaveMultiplierPressed,
-                                          child: const Text('Save'),
+                                          child: const Text('Zapisz'),
                                         ),
                                       ],
                                     ],
@@ -219,7 +219,7 @@ class _SquadRankingSettingsPageState
                                   if (_keepTestPreviewVisibleUntilSave) ...[
                                     const SizedBox(height: 12),
                                     Text(
-                                      'Test new settings out',
+                                      'Przetestuj nowe ustawienia',
                                       style: theme.textTheme.titleMedium,
                                     ),
                                     const SizedBox(height: 8),
@@ -240,7 +240,7 @@ class _SquadRankingSettingsPageState
                         ),
                       ] else ...[
                         Text(
-                          'Ranking updates are currently disabled for this squad.',
+                          'Aktualizacja rankingu jest obecnie wyłączona dla tego składu.',
                           style: theme.textTheme.bodySmall,
                         ),
                       ],
@@ -294,7 +294,7 @@ class _SquadRankingSettingsPageState
     if (!mounted) return;
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('Saved')));
+    ).showSnackBar(const SnackBar(content: Text('Zapisano')));
   }
 
   Future<void> _saveToggles({
@@ -427,10 +427,10 @@ class _TestMatchPreviewState extends State<_TestMatchPreview> {
                 Expanded(
                   child: _TestPlayerCard(
                     title: widget.useExperienceFactor
-                        ? 'New player'
-                        : 'Equal player',
-                    detailLine: widget.useExperienceFactor ? '1 match' : null,
-                    sideLabel: 'Home',
+                        ? 'Nowy gracz'
+                        : 'Równy gracz',
+                    detailLine: widget.useExperienceFactor ? '1 mecz' : null,
+                    sideLabel: 'Gospodarze',
                     delta: homeDelta,
                     compact: isCompact,
                   ),
@@ -439,12 +439,12 @@ class _TestMatchPreviewState extends State<_TestMatchPreview> {
                 Expanded(
                   child: _TestPlayerCard(
                     title: widget.useExperienceFactor
-                        ? 'Experienced player'
-                        : 'Equal player',
+                        ? 'Doświadczony gracz'
+                        : 'Równy gracz',
                     detailLine: widget.useExperienceFactor
                         ? '${AppConfig.maxMatchesPlayed} matches'
                         : null,
-                    sideLabel: 'Away',
+                    sideLabel: 'Goście',
                     delta: awayDelta,
                     compact: isCompact,
                   ),
@@ -455,7 +455,7 @@ class _TestMatchPreviewState extends State<_TestMatchPreview> {
               const SizedBox(height: 8),
               SelectableText.rich(
                 TextSpan(
-                  text: 'Enter valid scores to preview ranking changes.',
+                  text: 'Wpisz poprawne wyniki, aby podejrzeć zmiany rankingu.',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.error,
                   ),
@@ -523,7 +523,7 @@ class _MatchScoreInputRow extends StatelessWidget {
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               textAlign: TextAlign.center,
               onChanged: (_) => onChanged(),
-              decoration: decoration('Home'),
+              decoration: decoration('Gospodarze'),
             ),
           ),
           Padding(
@@ -538,7 +538,7 @@ class _MatchScoreInputRow extends StatelessWidget {
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               textAlign: TextAlign.center,
               onChanged: (_) => onChanged(),
-              decoration: decoration('Away'),
+              decoration: decoration('Goście'),
             ),
           ),
         ],
@@ -604,7 +604,7 @@ class _TestPlayerCard extends StatelessWidget {
                       width: 10,
                       height: 10,
                       decoration: BoxDecoration(
-                        color: sideLabel == 'Home'
+                        color: sideLabel == 'Gospodarze'
                             ? colorScheme.primary
                             : colorScheme.tertiary,
                         borderRadius: BorderRadius.circular(3),
@@ -656,7 +656,7 @@ class _TestPlayerCard extends StatelessWidget {
                       width: 10,
                       height: 10,
                       decoration: BoxDecoration(
-                        color: sideLabel == 'Home'
+                        color: sideLabel == 'Gospodarze'
                             ? colorScheme.primary
                             : colorScheme.tertiary,
                         borderRadius: BorderRadius.circular(3),
@@ -685,7 +685,7 @@ class _TestPlayerCard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Δ ranking',
+                      'Δ rankingu',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
@@ -758,7 +758,8 @@ class _NoAccessView extends StatelessWidget {
                 ),
               ),
               TextSpan(
-                text: 'Only the squad owner can edit ranking settings.',
+                text:
+                    'Tylko właściciel składu może edytować ustawienia rankingu.',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.error,
                 ),

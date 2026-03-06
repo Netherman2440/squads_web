@@ -56,7 +56,7 @@ class _DraftSelectionPageState extends ConsumerState<DraftSelectionPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Draft - wybór graczy'),
+        title: const Text('Propozycja - wybór graczy'),
         actions: [
           state.when(
             data: (data) {
@@ -79,7 +79,7 @@ class _DraftSelectionPageState extends ConsumerState<DraftSelectionPage> {
                               height: 16,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Text('Wygeneruj draft'),
+                          : const Text('Wygeneruj propozycję'),
                     ),
                     TextButton(
                       onPressed: hasMinimumPlayers
@@ -104,7 +104,7 @@ class _DraftSelectionPageState extends ConsumerState<DraftSelectionPage> {
                       child: const Text('Przejdź do relacji'),
                     ),
                     PopupMenuButton<_SelectionMenuAction>(
-                      tooltip: 'Ustawienia draftu',
+                      tooltip: 'Ustawienia propozycji',
                       onSelected: (value) {
                         switch (value) {
                           case _SelectionMenuAction.toggleSubstitute:

@@ -46,7 +46,7 @@ class _DangerZoneSectionState extends State<DangerZoneSection> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Danger Zone', style: theme.textTheme.titleLarge),
+            Text('Strefa zagrożenia', style: theme.textTheme.titleLarge),
             const SizedBox(height: 12),
             Container(
               width: double.infinity,
@@ -57,20 +57,20 @@ class _DangerZoneSectionState extends State<DangerZoneSection> {
               child: Column(
                 children: [
                   _VisibilityRow(
-                    title: 'Visibility',
+                    title: 'Widoczność',
                     subtitle: widget.visibility == SquadVisibility.private
-                        ? 'This squad is currently private.'
-                        : 'This squad is currently public.',
+                        ? 'Ten skład jest obecnie prywatny.'
+                        : 'Ten skład jest obecnie publiczny.',
                     isExpanded: _isVisibilityExpanded,
-                    actionLabel: 'Change visibility',
+                    actionLabel: 'Zmień widoczność',
                     onToggleExpanded: () {
                       setState(() {
                         _isVisibilityExpanded = !_isVisibilityExpanded;
                       });
                     },
                     nextLabel: widget.visibility == SquadVisibility.private
-                        ? 'Change to public'
-                        : 'Change to private',
+                        ? 'Zmień na publiczny'
+                        : 'Zmień na prywatny',
                     onConfirm: () async {
                       final next = widget.visibility == SquadVisibility.private
                           ? SquadVisibility.public
@@ -83,18 +83,18 @@ class _DangerZoneSectionState extends State<DangerZoneSection> {
                   ),
                   _DividerLine(color: theme.colorScheme.error),
                   _DangerRow(
-                    title: 'Name',
+                    title: 'Nazwa',
                     subtitle:
-                        'This squad is currently named "${widget.squadName}".',
-                    actionLabel: 'Change name',
+                        'Ten skład ma obecnie nazwę "${widget.squadName}".',
+                    actionLabel: 'Zmień nazwę',
                     onPressed: _showChangeNameDialog,
                   ),
                   _DividerLine(color: theme.colorScheme.error),
                   _DangerRow(
-                    title: 'Manage ranking updates',
+                    title: 'Zarządzaj aktualizacją rankingu',
                     subtitle:
-                        'Configure how match results change player rankings.',
-                    actionLabel: 'Manage',
+                        'Skonfiguruj, jak wyniki meczów zmieniają rankingi graczy.',
+                    actionLabel: 'Zarządzaj',
                     onPressed: () {
                       context.pushNamed(
                         AppRoute.rankingSettings.name,
@@ -104,24 +104,18 @@ class _DangerZoneSectionState extends State<DangerZoneSection> {
                   ),
                   _DividerLine(color: theme.colorScheme.error),
                   _DangerRow(
-                    title: 'Transfer ownership',
-                    subtitle: 'Transfer this squad to another user.',
-                    actionLabel: 'Transfer',
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('TODO: Transfer ownership'),
-                        ),
-                      );
-                    },
+                    title: 'Przekaż własność',
+                    subtitle: 'Przekaż ten skład innemu użytkownikowi.',
+                    actionLabel: 'Przekaż',
+                    onPressed: null,
                   ),
                   _DividerLine(color: theme.colorScheme.error),
                   _DangerRow(
-                    title: 'Delete squad',
+                    title: 'Usuń skład',
                     subtitle:
-                        'Once you delete a squad, there is no going back. '
-                        'Please be certain.',
-                    actionLabel: 'Delete',
+                        'Po usunięciu składu nie będzie odwrotu. '
+                        'Upewnij się, że tego chcesz.',
+                    actionLabel: 'Usuń',
                     onPressed: () async {
                       await widget.onDelete();
                     },
@@ -141,23 +135,23 @@ class _DangerZoneSectionState extends State<DangerZoneSection> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Change name'),
+          title: const Text('Zmień nazwę'),
           content: TextField(
             controller: controller,
             autofocus: true,
             textInputAction: TextInputAction.done,
             textCapitalization: TextCapitalization.sentences,
-            decoration: const InputDecoration(labelText: 'New squad name'),
+            decoration: const InputDecoration(labelText: 'Nowa nazwa składu'),
             onSubmitted: (value) => Navigator.of(context).pop(value),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
+              child: const Text('Anuluj'),
             ),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(controller.text),
-              child: const Text('Save'),
+              child: const Text('Zapisz'),
             ),
           ],
         );
@@ -184,7 +178,7 @@ class _DangerRow extends StatelessWidget {
   final String title;
   final String subtitle;
   final String actionLabel;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {

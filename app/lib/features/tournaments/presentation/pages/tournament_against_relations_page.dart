@@ -97,11 +97,11 @@ class _TournamentAgainstRelationsPageState
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Relations: Against'),
+        title: const Text('Relacje: Przeciwko'),
         actions: [
           TextButton(
             onPressed: validationMessage == null ? _goGenerate : null,
-            child: const Text('Generate'),
+            child: const Text('Generuj'),
           ),
         ],
       ),
@@ -120,7 +120,7 @@ class _TournamentAgainstRelationsPageState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Pick players that must be placed in different teams.',
+                    'Wybierz graczy, którzy muszą być w różnych drużynach.',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 12),
@@ -136,8 +136,8 @@ class _TournamentAgainstRelationsPageState
                     ),
                   Expanded(
                     child: DraftRelationGroupsList(
-                      title: 'Against rules',
-                      emptyText: 'No against rules yet.',
+                      title: 'Zasady przeciwko',
+                      emptyText: 'Brak zasad przeciwko.',
                       groups: _againstGroups,
                       playersById: {
                         for (final player in _selectedPlayers)
@@ -149,7 +149,7 @@ class _TournamentAgainstRelationsPageState
                           : () async {
                               final result = await showDraftRuleEditorDialog(
                                 context: context,
-                                title: 'Add against rule',
+                                title: 'Dodaj zasadę przeciwko',
                                 players: _selectedPlayers,
                                 blockedPlayerIds: const <String>{},
                                 minSelection: 2,
@@ -169,7 +169,7 @@ class _TournamentAgainstRelationsPageState
                       onEdit: (index) async {
                         final result = await showDraftRuleEditorDialog(
                           context: context,
-                          title: 'Edit against rule',
+                          title: 'Edytuj zasadę przeciwko',
                           players: _selectedPlayers,
                           blockedPlayerIds: const <String>{},
                           minSelection: 2,

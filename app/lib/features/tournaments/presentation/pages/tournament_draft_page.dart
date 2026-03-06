@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import 'package:app/core/app_config.dart';
 import 'package:app/core/app_router.dart';
@@ -105,11 +106,14 @@ class _TournamentDraftPageState extends ConsumerState<TournamentDraftPage> {
         .execute(tournamentDraftId: draftId);
 
     if (draft == null) {
-      throw const NotFoundFailure('Tournament draft not found.');
+      throw const NotFoundFailure('Nie znaleziono draftu turnieju.');
     }
 
     if (draft.status == 'error') {
-      throw ValidationFailure(draft.errorMessage ?? 'Draft failed previously.');
+      throw ValidationFailure(
+        draft.errorMessage ??
+            'Generowanie propozycji wcześniej się nie powiodło.',
+      );
     }
 
     final players = await ref
@@ -131,7 +135,7 @@ class _TournamentDraftPageState extends ConsumerState<TournamentDraftPage> {
     );
     if (selectedIds.length < widget.teamCount) {
       throw ValidationFailure(
-        'Draft requires at least ${widget.teamCount} selected players.',
+        'Losowanie wymaga co najmniej ${widget.teamCount} wybranych graczy.',
       );
     }
 
@@ -328,7 +332,7 @@ class _TournamentDraftPageState extends ConsumerState<TournamentDraftPage> {
 
     if (existingTeams.length < editedTeams.length) {
       throw const ValidationFailure(
-        'Unable to map edited teams to tournament teams.',
+        'Nie udało się dopasować edytowanych drużyn do drużyn turnieju.',
       );
     }
 
@@ -381,7 +385,7 @@ class _TournamentDraftPageState extends ConsumerState<TournamentDraftPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tournament Draft'),
+        title: const Text('Propozycje turnieju'),
         actions: [
           if (canAccept)
             Padding(
@@ -394,7 +398,7 @@ class _TournamentDraftPageState extends ConsumerState<TournamentDraftPage> {
                         height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Accept'),
+                    : const Text('Zakceptuj propozycję'),
               ),
             ),
         ],
@@ -419,14 +423,14 @@ class _TournamentDraftPageState extends ConsumerState<TournamentDraftPage> {
                     if (widget.tournamentDraftId == null)
                       FilledButton(
                         onPressed: _load,
-                        child: const Text('Retry'),
+                        child: const Text('Spróbuj ponownie'),
                       ),
                   ],
                 ),
               ),
             )
           : _proposals.isEmpty
-          ? const Center(child: Text('No draft proposals generated.'))
+          ? const Center(child: Text('Brak wygenerowanych propozycji.'))
           : Column(
               children: [
                 const SizedBox(height: 12),
@@ -486,7 +490,7 @@ class _ProposalNavigator extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         IconButton(onPressed: onPrev, icon: const Icon(Icons.chevron_left)),
-        Text('Proposal ${index + 1} / $total'),
+        Text('Propozycja ${index + 1} / $total'),
         IconButton(onPressed: onNext, icon: const Icon(Icons.chevron_right)),
       ],
     );
@@ -504,7 +508,7 @@ class _ProposalTeamsView extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         if (teams.isEmpty) {
-          return const Center(child: Text('No teams available.'));
+          return const Center(child: Text('Brak dostępnych drużyn.'));
         }
 
         final isCompact = constraints.maxWidth < AppConfig.compactWidth;
@@ -611,13 +615,13 @@ class _TeamProposalCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Team ${teamIndex + 1}',
+                  'Drużyna ${teamIndex + 1}',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 4),
-                Text('Players: ${players.length}'),
+                Text('Gracze: ${players.length}'),
                 Text(
-                  'Total ranking: ${_teamTotalRanking(players).toStringAsFixed(1)}',
+                  'Suma rankingu: ${NumberFormat.decimalPattern('pl').format(_teamTotalRanking(players))}',
                 ),
                 const Divider(height: 18),
                 if (sortedPlayers.isEmpty)
@@ -630,7 +634,7 @@ class _TeamProposalCard extends StatelessWidget {
                       ),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Text('Drag players here'),
+                    child: const Text('Przeciągnij tu graczy'),
                   )
                 else
                   ...sortedPlayers.map(

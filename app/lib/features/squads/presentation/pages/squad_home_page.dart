@@ -79,7 +79,7 @@ class _SquadHeader extends StatelessWidget {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            isPrivate ? 'Private' : 'Public',
+                            isPrivate ? 'Prywatny' : 'Publiczny',
                             style: theme.textTheme.labelSmall?.copyWith(
                               color: isPrivate
                                   ? theme.colorScheme.onErrorContainer
@@ -142,23 +142,27 @@ class _SquadHomeGrid extends StatelessWidget {
     final tiles = [
       _SquadHomeTileData(
         icon: Icons.person,
-        title: 'Players',
-        description: 'Manage squad players and their profiles.',
+        title: 'Gracze',
+        description: 'Zarządzaj graczami składu i ich profilami.',
+        routeName: AppRoute.players.name,
       ),
       _SquadHomeTileData(
         icon: Icons.sports_soccer,
-        title: 'Matches',
-        description: 'Schedule and review squad matches.',
+        title: 'Mecze',
+        description: 'Planuj i przeglądaj mecze składu.',
+        routeName: AppRoute.matches.name,
       ),
       _SquadHomeTileData(
         icon: Icons.emoji_events,
-        title: 'Tournaments',
-        description: 'Organize and track tournaments.',
+        title: 'Turnieje',
+        description: 'Organizuj i śledź turnieje.',
+        routeName: AppRoute.tournaments.name,
       ),
       _SquadHomeTileData(
         icon: Icons.bar_chart,
-        title: 'Stats',
-        description: 'See performance analytics for your squad.',
+        title: 'Statystyki',
+        description: 'Sprawdź analizy wyników swojego składu.',
+        routeName: AppRoute.squadStats.name,
       ),
     ];
 
@@ -180,47 +184,27 @@ class _SquadHomeGrid extends StatelessWidget {
             final tile = tiles[index];
             return InkWell(
               onTap: () {
-                if (tile.title == 'Players') {
+                try {
                   context.pushNamed(
-                    AppRoute.players.name,
+                    tile.routeName,
                     pathParameters: {'squadId': squad.squadId},
                   );
                   return;
-                }
-
-                if (tile.title == 'Matches') {
-                  context.pushNamed(
-                    AppRoute.matches.name,
-                    pathParameters: {'squadId': squad.squadId},
-                  );
-                  return;
-                }
-
-                if (tile.title == 'Stats') {
-                  context.pushNamed(
-                    AppRoute.squadStats.name,
-                    pathParameters: {'squadId': squad.squadId},
-                  );
-                  return;
-                }
-
-                if (tile.title == 'Tournaments') {
-                  context.pushNamed(
-                    AppRoute.tournaments.name,
-                    pathParameters: {'squadId': squad.squadId},
-                  );
-                  return;
+                } catch (_) {
+                  // Keep the existing fallback when a tile route is unknown.
                 }
 
                 showDialog<void>(
                   context: context,
                   builder: (context) => AlertDialog(
                     title: Text(tile.title),
-                    content: const SelectableText('This page is coming soon.'),
+                    content: const SelectableText(
+                      'Ta strona będzie dostępna wkrótce.',
+                    ),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Close'),
+                        child: const Text('Zamknij'),
                       ),
                     ],
                   ),
@@ -257,9 +241,11 @@ class _SquadHomeTileData {
     required this.icon,
     required this.title,
     required this.description,
+    required this.routeName,
   });
 
   final IconData icon;
   final String title;
   final String description;
+  final String routeName;
 }

@@ -13,7 +13,7 @@ class AuthConfirmPage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Confirm email'),
+        title: const Text('Potwierdź e-mail'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
       body: Center(
@@ -25,7 +25,7 @@ class AuthConfirmPage extends StatelessWidget {
               const Icon(Icons.mark_email_read_outlined, size: 80),
               const SizedBox(height: 16),
               Text(
-                'Check your inbox',
+                'Sprawdź skrzynkę odbiorczą',
                 style: theme.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -33,21 +33,21 @@ class AuthConfirmPage extends StatelessWidget {
               const SizedBox(height: 12),
               Text(
                 displayEmail != null
-                    ? 'We sent a confirmation link to $displayEmail.'
-                    : 'We sent a confirmation link to your email.',
+                    ? 'Wysłaliśmy link potwierdzający na $displayEmail.'
+                    : 'Wysłaliśmy link potwierdzający na Twój e-mail.',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyMedium,
               ),
               const SizedBox(height: 12),
               Text(
-                'Open the link to verify your account, then log in.',
+                'Otwórz link, aby potwierdzić konto, a następnie zaloguj się.',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodySmall,
               ),
               const SizedBox(height: 24),
               FilledButton(
                 onPressed: () => context.go('/auth'),
-                child: const Text('Back to login'),
+                child: const Text('Wróć do logowania'),
               ),
             ],
           ),

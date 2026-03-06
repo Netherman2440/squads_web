@@ -50,13 +50,13 @@ class _AuthCallbackPageState extends ConsumerState<AuthCallbackPage> {
       if (error is Failure) {
         message = error.message;
       } else {
-        message = 'Sign in failed. Please try again.';
+        message = 'Logowanie nie powiodło się. Spróbuj ponownie.';
       }
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Signing in'),
+        title: const Text('Logowanie'),
         backgroundColor: theme.colorScheme.inversePrimary,
       ),
       body: Center(
@@ -72,14 +72,14 @@ class _AuthCallbackPageState extends ConsumerState<AuthCallbackPage> {
               ),
               const SizedBox(height: 16),
               Text(
-                hasError ? 'Unable to sign in' : 'Finishing sign in',
+                hasError ? 'Nie można się zalogować' : 'Kończenie logowania',
                 style: theme.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 12),
               Text(
-                message ?? 'Please wait while we connect your account.',
+                message ?? 'Poczekaj, trwa łączenie konta.',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyMedium,
               ),
@@ -89,7 +89,7 @@ class _AuthCallbackPageState extends ConsumerState<AuthCallbackPage> {
               else
                 FilledButton(
                   onPressed: () => context.go('/auth'),
-                  child: const Text('Back to login'),
+                  child: const Text('Wróć do logowania'),
                 ),
             ],
           ),

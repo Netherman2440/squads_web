@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:app/core/app_config.dart';
 import 'package:app/core/error/failure.dart';
 import 'package:app/core/app_router.dart';
 import 'package:app/features/players/application/usecases/delete_player_usecase.dart';
@@ -39,15 +40,16 @@ class PlayerDetailsPage extends ConsumerWidget {
       data: (state) => state.player.name,
       orElse: () => null,
     );
+    final title = 'Szczegóły gracza';
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Player Details'),
+        title: Text(title),
         leading: BackButton(onPressed: () => context.pop()),
         actions: [
           if (canEdit && playerName != null)
             IconButton(
-              tooltip: 'Delete player',
+              tooltip: 'Usuń gracza',
               icon: const Icon(Icons.delete),
               color: Colors.red,
               onPressed: () => _confirmDeletePlayer(
@@ -65,7 +67,7 @@ class PlayerDetailsPage extends ConsumerWidget {
         error: (err, stack) => Center(
           child: SelectableText.rich(
             TextSpan(
-              text: 'Error: ${err.toString()}',
+              text: 'Błąd: ${err.toString()}',
               style: const TextStyle(color: Colors.red),
             ),
           ),
@@ -77,6 +79,19 @@ class PlayerDetailsPage extends ConsumerWidget {
           final isPositive = difference >= 0;
           final positionLabel =
               playerPositionPolishLabel(player.position) ?? 'Brak pozycji';
+          final isNarrowScreen =
+              MediaQuery.sizeOf(context).width < AppConfig.mobileWidth;
+          final baseNameStyle =
+              Theme.of(context).textTheme.headlineMedium ??
+              const TextStyle(fontSize: 28);
+          final nameStyle = isNarrowScreen
+              ? baseNameStyle.copyWith(
+                  fontSize: ((baseNameStyle.fontSize ?? 28) * 0.8)
+                      .clamp(18.0, 24.0)
+                      .toDouble(),
+                  height: 1.1,
+                )
+              : baseNameStyle;
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
@@ -100,17 +115,26 @@ class PlayerDetailsPage extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                player.name,
-                                style: Theme.of(
-                                  context,
-                                ).textTheme.headlineMedium,
+                              Expanded(
+                                child: Text(
+                                  player.name,
+                                  style: nameStyle,
+                                  softWrap: true,
+                                  maxLines: isNarrowScreen ? 3 : 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
-
                               if (canEdit)
                                 IconButton(
                                   tooltip: 'Edit name',
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(
+                                    minWidth: 40,
+                                    minHeight: 40,
+                                  ),
+                                  visualDensity: VisualDensity.compact,
                                   onPressed: () async {
                                     final result = await showDialog<bool>(
                                       context: context,
@@ -204,9 +228,43 @@ class PlayerDetailsPage extends ConsumerWidget {
                 ),
                 const SizedBox(height: 24),
                 const SizedBox(height: 8),
-                Text(
-                  'Ranking History',
-                  style: Theme.of(context).textTheme.titleMedium,
+                Row(
+                  children: [
+                    Text(
+                      'Historia rankingu',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(width: 8),
+                    InkWell(
+                      onTap: () => showDialog<void>(
+                        context: context,
+                        builder: (dialogContext) => AlertDialog(
+                          title: const Text('Historia rankingu'),
+                          content: const Text(
+                            'Po każdym meczu ranking gracza jest aktualizowany automatycznie. '
+                            'Im większa różnica bramek, tym większa zmiana rankingu '
+                            '(w górę lub w dół).',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () =>
+                                  Navigator.of(dialogContext).pop(),
+                              child: const Text('OK'),
+                            ),
+                          ],
+                        ),
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.all(2),
+                        child: Icon(
+                          Icons.info_outline,
+                          size: 18,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
                 Card(
@@ -238,21 +296,21 @@ class PlayerDetailsPage extends ConsumerWidget {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete player?'),
+        title: const Text('Usunąć gracza?'),
         content: Text(
-          'This will permanently remove '
-          '${playerName.isNotEmpty ? playerName : 'this player'} '
-          'from the squad. This action cannot be undone.',
+          'To trwale usunie '
+          '${playerName.isNotEmpty ? playerName : 'tego gracza'} '
+          'ze składu. Tej operacji nie można cofnąć.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: const Text('Anuluj'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
+            child: const Text('Usuń'),
           ),
         ],
       ),
@@ -329,7 +387,7 @@ class _PlayerTabs extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             _TabButton(
-              label: 'Matches',
+              label: 'Mecze',
               icon: Icons.sports_soccer,
               onPressed: () => context.pushNamed(
                 AppRoute.playerMatches.name,
@@ -337,7 +395,7 @@ class _PlayerTabs extends StatelessWidget {
               ),
             ),
             _TabButton(
-              label: 'Tournaments',
+              label: 'Turnieje',
               icon: Icons.emoji_events,
               onPressed: () => context.pushNamed(
                 AppRoute.playerTournaments.name,
@@ -345,7 +403,7 @@ class _PlayerTabs extends StatelessWidget {
               ),
             ),
             _TabButton(
-              label: 'Stats',
+              label: 'Statystyki',
               icon: Icons.analytics,
               onPressed: () => context.pushNamed(
                 AppRoute.playerStats.name,

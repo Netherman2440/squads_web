@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app/core/app_router.dart';
+import 'package:app/core/error/failure.dart';
 import 'package:app/features/matches/presentation/controllers/squad_matches_notifier.dart';
 import 'package:app/features/matches/presentation/widgets/match_tile.dart';
 import 'package:app/features/squads/presentation/state/squad_detail_notifier.dart';
@@ -22,7 +23,7 @@ class SquadMatchesPage extends ConsumerWidget {
         squadAsync.asData?.value.role == SquadRole.admin;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Matches')),
+      appBar: AppBar(title: const Text('Mecze')),
       floatingActionButton: canManage
           ? FloatingActionButton(
               onPressed: () {
@@ -41,7 +42,7 @@ class SquadMatchesPage extends ConsumerWidget {
         child: matchesAsync.when(
           data: (matches) {
             if (matches.isEmpty) {
-              return const Center(child: Text('No matches found.'));
+              return const Center(child: Text('Nie znaleziono meczów.'));
             }
             return ListView.builder(
               padding: const EdgeInsets.all(8),
@@ -53,14 +54,19 @@ class SquadMatchesPage extends ConsumerWidget {
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, stack) => Center(
-            child: SelectableText.rich(
-              TextSpan(
-                text: 'Error: $error',
-                style: const TextStyle(color: Colors.red),
+          error: (error, stack) {
+            final message = error is Failure && error.message.isNotEmpty
+                ? error.message
+                : 'Wystąpił nieznany błąd. Spróbuj ponownie.';
+            return Center(
+              child: SelectableText.rich(
+                TextSpan(
+                  text: 'Błąd: $message',
+                  style: const TextStyle(color: Colors.red),
+                ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ),
     );

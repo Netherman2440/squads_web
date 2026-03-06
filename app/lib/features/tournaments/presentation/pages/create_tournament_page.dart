@@ -198,7 +198,7 @@ class _CreateTournamentPageState extends ConsumerState<CreateTournamentPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Create Tournament'),
+        title: const Text('Utwórz turniej'),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8, left: 8),
@@ -218,7 +218,7 @@ class _CreateTournamentPageState extends ConsumerState<CreateTournamentPage> {
                           height: 16,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : Text(isNarrow ? 'Draft' : 'Wygeneruj draft'),
+                      : Text(isNarrow ? 'Losuj' : 'Wygeneruj propozycje'),
                 ),
                 TextButton(
                   onPressed: canEdit && _selectedIds.length >= _teamCount
@@ -230,7 +230,7 @@ class _CreateTournamentPageState extends ConsumerState<CreateTournamentPage> {
                   child: Text(isNarrow ? 'Relacje' : 'Przejdź do relacji'),
                 ),
                 const SizedBox(width: 8),
-                if (!isNarrow) const Text('Teams'),
+                if (!isNarrow) const Text('Drużyny'),
                 if (!isNarrow) const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -285,7 +285,7 @@ class _CreateTournamentPageState extends ConsumerState<CreateTournamentPage> {
                     controller: _nameController,
                     enabled: canEdit,
                     decoration: const InputDecoration(
-                      labelText: 'Tournament name (optional)',
+                      labelText: 'Nazwa turnieju (opcjonalnie)',
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -386,14 +386,14 @@ class _AvailablePlayersPanelState extends State<_AvailablePlayersPanel> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Available players',
+              'Dostępni gracze',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
             TextField(
               controller: widget.searchController,
               decoration: const InputDecoration(
-                labelText: 'Search players',
+                labelText: 'Szukaj graczy',
                 prefixIcon: Icon(Icons.search),
               ),
               onChanged: widget.onSearchChanged,
@@ -401,7 +401,7 @@ class _AvailablePlayersPanelState extends State<_AvailablePlayersPanel> {
             const SizedBox(height: 8),
             Expanded(
               child: widget.players.isEmpty
-                  ? const Center(child: Text('No available players.'))
+                  ? const Center(child: Text('Brak dostępnych graczy.'))
                   : Scrollbar(
                       controller: _scrollController,
                       child: ListView.builder(
@@ -476,21 +476,21 @@ class _SelectedPlayersPanelState extends State<_SelectedPlayersPanel> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Selected players (${widget.selectedCount})',
+                  'Wybrani gracze (${widget.selectedCount})',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 TextButton(
                   onPressed: !widget.canManage || widget.selectedCount == 0
                       ? null
                       : widget.onClear,
-                  child: const Text('Clear'),
+                  child: const Text('Wyczyść'),
                 ),
               ],
             ),
             const SizedBox(height: 8),
             Expanded(
               child: widget.players.isEmpty
-                  ? const Center(child: Text('No selected players yet.'))
+                  ? const Center(child: Text('Brak wybranych graczy.'))
                   : Scrollbar(
                       controller: _scrollController,
                       child: ListView.builder(

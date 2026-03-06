@@ -25,7 +25,7 @@ class UserProfileCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: SelectableText.rich(
           TextSpan(
-            text: 'Error: ',
+            text: 'Błąd: ',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Colors.red,
               fontWeight: FontWeight.bold,
@@ -48,7 +48,7 @@ class UserProfileCard extends StatelessWidget {
       return Padding(
         padding: const EdgeInsets.all(16),
         child: Text(
-          'You are not logged in.',
+          'Nie jesteś zalogowany.',
           style: Theme.of(context).textTheme.bodyMedium,
         ),
       );

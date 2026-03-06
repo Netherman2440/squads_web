@@ -65,11 +65,11 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
           }
         },
         error: (error, stack) {
-          String message = 'Registration failed. Please try again.';
+          String message = 'Rejestracja nie powiodła się. Spróbuj ponownie.';
           if (error is UserAlreadyExistsFailure) {
-            message = 'An account with this email already exists.';
+            message = 'Konto z tym adresem e-mail już istnieje.';
           } else if (error is NetworkFailure) {
-            message = 'No internet connection.';
+            message = 'Brak połączenia z internetem.';
           } else if (error is Failure) {
             message = error.message;
           }
@@ -139,7 +139,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
-                                    'Register an account',
+                                    'Zarejestruj konto',
                                     style: theme.textTheme.titleLarge?.copyWith(
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -151,7 +151,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                               TextFormField(
                                 controller: fullNameController,
                                 decoration: const InputDecoration(
-                                  labelText: 'Full name',
+                                  labelText: 'Imię i nazwisko',
                                   border: OutlineInputBorder(),
                                   prefixIcon: Icon(Icons.person_outline),
                                 ),
@@ -160,10 +160,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                                 validator: (value) {
                                   final text = value?.trim() ?? '';
                                   if (text.isEmpty) {
-                                    return 'Please enter full name';
+                                    return 'Podaj imię i nazwisko';
                                   }
                                   if (text.length < 2) {
-                                    return 'Full name is too short';
+                                    return 'Imię i nazwisko jest za krótkie';
                                   }
                                   return null;
                                 },
@@ -172,7 +172,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                               TextFormField(
                                 controller: emailController,
                                 decoration: const InputDecoration(
-                                  labelText: 'Email',
+                                  labelText: 'E-mail',
                                   border: OutlineInputBorder(),
                                   prefixIcon: Icon(Icons.email_outlined),
                                 ),
@@ -182,13 +182,13 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                                 validator: (value) {
                                   final text = value?.trim() ?? '';
                                   if (text.isEmpty) {
-                                    return 'Please enter email';
+                                    return 'Podaj e-mail';
                                   }
                                   final emailRegex = RegExp(
                                     r'^[^@]+@[^@]+\.[^@]+$',
                                   );
                                   if (!emailRegex.hasMatch(text)) {
-                                    return 'Please enter valid email';
+                                    return 'Podaj poprawny e-mail';
                                   }
                                   return null;
                                 },
@@ -197,7 +197,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                               TextFormField(
                                 controller: passwordController,
                                 decoration: const InputDecoration(
-                                  labelText: 'Password',
+                                  labelText: 'Hasło',
                                   border: OutlineInputBorder(),
                                   prefixIcon: Icon(Icons.lock_outline),
                                 ),
@@ -206,10 +206,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                                 validator: (value) {
                                   final text = value ?? '';
                                   if (text.isEmpty) {
-                                    return 'Please enter password';
+                                    return 'Podaj hasło';
                                   }
                                   if (text.length < 6) {
-                                    return 'Password must be at least 6 characters';
+                                    return 'Hasło musi mieć co najmniej 6 znaków';
                                   }
 
                                   return null;
@@ -219,7 +219,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                               TextFormField(
                                 controller: confirmController,
                                 decoration: const InputDecoration(
-                                  labelText: 'Confirm password',
+                                  labelText: 'Potwierdź hasło',
                                   border: OutlineInputBorder(),
                                   prefixIcon: Icon(Icons.lock_outline),
                                 ),
@@ -227,7 +227,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                                 textInputAction: TextInputAction.done,
                                 validator: (value) {
                                   if (value != passwordController.text) {
-                                    return 'Passwords do not match';
+                                    return 'Hasła nie są zgodne';
                                   }
                                   return null;
                                 },
@@ -247,7 +247,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                                             color: Colors.white,
                                           ),
                                         )
-                                      : const Text('Sign up'),
+                                      : const Text('Zarejestruj się'),
                                 ),
                               ),
                               const SizedBox(height: 20),
@@ -259,7 +259,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                                       horizontal: 12,
                                     ),
                                     child: Text(
-                                      'or',
+                                      'lub',
                                       style: theme.textTheme.bodySmall
                                           ?.copyWith(
                                             color: theme.colorScheme.onSurface
@@ -278,7 +278,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                                       ? null
                                       : handleGoogleSignIn,
                                   icon: const Icon(Icons.g_mobiledata),
-                                  label: const Text('Sign up with Google'),
+                                  label: const Text(
+                                    'Zarejestruj się przez Google',
+                                  ),
                                 ),
                               ),
                               const SizedBox(height: 12),
@@ -290,7 +292,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                                           context.go('/auth');
                                         }
                                       },
-                                child: const Text('Already have an account?'),
+                                child: const Text('Masz już konto?'),
                               ),
                             ],
                           ),

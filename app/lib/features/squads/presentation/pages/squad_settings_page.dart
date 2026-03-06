@@ -48,7 +48,7 @@ class _SquadSettingsPageState extends ConsumerState<SquadSettingsPage> {
     final squadState = ref.watch(squadDetailProvider(widget.squadId));
 
     return Scaffold(
-      appBar: AppBar(title: Text('Settings')),
+      appBar: AppBar(title: Text('Ustawienia')),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -65,7 +65,7 @@ class _SquadSettingsPageState extends ConsumerState<SquadSettingsPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Manage squad members, roles and visibility.',
+                      'Zarządzaj członkami składu, rolami i widocznością.',
                       style: theme.textTheme.bodySmall,
                     ),
                     const SizedBox(height: 24),
@@ -133,21 +133,21 @@ class _SquadSettingsPageState extends ConsumerState<SquadSettingsPage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete squad?'),
+        title: const Text('Usunąć skład?'),
         content: Text(
-          'This will permanently remove '
-          '${squadName.isNotEmpty ? squadName : 'this squad'} '
-          'and all related data. This action cannot be undone.',
+          'To trwale usunie '
+          '${squadName.isNotEmpty ? squadName : 'ten skład'} '
+          'oraz wszystkie powiązane dane. Tej operacji nie można cofnąć.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: const Text('Anuluj'),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
+            child: const Text('Usuń'),
           ),
         ],
       ),
@@ -217,7 +217,9 @@ class _MembersSection extends StatelessWidget {
             if (members.isEmpty) {
               return const Padding(
                 padding: EdgeInsets.symmetric(vertical: 8),
-                child: SelectableText('No members found for this squad.'),
+                child: SelectableText(
+                  'Nie znaleziono członków dla tego składu.',
+                ),
               );
             }
 
@@ -270,14 +272,16 @@ class _InviteSectionState extends ConsumerState<_InviteSection> {
       }
       ref.invalidate(squadInviteLinkProvider(widget.squadId));
       messenger.showSnackBar(
-        const SnackBar(content: Text('Invite link generated')),
+        const SnackBar(content: Text('Wygenerowano link zaproszenia')),
       );
     } catch (_) {
       if (!mounted) {
         return;
       }
       messenger.showSnackBar(
-        const SnackBar(content: Text('Failed to generate invite link')),
+        const SnackBar(
+          content: Text('Nie udało się wygenerować linku zaproszenia'),
+        ),
       );
     } finally {
       if (mounted) {
@@ -295,7 +299,7 @@ class _InviteSectionState extends ConsumerState<_InviteSection> {
     }
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('Link copied to clipboard')));
+    ).showSnackBar(const SnackBar(content: Text('Link skopiowany do schowka')));
   }
 
   String _formatValidity(DateTime validUntil) {
@@ -333,14 +337,14 @@ class _InviteSectionState extends ConsumerState<_InviteSection> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Invite link', style: theme.textTheme.titleMedium),
+          Text('Link zaproszenia', style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),
           if (inviteState.hasError)
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SelectableText(
-                  'Failed to load invite link: ${inviteState.error}',
+                  'Nie udało się wczytać linku zaproszenia: ${inviteState.error}',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.error,
                   ),
@@ -349,7 +353,7 @@ class _InviteSectionState extends ConsumerState<_InviteSection> {
                 OutlinedButton(
                   onPressed: () =>
                       ref.invalidate(squadInviteLinkProvider(widget.squadId)),
-                  child: const Text('Retry'),
+                  child: const Text('Ponów'),
                 ),
               ],
             )
@@ -363,13 +367,13 @@ class _InviteSectionState extends ConsumerState<_InviteSection> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'No active invite link. Generate one to invite members.',
+                  'Brak aktywnego linku zaproszenia. Wygeneruj go, aby zaprosić członków.',
                   style: theme.textTheme.bodySmall,
                 ),
                 const SizedBox(height: 12),
                 FilledButton(
                   onPressed: isBusy ? null : _generateInviteLink,
-                  child: const Text('Generate invite link'),
+                  child: const Text('Wygeneruj link zaproszenia'),
                 ),
               ],
             )
@@ -384,14 +388,14 @@ class _InviteSectionState extends ConsumerState<_InviteSection> {
                     final isNarrow =
                         constraints.maxWidth < AppConfig.mobileWidth;
                     final validityText =
-                        'Valid until ${_formatValidity(inviteLink!.validUntil)}';
+                        'Ważny do ${_formatValidity(inviteLink!.validUntil)}';
                     final copyButton = FilledButton.tonal(
                       onPressed: isBusy ? null : () => _copyLink(inviteUrl),
-                      child: const Text('Copy link'),
+                      child: const Text('Kopiuj link'),
                     );
                     final regenerateButton = OutlinedButton(
                       onPressed: isBusy ? null : _generateInviteLink,
-                      child: const Text('Regenerate'),
+                      child: const Text('Wygeneruj ponownie'),
                     );
 
                     if (isNarrow) {
@@ -483,7 +487,8 @@ class _NoAccessView extends StatelessWidget {
                 ),
               ),
               TextSpan(
-                text: 'Only the squad owner can access squad settings page.',
+                text:
+                    'Tylko właściciel składu może wejść na stronę ustawień składu.',
                 style: textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.error,
                 ),

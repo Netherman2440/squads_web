@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import 'package:app/core/app_config.dart';
 import 'package:app/features/players/domain/entities/player_head_to_head_stat.dart';
@@ -10,12 +11,16 @@ enum HeadToHeadColumn {
   togetherWins,
   togetherDraws,
   togetherLosses,
+  togetherWinRate,
+  togetherLossRate,
   togetherGoalsFor,
   togetherGoalsAgainst,
   vsMatches,
   vsWins,
   vsDraws,
   vsLosses,
+  vsWinRate,
+  vsLossRate,
   vsGoalsFor,
   vsGoalsAgainst,
 }
@@ -110,7 +115,7 @@ class _PlayerHeadToHeadTableState extends State<PlayerHeadToHeadTable> {
   @override
   Widget build(BuildContext context) {
     if (widget.stats.isEmpty) {
-      return const Text('No head-to-head stats yet.');
+      return const Text('Brak statystyk bezpośrednich pojedynków.');
     }
 
     return LayoutBuilder(
@@ -238,7 +243,11 @@ class _PlayerHeadToHeadTableState extends State<PlayerHeadToHeadTable> {
                                           for (final column in statColumns)
                                             _BodyCell(
                                               width: statColumnWidth,
-                                              value: _valueFor(stat, column),
+                                              value: _valueFor(
+                                                context,
+                                                stat,
+                                                column,
+                                              ),
                                               isSelected:
                                                   widget.sortColumn == column,
                                               highlightColor: highlightColor,
@@ -293,12 +302,16 @@ class _PlayerHeadToHeadTableState extends State<PlayerHeadToHeadTable> {
       HeadToHeadColumn.togetherWins,
       HeadToHeadColumn.togetherDraws,
       HeadToHeadColumn.togetherLosses,
+      HeadToHeadColumn.togetherWinRate,
+      HeadToHeadColumn.togetherLossRate,
       HeadToHeadColumn.togetherGoalsFor,
       HeadToHeadColumn.togetherGoalsAgainst,
       HeadToHeadColumn.vsMatches,
       HeadToHeadColumn.vsWins,
       HeadToHeadColumn.vsDraws,
       HeadToHeadColumn.vsLosses,
+      HeadToHeadColumn.vsWinRate,
+      HeadToHeadColumn.vsLossRate,
       HeadToHeadColumn.vsGoalsFor,
       HeadToHeadColumn.vsGoalsAgainst,
     ];
@@ -316,6 +329,10 @@ class _PlayerHeadToHeadTableState extends State<PlayerHeadToHeadTable> {
         return 'Razem remisy';
       case HeadToHeadColumn.togetherLosses:
         return 'Razem porażki';
+      case HeadToHeadColumn.togetherWinRate:
+        return 'Razem % zwycięstw';
+      case HeadToHeadColumn.togetherLossRate:
+        return 'Razem % porażek';
       case HeadToHeadColumn.togetherGoalsFor:
         return 'Razem gole strzelone';
       case HeadToHeadColumn.togetherGoalsAgainst:
@@ -328,6 +345,10 @@ class _PlayerHeadToHeadTableState extends State<PlayerHeadToHeadTable> {
         return 'Przeciwko remisy';
       case HeadToHeadColumn.vsLosses:
         return 'Przeciwko porażki';
+      case HeadToHeadColumn.vsWinRate:
+        return 'Przeciwko % zwycięstw';
+      case HeadToHeadColumn.vsLossRate:
+        return 'Przeciwko % porażek';
       case HeadToHeadColumn.vsGoalsFor:
         return 'Przeciwko gole strzelone';
       case HeadToHeadColumn.vsGoalsAgainst:
@@ -335,7 +356,11 @@ class _PlayerHeadToHeadTableState extends State<PlayerHeadToHeadTable> {
     }
   }
 
-  String _valueFor(PlayerHeadToHeadStat stat, HeadToHeadColumn column) {
+  String _valueFor(
+    BuildContext context,
+    PlayerHeadToHeadStat stat,
+    HeadToHeadColumn column,
+  ) {
     switch (column) {
       case HeadToHeadColumn.togetherMatches:
         return stat.togetherMatches.toString();
@@ -345,6 +370,16 @@ class _PlayerHeadToHeadTableState extends State<PlayerHeadToHeadTable> {
         return stat.togetherDraws.toString();
       case HeadToHeadColumn.togetherLosses:
         return stat.togetherLosses.toString();
+      case HeadToHeadColumn.togetherWinRate:
+        return _formatPercent(
+          context,
+          _rate(value: stat.togetherWins, total: stat.togetherMatches),
+        );
+      case HeadToHeadColumn.togetherLossRate:
+        return _formatPercent(
+          context,
+          _rate(value: stat.togetherLosses, total: stat.togetherMatches),
+        );
       case HeadToHeadColumn.togetherGoalsFor:
         return stat.togetherGoalsFor.toString();
       case HeadToHeadColumn.togetherGoalsAgainst:
@@ -357,6 +392,16 @@ class _PlayerHeadToHeadTableState extends State<PlayerHeadToHeadTable> {
         return stat.vsDraws.toString();
       case HeadToHeadColumn.vsLosses:
         return stat.vsLosses.toString();
+      case HeadToHeadColumn.vsWinRate:
+        return _formatPercent(
+          context,
+          _rate(value: stat.vsWins, total: stat.vsMatches),
+        );
+      case HeadToHeadColumn.vsLossRate:
+        return _formatPercent(
+          context,
+          _rate(value: stat.vsLosses, total: stat.vsMatches),
+        );
       case HeadToHeadColumn.vsGoalsFor:
         return stat.vsGoalsFor.toString();
       case HeadToHeadColumn.vsGoalsAgainst:
@@ -397,6 +442,18 @@ class _PlayerHeadToHeadTableState extends State<PlayerHeadToHeadTable> {
       case HeadToHeadColumn.togetherLosses:
         result = compareNum(a.togetherLosses, b.togetherLosses);
         break;
+      case HeadToHeadColumn.togetherWinRate:
+        result = compareNum(
+          _rate(value: a.togetherWins, total: a.togetherMatches),
+          _rate(value: b.togetherWins, total: b.togetherMatches),
+        );
+        break;
+      case HeadToHeadColumn.togetherLossRate:
+        result = compareNum(
+          _rate(value: a.togetherLosses, total: a.togetherMatches),
+          _rate(value: b.togetherLosses, total: b.togetherMatches),
+        );
+        break;
       case HeadToHeadColumn.togetherGoalsFor:
         result = compareNum(a.togetherGoalsFor, b.togetherGoalsFor);
         break;
@@ -414,6 +471,18 @@ class _PlayerHeadToHeadTableState extends State<PlayerHeadToHeadTable> {
         break;
       case HeadToHeadColumn.vsLosses:
         result = compareNum(a.vsLosses, b.vsLosses);
+        break;
+      case HeadToHeadColumn.vsWinRate:
+        result = compareNum(
+          _rate(value: a.vsWins, total: a.vsMatches),
+          _rate(value: b.vsWins, total: b.vsMatches),
+        );
+        break;
+      case HeadToHeadColumn.vsLossRate:
+        result = compareNum(
+          _rate(value: a.vsLosses, total: a.vsMatches),
+          _rate(value: b.vsLosses, total: b.vsMatches),
+        );
         break;
       case HeadToHeadColumn.vsGoalsFor:
         result = compareNum(a.vsGoalsFor, b.vsGoalsFor);
@@ -446,6 +515,8 @@ class _PlayerHeadToHeadTableState extends State<PlayerHeadToHeadTable> {
         column == HeadToHeadColumn.togetherWins ||
         column == HeadToHeadColumn.togetherDraws ||
         column == HeadToHeadColumn.togetherLosses ||
+        column == HeadToHeadColumn.togetherWinRate ||
+        column == HeadToHeadColumn.togetherLossRate ||
         column == HeadToHeadColumn.togetherGoalsFor ||
         column == HeadToHeadColumn.togetherGoalsAgainst;
   }
@@ -455,8 +526,25 @@ class _PlayerHeadToHeadTableState extends State<PlayerHeadToHeadTable> {
         column == HeadToHeadColumn.vsWins ||
         column == HeadToHeadColumn.vsDraws ||
         column == HeadToHeadColumn.vsLosses ||
+        column == HeadToHeadColumn.vsWinRate ||
+        column == HeadToHeadColumn.vsLossRate ||
         column == HeadToHeadColumn.vsGoalsFor ||
         column == HeadToHeadColumn.vsGoalsAgainst;
+  }
+
+  double _rate({required int value, required int total}) {
+    if (total == 0) {
+      return 0;
+    }
+    return value / total;
+  }
+
+  String _formatPercent(BuildContext context, double value) {
+    final locale = Localizations.localeOf(context).toLanguageTag();
+    final formatter = NumberFormat.decimalPattern(locale)
+      ..minimumFractionDigits = 1
+      ..maximumFractionDigits = 1;
+    return '${formatter.format(value * 100)}%';
   }
 }
 

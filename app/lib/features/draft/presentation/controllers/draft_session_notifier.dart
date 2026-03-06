@@ -128,7 +128,7 @@ class DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>> {
 
             if (selectedPlayerIds.length < 2) {
               throw const ValidationFailure(
-                'Draft not found for this match. Select players and retry.',
+                'Nie znaleziono propozycji dla tego meczu. Wybierz graczy i spróbuj ponownie.',
               );
             }
 
@@ -142,7 +142,7 @@ class DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>> {
           if (storedDraft.status == 'error') {
             throw ValidationFailure(
               storedDraft.errorMessage ??
-                  'Draft for this match failed previously. Retry redraft.',
+                  'Propozycja dla tego meczu zakończyła się wcześniej błędem. Spróbuj ponownie.',
             );
           }
 
@@ -163,7 +163,9 @@ class DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>> {
         }
 
         if (request.selectedPlayerIds.length < 2) {
-          throw const ValidationFailure('Draft requires at least 2 players.');
+          throw const ValidationFailure(
+            'Propozycja wymaga co najmniej 2 graczy.',
+          );
         }
         final requestedAlgorithm = _resolveAlgorithmForPlayerCount(
           preferred: request.algorithm,
@@ -172,7 +174,7 @@ class DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>> {
         if (requestedAlgorithm == DraftAlgorithm.combinatory &&
             request.selectedPlayerIds.length > AppConfig.maxPlayersPerMatch) {
           throw ValidationFailure(
-            'Draft supports up to ${AppConfig.maxPlayersPerMatch} players per match.',
+            'Propozycja obsługuje maksymalnie ${AppConfig.maxPlayersPerMatch} graczy na mecz.',
           );
         }
 
@@ -183,7 +185,7 @@ class DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>> {
         if (requestedAlgorithm == DraftAlgorithm.combinatory &&
             selectedCount > AppConfig.maxPlayersPerMatch) {
           throw ValidationFailure(
-            'Draft supports up to ${AppConfig.maxPlayersPerMatch} players per match.',
+            'Propozycja obsługuje maksymalnie ${AppConfig.maxPlayersPerMatch} graczy na mecz.',
           );
         }
 
@@ -223,7 +225,7 @@ class DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>> {
   }) async {
     final selected = _filterByIds(players: allPlayers, ids: selectedPlayerIds);
     if (selected.length < 2) {
-      throw const ValidationFailure('Draft requires at least 2 players.');
+      throw const ValidationFailure('Propozycja wymaga co najmniej 2 graczy.');
     }
     final algorithm = _resolveAlgorithmForPlayerCount(
       preferred: request.algorithm,
@@ -232,7 +234,7 @@ class DraftSessionNotifier extends Notifier<AsyncValue<DraftSessionState>> {
     if (algorithm == DraftAlgorithm.combinatory &&
         selected.length > AppConfig.maxPlayersPerMatch) {
       throw ValidationFailure(
-        'Draft supports up to ${AppConfig.maxPlayersPerMatch} players per match.',
+        'Propozycja obsługuje maksymalnie ${AppConfig.maxPlayersPerMatch} graczy na mecz.',
       );
     }
 

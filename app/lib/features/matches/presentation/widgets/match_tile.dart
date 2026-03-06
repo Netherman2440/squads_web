@@ -16,11 +16,11 @@ class MatchTile extends StatelessWidget {
     final dateFormat = DateFormat('dd.MM.yyyy HH:mm');
     final homeTeamName = _displayTeamName(
       match.homeTeam?.name,
-      'home',
+      'gospodarze',
     ).toUpperCase();
     final awayTeamName = _displayTeamName(
       match.awayTeam?.name,
-      'away',
+      'goście',
     ).toUpperCase();
     final homeTeamColor = _parseColor(match.homeTeam?.color);
     final awayTeamColor = _parseColor(match.awayTeam?.color);
@@ -28,8 +28,8 @@ class MatchTile extends StatelessWidget {
       fontWeight: FontWeight.w700,
       letterSpacing: 0.3,
     );
-
     final hasScore = match.homeScore != null && match.awayScore != null;
+    final teamsNotSelected = !hasScore && _teamsAreEmpty(match);
     final homeScore = hasScore ? match.homeScore.toString() : '-';
     final awayScore = hasScore ? match.awayScore.toString() : '-';
 
@@ -78,21 +78,40 @@ class MatchTile extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              Row(
-                children: [
-                  _ScoreBox(score: homeScore),
-                  const SizedBox(width: 8),
-                  const Text(':'),
-                  const SizedBox(width: 8),
-                  _ScoreBox(score: awayScore),
-                ],
-              ),
+              if (teamsNotSelected)
+                Text(
+                  'Nie wybrano jeszcze drużyn',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                )
+              else
+                Row(
+                  children: [
+                    _ScoreBox(score: homeScore),
+                    const SizedBox(width: 8),
+                    const Text(':'),
+                    const SizedBox(width: 8),
+                    _ScoreBox(score: awayScore),
+                  ],
+                ),
             ],
           ),
         ),
       ),
     );
   }
+}
+
+bool _teamsAreEmpty(Match match) {
+  final homeHasPlayers =
+      (match.homeTeam?.players.isNotEmpty ?? false) ||
+      ((match.homeTeam?.playerCount ?? 0) > 0);
+  final awayHasPlayers =
+      (match.awayTeam?.players.isNotEmpty ?? false) ||
+      ((match.awayTeam?.playerCount ?? 0) > 0);
+
+  return !homeHasPlayers && !awayHasPlayers;
 }
 
 String _displayTeamName(String? name, String fallback) {

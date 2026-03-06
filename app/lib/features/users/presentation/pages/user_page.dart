@@ -71,7 +71,7 @@ class _UserPageState extends ConsumerState<UserPage> {
         squadsState.isLoading && mySquads.isEmpty && !userState.isLoading;
     final showEmptySquads = mySquads.isEmpty && !userState.isLoading;
 
-    final text = hasSquad ? 'Add more' : 'Add your first squad';
+    final text = hasSquad ? 'Dodaj kolejny' : 'Dodaj pierwszy skład';
 
     return Scaffold(
       body: RefreshIndicator(
@@ -90,7 +90,7 @@ class _UserPageState extends ConsumerState<UserPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'My squads',
+                    'Moje składy',
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   FilledButton.icon(
@@ -111,7 +111,7 @@ class _UserPageState extends ConsumerState<UserPage> {
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text(
-                  'You are not a member of any squads yet.',
+                  'Nie należysz jeszcze do żadnego składu.',
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
               )

@@ -283,7 +283,7 @@ class _RootShellState extends ConsumerState<RootShell> {
       children: [
         IconButton(
           icon: const Icon(Icons.menu),
-          tooltip: 'Open navigation',
+          tooltip: 'Otwórz nawigację',
           onPressed: () {
             setState(() {
               _isSidebarPinned = !_isSidebarPinned;
@@ -356,8 +356,7 @@ class _RootShellState extends ConsumerState<RootShell> {
                 value: _ProfileMenuAction.profile,
                 child: ListTile(
                   leading: const Icon(Icons.person),
-                  title: const Text('Profile'),
-                  subtitle: Text(
+                  title: Text(
                     email,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -412,7 +411,7 @@ class _SidebarNavigation extends StatelessWidget {
     final navItems = <_NavItem>[
       if (!isGuest)
         const _NavItem(icon: Icons.person, label: 'Profil', path: '/me'),
-      const _NavItem(icon: Icons.groups, label: 'Squads', path: '/squads'),
+      const _NavItem(icon: Icons.groups, label: 'Składy', path: '/squads'),
     ];
 
     final squadId = _extractSquadId(location);
@@ -444,7 +443,7 @@ class _SidebarNavigation extends StatelessWidget {
                     child: Text(
                       (squadName != null && squadName!.isNotEmpty)
                           ? squadName!
-                          : 'Squad',
+                          : 'Skład',
                       style: theme.textTheme.titleSmall,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -455,7 +454,7 @@ class _SidebarNavigation extends StatelessWidget {
                 _SidebarNavItem(
                   item: _NavItem(
                     icon: Icons.home,
-                    label: 'Home',
+                    label: 'Główna',
                     path: '/squads/$squadId',
                   ),
                   isExpanded: isExpanded,
@@ -466,7 +465,7 @@ class _SidebarNavigation extends StatelessWidget {
                 _SidebarNavItem(
                   item: _NavItem(
                     icon: Icons.group,
-                    label: 'Players',
+                    label: 'Gracze',
                     path: '/squads/$squadId/players',
                   ),
                   isExpanded: isExpanded,
@@ -479,7 +478,7 @@ class _SidebarNavigation extends StatelessWidget {
                 _SidebarNavItem(
                   item: _NavItem(
                     icon: Icons.sports_soccer,
-                    label: 'Matches',
+                    label: 'Mecze',
                     path: '/squads/$squadId/matches',
                   ),
                   isExpanded: isExpanded,
@@ -505,7 +504,7 @@ class _SidebarNavigation extends StatelessWidget {
                 _SidebarNavItem(
                   item: _NavItem(
                     icon: Icons.bar_chart,
-                    label: 'Stats',
+                    label: 'Statystyki',
                     path: '/squads/$squadId/stats',
                   ),
                   isExpanded: isExpanded,

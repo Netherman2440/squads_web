@@ -15,7 +15,14 @@ extension SquadVisibilityParser on SquadVisibility {
     }
   }
 
-  String get label => name;
+  String get label {
+    switch (this) {
+      case SquadVisibility.public:
+        return 'Publiczny';
+      case SquadVisibility.private:
+        return 'Prywatny';
+    }
+  }
 }
 
 extension SportTypeParser on SportType {
@@ -27,7 +34,12 @@ extension SportTypeParser on SportType {
     }
   }
 
-  String get label => name;
+  String get label {
+    switch (this) {
+      case SportType.football:
+        return 'Piłka nożna';
+    }
+  }
 }
 
 class Squad {

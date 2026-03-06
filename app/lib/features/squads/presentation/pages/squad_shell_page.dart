@@ -53,16 +53,16 @@ class _SquadShellErrorView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final error = this.error;
-    String title = 'Something went wrong';
-    String message = 'An unexpected error occurred while loading the squad.';
+    String title = 'Coś poszło nie tak';
+    String message = 'Wystąpił nieoczekiwany błąd podczas ładowania składu.';
     IconData icon = Icons.error_outline;
 
     if (error is NotFoundFailure) {
-      title = 'Squad not found';
-      message = 'The squad you are looking for does not exist.';
+      title = 'Nie znaleziono składu';
+      message = 'Szukany skład nie istnieje.';
     } else if (error is UnauthorizedFailure) {
-      title = 'No access';
-      message = 'You do not have access to this squad.';
+      title = 'Brak dostępu';
+      message = 'Nie masz dostępu do tego składu.';
       icon = Icons.lock_outline;
     } else if (error is Failure) {
       message = error.message;
@@ -104,7 +104,7 @@ class _SquadShellErrorView extends StatelessWidget {
               alignment: Alignment.center,
               child: FilledButton(
                 onPressed: onBack,
-                child: const Text('Back to squads list'),
+                child: const Text('Wróć do listy składów'),
               ),
             ),
           ],
@@ -138,7 +138,7 @@ class _QuickActionsFab extends StatelessWidget {
         );
       },
       icon: const Icon(Icons.add),
-      label: const Text('Quick actions'),
+      label: const Text('Szybkie akcje'),
     );
   }
 }
@@ -158,19 +158,19 @@ class _QuickActionsSheet extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Quick actions',
+              'Szybkie akcje',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
             Text(
-              'Choose what you want to add to ${squad.name}.',
+              'Wybierz, co chcesz dodać do ${squad.name}.',
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 16),
             ListTile(
               leading: const Icon(Icons.person_add),
-              title: const Text('Add player'),
-              subtitle: const Text('Invite or create a new squad player.'),
+              title: const Text('Dodaj gracza'),
+              subtitle: const Text('Zaproś lub utwórz nowego gracza składu.'),
               onTap: () {
                 Navigator.of(context).pop();
                 showDialog<void>(
@@ -182,8 +182,8 @@ class _QuickActionsSheet extends StatelessWidget {
             ),
             ListTile(
               leading: const Icon(Icons.sports_soccer),
-              title: const Text('Add match'),
-              subtitle: const Text('Schedule a new squad match.'),
+              title: const Text('Dodaj mecz'),
+              subtitle: const Text('Zaplanuj nowy mecz składu.'),
               onTap: () {
                 Navigator.of(context).pop();
                 context.pushNamed(
@@ -194,8 +194,8 @@ class _QuickActionsSheet extends StatelessWidget {
             ),
             ListTile(
               leading: const Icon(Icons.emoji_events),
-              title: const Text('Add tournament'),
-              subtitle: const Text('Create a new tournament for this squad.'),
+              title: const Text('Dodaj turniej'),
+              subtitle: const Text('Utwórz nowy turniej dla tego składu.'),
               onTap: () {
                 Navigator.of(context).pop();
                 context.pushNamed(

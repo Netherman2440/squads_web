@@ -20,7 +20,7 @@ class UserNotifier extends Notifier<UserState> {
     } catch (_) {
       state = state.copyWith(
         isLoading: false,
-        error: 'Failed to load user profile',
+        error: 'Nie udało się wczytać profilu użytkownika',
       );
     }
   }

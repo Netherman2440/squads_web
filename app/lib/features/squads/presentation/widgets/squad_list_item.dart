@@ -69,7 +69,7 @@ class SquadListItem extends StatelessWidget {
             : Chip(
                 label: Text(
                   isGuest && squad.role == SquadRole.none
-                      ? 'Guest'
+                      ? 'Gość'
                       : squad.role.label,
                 ),
                 backgroundColor: _roleColor(context).withValues(alpha: 0.15),

@@ -13,7 +13,7 @@ void main() {
 
   group('AuthPage Widget Tests', () {
     testWidgets(
-      'shows "Please enter email" when email is empty and login is pressed',
+      'shows "Podaj e-mail" when email is empty and login is pressed',
       (WidgetTester tester) async {
         // Build the AuthPage widget with theme
         await tester.pumpWidget(
@@ -32,7 +32,7 @@ void main() {
         await tester.pumpAndSettle();
 
         // Find the login button
-        final loginButton = find.text('Login');
+        final loginButton = find.text('Zaloguj się');
         expect(loginButton, findsOneWidget);
 
         // Tap the login button without entering any email
@@ -40,12 +40,12 @@ void main() {
         await tester.pump();
 
         // Check if the validation message appears
-        expect(find.text('Please enter email'), findsOneWidget);
+        expect(find.text('Podaj e-mail'), findsOneWidget);
       },
     );
 
     testWidgets(
-      'shows "Please enter password" when password is empty and login is pressed',
+      'shows "Podaj hasło" when password is empty and login is pressed',
       (WidgetTester tester) async {
         // Build the AuthPage widget with theme
         await tester.pumpWidget(
@@ -69,7 +69,7 @@ void main() {
         await tester.pump();
 
         // Find the login button
-        final loginButton = find.text('Login');
+        final loginButton = find.text('Zaloguj się');
         expect(loginButton, findsOneWidget);
 
         // Tap the login button without entering password
@@ -77,7 +77,7 @@ void main() {
         await tester.pump();
 
         // Check if the validation message appears
-        expect(find.text('Please enter password'), findsOneWidget);
+        expect(find.text('Podaj hasło'), findsOneWidget);
       },
     );
 
@@ -96,7 +96,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Find the Create Account button
-      final createAccountButton = find.text('Create account');
+      final createAccountButton = find.text('Utwórz konto');
       expect(createAccountButton, findsOneWidget);
 
       // Verify the button is enabled (not disabled due to loading)

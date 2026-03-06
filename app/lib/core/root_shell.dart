@@ -491,7 +491,7 @@ class _SidebarNavigation extends StatelessWidget {
                 _SidebarNavItem(
                   item: _NavItem(
                     icon: Icons.emoji_events,
-                    label: 'Tournaments',
+                    label: 'Turnieje',
                     path: '/squads/$squadId/tournaments',
                   ),
                   isExpanded: isExpanded,

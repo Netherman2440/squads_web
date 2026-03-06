@@ -169,6 +169,29 @@ class _SquadsPageState extends ConsumerState<SquadsPage> {
       skipLoadingOnReload: true,
       data: (squads) {
         if (squads.isEmpty) {
+          final hasQuery = _searchController.text.trim().isNotEmpty;
+          if (hasQuery) {
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('Brak składów pasujących do wyszukiwania.'),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      _searchController.clear();
+                      ref
+                          .read(squadsNotifierProvider.notifier)
+                          .loadSquads(searchQuery: '');
+                    },
+                    icon: const Icon(Icons.clear),
+                    label: const Text('Wyczyść wyszukiwanie'),
+                  ),
+                ],
+              ),
+            );
+          }
+
           return const Center(
             child: Text('Nie znaleziono składów. Utwórz pierwszy, aby zacząć!'),
           );

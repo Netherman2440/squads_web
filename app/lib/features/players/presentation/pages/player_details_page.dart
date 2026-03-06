@@ -260,7 +260,7 @@ class PlayerDetailsPage extends ConsumerWidget {
                         child: Icon(
                           Icons.info_outline,
                           size: 18,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                     ),

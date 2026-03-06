@@ -107,13 +107,7 @@ class _DangerZoneSectionState extends State<DangerZoneSection> {
                     title: 'Przekaż własność',
                     subtitle: 'Przekaż ten skład innemu użytkownikowi.',
                     actionLabel: 'Przekaż',
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('TODO: Przekazanie własności'),
-                        ),
-                      );
-                    },
+                    onPressed: null,
                   ),
                   _DividerLine(color: theme.colorScheme.error),
                   _DangerRow(
@@ -184,7 +178,7 @@ class _DangerRow extends StatelessWidget {
   final String title;
   final String subtitle;
   final String actionLabel;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {

@@ -144,21 +144,25 @@ class _SquadHomeGrid extends StatelessWidget {
         icon: Icons.person,
         title: 'Gracze',
         description: 'Zarządzaj graczami składu i ich profilami.',
+        routeName: AppRoute.players.name,
       ),
       _SquadHomeTileData(
         icon: Icons.sports_soccer,
         title: 'Mecze',
         description: 'Planuj i przeglądaj mecze składu.',
+        routeName: AppRoute.matches.name,
       ),
       _SquadHomeTileData(
         icon: Icons.emoji_events,
         title: 'Turnieje',
         description: 'Organizuj i śledź turnieje.',
+        routeName: AppRoute.tournaments.name,
       ),
       _SquadHomeTileData(
         icon: Icons.bar_chart,
         title: 'Statystyki',
         description: 'Sprawdź analizy wyników swojego składu.',
+        routeName: AppRoute.squadStats.name,
       ),
     ];
 
@@ -180,36 +184,14 @@ class _SquadHomeGrid extends StatelessWidget {
             final tile = tiles[index];
             return InkWell(
               onTap: () {
-                if (tile.title == 'Gracze') {
+                try {
                   context.pushNamed(
-                    AppRoute.players.name,
+                    tile.routeName,
                     pathParameters: {'squadId': squad.squadId},
                   );
                   return;
-                }
-
-                if (tile.title == 'Mecze') {
-                  context.pushNamed(
-                    AppRoute.matches.name,
-                    pathParameters: {'squadId': squad.squadId},
-                  );
-                  return;
-                }
-
-                if (tile.title == 'Statystyki') {
-                  context.pushNamed(
-                    AppRoute.squadStats.name,
-                    pathParameters: {'squadId': squad.squadId},
-                  );
-                  return;
-                }
-
-                if (tile.title == 'Tournaments') {
-                  context.pushNamed(
-                    AppRoute.tournaments.name,
-                    pathParameters: {'squadId': squad.squadId},
-                  );
-                  return;
+                } catch (_) {
+                  // Keep the existing fallback when a tile route is unknown.
                 }
 
                 showDialog<void>(
@@ -259,9 +241,11 @@ class _SquadHomeTileData {
     required this.icon,
     required this.title,
     required this.description,
+    required this.routeName,
   });
 
   final IconData icon;
   final String title;
   final String description;
+  final String routeName;
 }

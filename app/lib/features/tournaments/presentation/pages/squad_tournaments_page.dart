@@ -34,29 +34,32 @@ class SquadTournamentsPage extends ConsumerWidget {
           ),
         ),
         data: (tournaments) {
-          if (tournaments.isEmpty) {
-            return const Center(
-              child: Text('Brak turniejów. Utwórz pierwszy.'),
-            );
-          }
-
           return RefreshIndicator(
             onRefresh: () async {
               ref.invalidate(squadTournamentsProvider(squadId));
               await ref.read(squadTournamentsProvider(squadId).future);
             },
-            child: ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: tournaments.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final tournament = tournaments[index];
-                return _TournamentTile(
-                  squadId: squadId,
-                  tournament: tournament,
-                );
-              },
-            ),
+            child: tournaments.isEmpty
+                ? ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: const [
+                      SizedBox(height: 120),
+                      Center(child: Text('Brak turniejów. Utwórz pierwszy.')),
+                    ],
+                  )
+                : ListView.separated(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(16),
+                    itemCount: tournaments.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final tournament = tournaments[index];
+                      return _TournamentTile(
+                        squadId: squadId,
+                        tournament: tournament,
+                      );
+                    },
+                  ),
           );
         },
       ),

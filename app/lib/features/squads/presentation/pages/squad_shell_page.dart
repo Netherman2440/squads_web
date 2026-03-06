@@ -61,7 +61,7 @@ class _SquadShellErrorView extends StatelessWidget {
       title = 'Nie znaleziono składu';
       message = 'Szukany skład nie istnieje.';
     } else if (error is UnauthorizedFailure) {
-      title = 'No access';
+      title = 'Brak dostępu';
       message = 'Nie masz dostępu do tego składu.';
       icon = Icons.lock_outline;
     } else if (error is Failure) {

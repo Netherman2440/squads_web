@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import 'package:app/core/app_config.dart';
 import 'package:app/features/players/domain/entities/player_head_to_head_stat.dart';
@@ -242,7 +243,11 @@ class _PlayerHeadToHeadTableState extends State<PlayerHeadToHeadTable> {
                                           for (final column in statColumns)
                                             _BodyCell(
                                               width: statColumnWidth,
-                                              value: _valueFor(stat, column),
+                                              value: _valueFor(
+                                                context,
+                                                stat,
+                                                column,
+                                              ),
                                               isSelected:
                                                   widget.sortColumn == column,
                                               highlightColor: highlightColor,
@@ -351,7 +356,11 @@ class _PlayerHeadToHeadTableState extends State<PlayerHeadToHeadTable> {
     }
   }
 
-  String _valueFor(PlayerHeadToHeadStat stat, HeadToHeadColumn column) {
+  String _valueFor(
+    BuildContext context,
+    PlayerHeadToHeadStat stat,
+    HeadToHeadColumn column,
+  ) {
     switch (column) {
       case HeadToHeadColumn.togetherMatches:
         return stat.togetherMatches.toString();
@@ -363,10 +372,12 @@ class _PlayerHeadToHeadTableState extends State<PlayerHeadToHeadTable> {
         return stat.togetherLosses.toString();
       case HeadToHeadColumn.togetherWinRate:
         return _formatPercent(
+          context,
           _rate(value: stat.togetherWins, total: stat.togetherMatches),
         );
       case HeadToHeadColumn.togetherLossRate:
         return _formatPercent(
+          context,
           _rate(value: stat.togetherLosses, total: stat.togetherMatches),
         );
       case HeadToHeadColumn.togetherGoalsFor:
@@ -382,9 +393,13 @@ class _PlayerHeadToHeadTableState extends State<PlayerHeadToHeadTable> {
       case HeadToHeadColumn.vsLosses:
         return stat.vsLosses.toString();
       case HeadToHeadColumn.vsWinRate:
-        return _formatPercent(_rate(value: stat.vsWins, total: stat.vsMatches));
+        return _formatPercent(
+          context,
+          _rate(value: stat.vsWins, total: stat.vsMatches),
+        );
       case HeadToHeadColumn.vsLossRate:
         return _formatPercent(
+          context,
           _rate(value: stat.vsLosses, total: stat.vsMatches),
         );
       case HeadToHeadColumn.vsGoalsFor:
@@ -524,8 +539,12 @@ class _PlayerHeadToHeadTableState extends State<PlayerHeadToHeadTable> {
     return value / total;
   }
 
-  String _formatPercent(double value) {
-    return '${(value * 100).toStringAsFixed(1)}%';
+  String _formatPercent(BuildContext context, double value) {
+    final locale = Localizations.localeOf(context).toLanguageTag();
+    final formatter = NumberFormat.decimalPattern(locale)
+      ..minimumFractionDigits = 1
+      ..maximumFractionDigits = 1;
+    return '${formatter.format(value * 100)}%';
   }
 }
 

@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import 'package:app/core/app_config.dart';
 import 'package:app/core/app_router.dart';
@@ -620,7 +621,7 @@ class _TeamProposalCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text('Gracze: ${players.length}'),
                 Text(
-                  'Suma rankingu: ${_teamTotalRanking(players).toStringAsFixed(1)}',
+                  'Suma rankingu: ${NumberFormat.decimalPattern('pl').format(_teamTotalRanking(players))}',
                 ),
                 const Divider(height: 18),
                 if (sortedPlayers.isEmpty)

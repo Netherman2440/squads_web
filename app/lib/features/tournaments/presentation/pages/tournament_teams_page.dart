@@ -39,6 +39,8 @@ class _TournamentTeamsPageState extends ConsumerState<TournamentTeamsPage> {
   final Map<String, String?> _teamColors = {};
   final Map<String, String> _playerAssignments = {};
   final Map<String, Player> _playersById = {};
+  static const String _redraftValidationError =
+      'Za mało przypisanych graczy, aby ponownie wygenerować drużyny.';
 
   static const List<String> _teamColorOptions = [
     '#E53935',
@@ -125,7 +127,16 @@ class _TournamentTeamsPageState extends ConsumerState<TournamentTeamsPage> {
 
     setState(() {
       _playerAssignments[playerId] = targetTeamId;
+      if (_error == _redraftValidationError && _isRedraftInputValid()) {
+        _error = null;
+      }
     });
+  }
+
+  bool _isRedraftInputValid() {
+    final teamCount = _teams.length;
+    final selectedCount = _playerAssignments.keys.length;
+    return teamCount >= 2 && selectedCount >= teamCount;
   }
 
   Future<void> _pickTeamColor(String teamId) async {
@@ -186,14 +197,16 @@ class _TournamentTeamsPageState extends ConsumerState<TournamentTeamsPage> {
     final selectedIds = _playerAssignments.keys.toSet().toList(growable: false);
 
     if (teamCount < 2 || selectedIds.length < teamCount) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Za mało przypisanych graczy, aby ponownie wygenerować drużyny.',
-          ),
-        ),
-      );
+      setState(() {
+        _error = _redraftValidationError;
+      });
       return;
+    }
+
+    if (_error == _redraftValidationError) {
+      setState(() {
+        _error = null;
+      });
     }
 
     final confirm = await showDialog<bool>(
@@ -322,10 +335,12 @@ class _TournamentTeamsPageState extends ConsumerState<TournamentTeamsPage> {
                 if (_error != null)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8),
-                    child: SelectableText(
-                      _error!,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
+                    child: SelectableText.rich(
+                      TextSpan(
+                        text: _error!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
                       ),
                     ),
                   ),

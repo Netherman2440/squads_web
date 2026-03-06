@@ -41,7 +41,7 @@ class ProbabilitySlider extends StatelessWidget {
                   IconButton(
                     icon: const Icon(Icons.info_outline),
                     tooltip: 'Jak to obliczamy?',
-                    onPressed: () => _showInfo(context, infoText!),
+                    onPressed: () => _showInfo(context, infoText!, title),
                   ),
               ],
             ),
@@ -62,11 +62,11 @@ class ProbabilitySlider extends StatelessWidget {
     );
   }
 
-  void _showInfo(BuildContext context, String message) {
+  void _showInfo(BuildContext context, String message, String title) {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Szansa na wygraną'),
+        title: Text(title),
         content: Text(message),
         actions: [
           TextButton(
